@@ -116,7 +116,7 @@ const WorkspaceDetail = () => {
           <Label htmlFor='workspace-url'>Workspace URL</Label>
           <InputGroup>
             <InputGroupAddon className='text-foreground font-normal'>https://example.com/</InputGroupAddon>
-            <InputGroupInput id='workspace-url' placeholder='shadcnstudio' />
+            <InputGroupInput id='workspace-url' placeholder='afenda' />
             <InputGroupAddon align='inline-end' className='text-foreground font-normal'>
               .com
             </InputGroupAddon>

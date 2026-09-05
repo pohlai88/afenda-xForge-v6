@@ -39,7 +39,7 @@ const ActivityDialog = ({ defaultOpen = false, trigger, triggerClassName }: Prop
               </div>
               <div className='bg-muted flex flex-col gap-4 rounded-md border px-4 py-2.5'>
                 <p className='text-sm font-medium'>
-                  @ShadcnStudio For an expert opinion, check out what Mike has to say on this topic!
+                  @afenda For an expert opinion, check out what Mike has to say on this topic!
                 </p>
                 <InputGroup className='bg-card'>
                   <InputGroupInput placeholder='Reply' />

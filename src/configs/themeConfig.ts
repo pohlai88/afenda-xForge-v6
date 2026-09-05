@@ -17,9 +17,10 @@
  */
 
 const themeConfig = {
-  templateName: 'AdminCN',
+  templateName: 'Afenda xForge',
+  tagline: 'Run everything',
   homePageUrl: '/dashboard/sales',
-  settingsCookieName: 'shadcn-next-admin-settings',
+  settingsCookieName: 'afenda-xforge-settings',
   mode: 'system', // 'system' | 'light' | 'dark'
   themePreset: 'default', // 'default' | 'caffeine' | 'claude' | 'corporate' | 'ghibli-studio' | 'marvel' | 'material-design' | 'modern-minimal' | 'nature' | 'perplexity' | 'slack' | 'pastel-dreams'
   font: 'geist', // 'geist' | 'inter' | 'roboto' | 'nunito-sans' | 'lora' | 'geist-mono' | 'space-grotesk' | 'josefin-sans' | 'poppins' | 'open-sans' | 'montserrat' | 'raleway' | 'ubuntu' | 'noto-sans' | 'archivo' | 'archivo-narrow' | 'archivo-black' | 'archivo-condensed' | 'archivo-expanded' | 'archivo-italic' | 'archivo-light' | 'archivo-medium' | 'archivo-semibold' | 'archivo-bold' | 'archivo-extrabold' | 'archivo-black' | 'archivo-condensed' | 'archivo-expanded' | 'archivo-italic' | 'archivo-light' | 'archivo-medium' | 'archivo-semibold' | 'archivo-bold' | 'archivo-extrabold'

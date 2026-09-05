@@ -60,7 +60,7 @@ export const db: UserProfilePageData = {
       person: {
         name: 'Lester McCarthy (Client)',
         initials: 'LM',
-        role: 'CEO of ThemeSelection',
+        role: 'CEO of Afenda',
         avatar: '/images/avatars/avatar-3.webp'
       }
     },

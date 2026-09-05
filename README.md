@@ -1,148 +1,63 @@
-<p align="center"></p>
+# Afenda xForge
 
-<p align="center">
-   <a href="https://shadcnstudio.com" target="_blank">
-      <img src="https://cdn.shadcnstudio.com/ss-assets/logo/logo.png" alt="$brand_name-logo" width="40px" height="auto">
-   </a>
-</p>
+ERP console built on Next.js 16, React 19, Tailwind v4 and shadcn/ui.
 
-<h1 align="center">
-   <a href="https://shadcnstudio.com" target="_blank" align="center">
-      shadcn/studio
-   </a>
-</h1>
+Started from the shadcn/studio AdminCN admin template (paper layout), trimmed to an
+ERP-shaped surface. See `_archive/` for what was removed and why.
 
-<p>
-   <a href="https://shadcnstudio.com" target="_blank">
-      shadcn/studio
-   </a>
-   is an open-source collection of copy-and-paste shadcn components, blocks, and templates - paired with a powerful theme generator & AI Tools to craft, customize, and ship faster. 🚀
-</p>
+## Requirements
 
-<a href="https://shadcnstudio.com" target="_blank">
-  <img src="https://cdn.shadcnstudio.com/ss-assets/smm/marketing/shadcn-studio-smm-banner.png" alt="shadcn/studio banner" width="1200">
-</a>
+- Node 20+ (developed on 24)
+- pnpm 11+
 
-<p>
-    <a href="https://github.com/themeselection/shadcn-studio/blob/main/LICENSE.md"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License"></a>
-    <a href="https://x.com/ShadcnStudio" target="_blank">
-      <img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/ShadcnStudio">
-   </a>
-</p>
+## Getting started
 
-<a href="https://themeselection.com" target="_blank">
-  <img
-    src="https://cdn.shadcnstudio.com/ts-assets/themeselection/logo/logo.png"
-    alt="themeselection logo"
-    height="30"
-  />
-</a>
+```bash
+pnpm install
+pnpm dev
+```
 
-<p>
-  Supported by
-  <a href="https://themeselection.com" target="_blank">
-    ThemeSelection
-  </a>
-  , with a commitment to empowering the open-source community.
-</p>
+The app runs at http://localhost:3000 and redirects to `/dashboard/sales`.
 
----
+## Scripts
 
-## Table of Contents 📋
+| Script              | What it does                                  |
+| ------------------- | --------------------------------------------- |
+| `pnpm dev`          | Dev server (Turbopack)                        |
+| `pnpm build`        | Production build                              |
+| `pnpm start`        | Serve the production build                    |
+| `pnpm lint`         | ESLint                                        |
+| `pnpm lint:fix`     | ESLint with autofix                           |
+| `pnpm format`       | Prettier over `src/`                          |
+| `pnpm check-types`  | `tsc --noEmit`                                |
 
-- [Table of Contents 📋](#table-of-contents-)
-- [Overview 🌏](#overview-)
-  - [Not a standard library, but a distribution of components](#not-a-standard-library-but-a-distribution-of-components)
-- [Why should I use shadcn/studio? 💡](#why-should-i-use-shadcnstudio-)
-- [This is where shadcn/studio shines ✨](#this-is-where-shadcnstudio-shines-)
-- [Features ✨](#features-)
-- [Documentation 📚](#documentation-)
-- [Community 🤝](#community-)
-- [Credits 🤘](#credits-)
-- [Useful Links 🎁](#useful-links-)
-- [Social Media :earth_africa:](#social-media-earth_africa)
+## Layout of the code
 
----
+| Path             | Holds                                                          |
+| ---------------- | -------------------------------------------------------------- |
+| `src/app`        | Routes. `(pages)` renders inside the admin shell, `(blank)` does not |
+| `src/views`      | Page-level UI, imported by the thin route files                 |
+| `src/components` | `ui/` primitives, `layout/` shell, `shared/` cross-page pieces   |
+| `src/configs`    | `themeConfig.ts` (branding, defaults), `navConfig.tsx` (sidebar) |
+| `src/store`      | Zustand stores for the stateful apps                            |
+| `src/fake-db`    | Seed data, read through `src/app/server/actions.ts`              |
+| `_archive`       | The five unused layout variants, plus everything stripped out    |
 
-## Overview 🌏
+## Branding
 
-**This isn&apos;t a traditional component library or a replacement for Shadcn**. Instead, it&apos;s a unique collection offers customizable variants of components, blocks, and templates. Preview, customize, and copy-paste them into your apps with ease.
+Name and tagline live in `src/configs/themeConfig.ts` (`templateName`, `tagline`) and are
+read by the sidebar header and footer. Page metadata is in `src/app/layout.tsx`.
 
-Building on the solid foundation of the Shadcn components & blocks, we&apos;ve enhanced it with custom-designed components & blocks to give you a head start. This allows you to craft, customize, and ship your projects faster and more efficiently.
+Still carrying template artwork: `public/images/og-image.png` and `src/app/favicon.ico`.
 
-### Not a standard library, but a distribution of components
+## Theme settings
 
-Following the philosophy of Shadcn, shadcn/studio isn&apos;t a conventional &quot;install-from-NPM&quot; library. Rather, it&apos;s an open-source distribution of components designed for maximum adaptability. You can copy the code, modify styles, adjust logic, or integrate it with other tools—free from the limitations of typical libraries. This &quot;open code&quot; model empowers you to customize with confidence and creativity.
+Theme, font, radius, scale, layout and sidebar behaviour are stored in a cookie
+(`afenda-xforge-settings`), which **takes priority over `themeConfig.ts`**. Editing the
+config has no visible effect until you reset from the in-app customizer or clear the cookie.
 
-## Why should I use shadcn/studio? 💡
+## Replacing the seed data
 
-shadcn/ui aims to provide core components with a unique distribution system, allowing developers to copy and paste reusable, customizable UI elements directly into their codebase.
-
-While this approach offers flexibility and control, it comes with some limitations: a lack of diverse component variants examples, limited theme customization options, and limited pre-built blocks. Additionally, its extensive customization options, though powerful, can sometimes feel overwhelming, especially for those seeking a more guided or streamlined experience.
-
-## This is where shadcn/studio shines ✨
-
-An open-source & premium collection of copy-and-paste shadcn components, blocks, and templates - paired with a powerful theme generator to craft, customize, and ship faster 🚀. It provides a robust toolkit for building stunning, interactive user interfaces with ease.
-
-- **Open-source:** Dive into a growing, community-driven collection of copy-and-paste [shadcn/ui components]('https://shadcnstudio.com/components'), shadcn blocks, and templates.
-
-- **Component & Blocks variants:** Access a diverse, collection of customizable [shadcn blocks](https://shadcnstudio.com/blocks) and component variants to quickly build and style your UI with ease.
-
-- **Animated variants with Motion:** Add smooth, modern animations to your components, enhancing user experiences with minimal effort.
-
-- **Landing pages & Dashboards:** Explore 20+ premium & free [Shadcn templates](https://shadcnstudio.com/templates), [Shadcn Admin Dashboard](https://shadcnstudio.com/templates/admin-dashboard) for dashboards, landing pages & more. Fully customizable & easy to use.
-
-- **shadcn/ui for Figma:** Speed up your workflow with [Shadcn Figma](https://shadcnstudio.com/figma) UI components, blocks & templates — a full design library inspired by shadcn/ui.
-
-- **Powerful theme generator:** Customize your UI instantly with [Shadcn Theme Generator](https://shadcnstudio.com/theme-generator). Preview changes in real time and create consistent, on-brand designs faster.
-
-- **shadcn/studio MCP:** Integrate [shadcn/studio MCP](https://shadcnstudio.com/mcp) Server directly into your favorite IDE and craft stunning shadcn/ui Components, Blocks and Pages inspired by shadcn/studio.
-
-- **Shadcn Figma To Code Plugin:** Convert your Figma designs into production-ready code instantly with the [Shadcn Figma Plugin](https://shadcnstudio.com/figma-plugin).
-
-## Features ✨
-
-1. **Live Theme Generator:** See your shadcn components transform instantly as you experiment with styles in real time.
-2. **Color Mastery:** Play with background, text, and border hues using a sleek color picker for a unified design.
-3. **Typography Fine-Tuning:** Perfect your text with adjustable font sizes, weights, and transformations for a polished look.
-4. **Tailwind v4 Compatibility:** Effortlessly use Tailwind v4, supporting OKLCH, HSL, RGB & HEX color formats.
-5. **Stunning Theme Starters:** Kick off with gorgeous pre-built themes and customize light or dark modes in a breeze.
-6. **Hold to Save Theme:** Preserve your custom themes with a quick hold, making them easy to reuse or share later.
-
-## Documentation 📚
-
-For comprehensive documentation, please visit [shadcn/studio documentation](https://shadcnstudio.com/docs/getting-started/shadcn-studio-template-nextjs).
-
-## Community 🤝
-
-Join the shadcn/studio community to discuss the library, ask questions, and share your experiences:
-
-- 🐦 [Follow us on Twitter](https://x.com/ShadCNStudio)
-- 🎮 [Join us on Discord](https://discord.com/invite/kBHkY7DekX)
-
-## Credits 🤘
-
-We are grateful for the contributions of the open-source community, particularly:
-
-- [shadcn/ui](https://ui.shadcn.com/)
-- [tweakcn](https://tweakcn.com/) (Our Theme Generator is heavily inspired by tweakcn)
-
-These projects form the backbone of shadcn/studio, allowing us to build a powerful copy-and-paste components.
-
-## Useful Links 🎁
-
-- [Shadcn Blocks](https://shadcnstudio.com/blocks)
-- [Shadcn Templates](https://shadcnstudio.com/templates)
-- [Shadcn Admin Dashboard](https://shadcnstudio.com/templates/admin-dashboard)
-- [Shadcn Figma UI Kit](https://shadcnstudio.com/figma)
-- [Shadcn Theme Generator](https://shadcnstudio.com/theme-generator)
-- [Shadcn MCP Server](https://shadcnstudio.com/mcp)
-- [Shadcn IDE Extension](https://shadcnstudio.com/ide-extension)
-- [Shadcn Components](https://shadcnstudio.com/components)
-- [Shadcn Figma to Code](https://shadcnstudio.com/figma-plugin)
-
-## Social Media :earth_africa:
-
-- [x](https://x.com/ShadcnStudio)
-- [Discord](https://discord.com/invite/kBHkY7DekX)
-- [YouTube](https://www.youtube.com/@themeselection)
+`src/app/server/actions.ts` wraps `src/fake-db` in server actions. Swap the bodies for real
+queries and the pages keep working. The stateful apps additionally seed Zustand stores from
+`src/fake-db` directly — see `src/store`.

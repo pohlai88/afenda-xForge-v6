@@ -57,7 +57,7 @@ const transactionData: Item[] = [
     name: 'Jack Alfredo',
     amount: 316.0,
     status: 'paid',
-    email: 'jack@shadcnstudio.com',
+    email: 'jack@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -67,7 +67,7 @@ const transactionData: Item[] = [
     name: 'Maria Gonzalez',
     amount: 253.4,
     status: 'pending',
-    email: 'maria.g@shadcnstudio.com',
+    email: 'maria.g@example.com',
     paidBy: 'visa'
   },
   {
@@ -77,7 +77,7 @@ const transactionData: Item[] = [
     name: 'John Doe',
     amount: 852.0,
     status: 'paid',
-    email: 'john.doe@shadcnstudio.com',
+    email: 'john.doe@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -87,7 +87,7 @@ const transactionData: Item[] = [
     name: 'Emily Carter',
     amount: 889.0,
     status: 'pending',
-    email: 'emily.carter@shadcnstudio.com',
+    email: 'emily.carter@example.com',
     paidBy: 'visa'
   },
   {
@@ -97,7 +97,7 @@ const transactionData: Item[] = [
     name: 'David Lee',
     amount: 723.16,
     status: 'paid',
-    email: 'david.lee@shadcnstudio.com',
+    email: 'david.lee@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -107,7 +107,7 @@ const transactionData: Item[] = [
     name: 'Sophia Patel',
     amount: 612.0,
     status: 'failed',
-    email: 'sophia.patel@shadcnstudio.com',
+    email: 'sophia.patel@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -117,7 +117,7 @@ const transactionData: Item[] = [
     name: 'Robert Wilson',
     amount: 445.25,
     status: 'paid',
-    email: 'robert.wilson@shadcnstudio.com',
+    email: 'robert.wilson@example.com',
     paidBy: 'visa'
   },
   {
@@ -127,7 +127,7 @@ const transactionData: Item[] = [
     name: 'Lisa Martinez',
     amount: 297.8,
     status: 'processing',
-    email: 'lisa.martinez@shadcnstudio.com',
+    email: 'lisa.martinez@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -137,7 +137,7 @@ const transactionData: Item[] = [
     name: 'Michael Thompson',
     amount: 756.9,
     status: 'paid',
-    email: 'michael.thompson@shadcnstudio.com',
+    email: 'michael.thompson@example.com',
     paidBy: 'visa'
   },
   {
@@ -147,7 +147,7 @@ const transactionData: Item[] = [
     name: 'Amanda Johnson',
     amount: 189.5,
     status: 'pending',
-    email: 'amanda.johnson@shadcnstudio.com',
+    email: 'amanda.johnson@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -157,7 +157,7 @@ const transactionData: Item[] = [
     name: 'Kevin Brown',
     amount: 1024.75,
     status: 'paid',
-    email: 'kevin.brown@shadcnstudio.com',
+    email: 'kevin.brown@example.com',
     paidBy: 'visa'
   },
   {
@@ -167,7 +167,7 @@ const transactionData: Item[] = [
     name: 'Sarah Davis',
     amount: 367.2,
     status: 'failed',
-    email: 'sarah.davis@shadcnstudio.com',
+    email: 'sarah.davis@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -177,7 +177,7 @@ const transactionData: Item[] = [
     name: 'Christopher Garcia',
     amount: 598.45,
     status: 'processing',
-    email: 'christopher.garcia@shadcnstudio.com',
+    email: 'christopher.garcia@example.com',
     paidBy: 'visa'
   },
   {
@@ -187,7 +187,7 @@ const transactionData: Item[] = [
     name: 'Jennifer Rodriguez',
     amount: 821.3,
     status: 'paid',
-    email: 'jennifer.rodriguez@shadcnstudio.com',
+    email: 'jennifer.rodriguez@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -197,7 +197,7 @@ const transactionData: Item[] = [
     name: 'Daniel Miller',
     amount: 156.75,
     status: 'pending',
-    email: 'daniel.miller@shadcnstudio.com',
+    email: 'daniel.miller@example.com',
     paidBy: 'visa'
   },
   {
@@ -207,7 +207,7 @@ const transactionData: Item[] = [
     name: 'Nicole White',
     amount: 934.1,
     status: 'paid',
-    email: 'nicole.white@shadcnstudio.com',
+    email: 'nicole.white@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -217,7 +217,7 @@ const transactionData: Item[] = [
     name: 'Anthony Lopez',
     amount: 412.85,
     status: 'failed',
-    email: 'anthony.lopez@shadcnstudio.com',
+    email: 'anthony.lopez@example.com',
     paidBy: 'visa'
   },
   {
@@ -227,7 +227,7 @@ const transactionData: Item[] = [
     name: 'Michelle Harris',
     amount: 675.5,
     status: 'processing',
-    email: 'michelle.harris@shadcnstudio.com',
+    email: 'michelle.harris@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -237,7 +237,7 @@ const transactionData: Item[] = [
     name: 'James Clark',
     amount: 289.95,
     status: 'paid',
-    email: 'james.clark@shadcnstudio.com',
+    email: 'james.clark@example.com',
     paidBy: 'visa'
   },
   {
@@ -247,7 +247,7 @@ const transactionData: Item[] = [
     name: 'Rachel Lewis',
     amount: 1156.25,
     status: 'pending',
-    email: 'rachel.lewis@shadcnstudio.com',
+    email: 'rachel.lewis@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -257,7 +257,7 @@ const transactionData: Item[] = [
     name: 'Thomas Young',
     amount: 543.6,
     status: 'paid',
-    email: 'thomas.young@shadcnstudio.com',
+    email: 'thomas.young@example.com',
     paidBy: 'visa'
   },
   {
@@ -267,7 +267,7 @@ const transactionData: Item[] = [
     name: 'Stephanie Brown',
     amount: 789.3,
     status: 'processing',
-    email: 'stephanie.brown@shadcnstudio.com',
+    email: 'stephanie.brown@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -277,7 +277,7 @@ const transactionData: Item[] = [
     name: 'Brandon Moore',
     amount: 425.75,
     status: 'failed',
-    email: 'brandon.moore@shadcnstudio.com',
+    email: 'brandon.moore@example.com',
     paidBy: 'visa'
   },
   {
@@ -287,7 +287,7 @@ const transactionData: Item[] = [
     name: 'Kelly Taylor',
     amount: 1203.5,
     status: 'paid',
-    email: 'kelly.taylor@shadcnstudio.com',
+    email: 'kelly.taylor@example.com',
     paidBy: 'mastercard'
   },
   {
@@ -297,7 +297,7 @@ const transactionData: Item[] = [
     name: 'Mark Anderson',
     amount: 356.2,
     status: 'pending',
-    email: 'mark.anderson@shadcnstudio.com',
+    email: 'mark.anderson@example.com',
     paidBy: 'visa'
   }
 ]

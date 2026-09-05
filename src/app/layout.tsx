@@ -28,17 +28,19 @@ import { allFonts, FONT_CONFIG, type FontKey } from '@/utils/fonts'
 import './globals.css'
 import ScrollToTop from '@/components/layout/ScrollToTop'
 
+const APP_NAME = 'Afenda xForge'
+const APP_TAGLINE = 'Run everything'
+const APP_DESCRIPTION = 'Afenda xForge — one console for orders, inventory, finance and the people who run them.'
+
 export const metadata: Metadata = {
-  title: 'AdminCN - Paper Layout Shadcn Admin Dashboard Template',
-  description:
-    'Launch powerful admin panels faster with AdminCN Paper Layout Shadcn Admin Dashboard Template, featuring modern UI, responsive layouts, and reusable components.',
+  title: `${APP_NAME} — ${APP_TAGLINE}`,
+  description: APP_DESCRIPTION,
   metadataBase: new URL(`${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}`),
   openGraph: {
-    title: 'AdminCN - Paper Layout Shadcn Admin Dashboard Template',
-    description:
-      'Launch powerful admin panels faster with AdminCN Paper Layout Shadcn Admin Dashboard Template, featuring modern UI, responsive layouts, and reusable components.',
+    title: `${APP_NAME} — ${APP_TAGLINE}`,
+    description: APP_DESCRIPTION,
     type: 'website',
-    siteName: 'AdminCN',
+    siteName: APP_NAME,
     url: process.env.NEXT_PUBLIC_APP_URL,
     images: [
       {
@@ -46,15 +48,14 @@ export const metadata: Metadata = {
         type: 'image/png',
         width: 1200,
         height: 630,
-        alt: 'AdminCN - Paper Layout Shadcn Admin Dashboard Template'
+        alt: `${APP_NAME} — ${APP_TAGLINE}`
       }
     ]
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AdminCN - Paper Layout Shadcn Admin Dashboard Template',
-    description:
-      'Launch powerful admin panels faster with AdminCN Paper Layout Shadcn Admin Dashboard Template, featuring modern UI, responsive layouts, and reusable components.'
+    title: `${APP_NAME} — ${APP_TAGLINE}`,
+    description: APP_DESCRIPTION
   }
 }
 
@@ -90,10 +91,20 @@ const RootLayout = async ({ children }: Readonly<{ children: ReactNode }>) => {
   // no flash of the default Geist font on refresh
   const fontStyle = { '--font-sans': fontVar, fontFamily: fontVar } as Record<string, string>
 
+  // 'light' and 'dark' are real theme classes, so emitting one server-side paints the correct
+  // theme before next-themes runs. 'system' is not a class anything styles — it only ever put
+  // an inert class on <html> that the client then diverged from, so it is left off and
+  // next-themes' inline script resolves the system preference instead.
+  const htmlClassName = cn(
+    ...allFonts.map(f => f.variable),
+    'flex min-h-full w-full antialiased',
+    mode !== 'system' && mode
+  )
+
   return (
     <html
       lang='en'
-      className={cn(...allFonts.map(f => f.variable), 'flex min-h-full w-full antialiased', mode)}
+      className={htmlClassName}
       style={fontStyle}
       data-scroll-behavior='smooth'
       suppressHydrationWarning

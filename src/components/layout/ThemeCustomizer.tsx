@@ -2,7 +2,6 @@
 
 // Next Imports
 import { useTheme } from 'next-themes'
-import Link from 'next/link'
 
 // Third-party Imports
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover'
@@ -118,15 +117,9 @@ const ThemeCustomizer = () => {
                     </TooltipTrigger>
                     <TooltipContent side='bottom' className='max-w-62'>
                       <p>
-                        Refer to the{' '}
-                        <Link
-                          href='https://shadcnstudio.com/docs/documentation-admin/customization#theme-config'
-                          target='_blank'
-                          className='inline font-medium underline'
-                        >
-                          documentation
-                        </Link>{' '}
-                        for detailed theme customization guidance.
+                        These settings are stored in a cookie, which overrides the defaults in{' '}
+                        <code className='font-medium'>src/configs/themeConfig.ts</code>. Reset to see config changes
+                        take effect.
                       </p>
                     </TooltipContent>
                   </Tooltip>

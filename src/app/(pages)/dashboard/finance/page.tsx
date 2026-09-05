@@ -159,7 +159,7 @@ const userData: Item[] = [
     avatar: '/images/avatars/avatar-1.webp',
     fallback: 'JA',
     user: 'Jack Alfredo',
-    email: 'jack.alfredo@shadcnstudio.com',
+    email: 'jack.alfredo@example.com',
     role: 'maintainer',
     plan: 'enterprise',
     billing: 'auto-debit',
