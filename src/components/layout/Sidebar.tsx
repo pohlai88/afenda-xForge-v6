@@ -3,7 +3,7 @@
 // React Imports
 import { type ComponentType } from 'react'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
@@ -57,7 +57,6 @@ import { useSettings } from '@/hooks/use-settings'
 
 // Util Imports
 import { cn } from '@/lib/utils'
-import { getNavApps } from '@/lib/nav-apps'
 
 const isSubGroup = (item: MenuSubItem): item is MenuGroupSubItem => 'childItems' in item
 
@@ -398,47 +397,14 @@ const SidebarLayout = () => {
   const { settings } = useSettings()
   const { state, isMobile } = useSidebar()
 
-  // Remove this state when the nav-apps API is removed. Until then, this state is used to hold the external nav-apps fetched from the API JSON.
-  const [externalApps, setExternalApps] = useState<MenuItem[]>([])
-
   // Branches the user has explicitly opened or closed, keyed by label. It lives here rather
   // than inside each Collapsible so it survives the swap between the inline sub-menu and the
   // icon-mode flyout — collapsing and re-expanding the sidebar keeps the tree as it was.
   // Anything absent from this map falls back to "open if it holds the active route".
   const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
 
-  useEffect(() => {
-    let mounted = true
-
-    getNavApps().then(data => {
-      if (!mounted) return
-
-      setExternalApps(
-        data.map(app => ({
-          icon: app.icon as MenuItem['icon'],
-          label: app.name,
-          href: app.href,
-          ...(app.openInNewTab ? { target: '_blank' as const } : {})
-        }))
-      )
-    })
-
-    return () => {
-      mounted = false
-    }
-  }, [])
-
   // Nav groups rendered in the sidebar.
-  // Remove the externalApps branch when the nav-apps API is removed. Until then, this is used to merge external nav-apps into the "Apps" group.
-  const navGroups = useMemo(
-    () =>
-      externalApps.length > 0
-        ? navItems.map(item =>
-            item.groupLabel === 'Apps' ? { ...item, items: item.items.concat(externalApps) } : item
-          )
-        : navItems,
-    [externalApps]
-  )
+  const navGroups = navItems
 
   const activeBranchKeys = useMemo(
     () => getActiveBranchKeys(navGroups, pathname, searchParams),

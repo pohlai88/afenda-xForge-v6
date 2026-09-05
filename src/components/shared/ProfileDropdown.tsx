@@ -77,7 +77,7 @@ const ProfileDropdown = () => {
         <DropdownMenuSeparator />
 
         <DropdownMenuGroup>
-          <DropdownMenuItem variant='destructive' render={<Link href='/pages/auth/login-v3' />}>
+          <DropdownMenuItem variant='destructive' render={<Link href='/pages/auth/login-v1' />}>
             <LogOutIcon />
             <span>Sign out</span>
           </DropdownMenuItem>

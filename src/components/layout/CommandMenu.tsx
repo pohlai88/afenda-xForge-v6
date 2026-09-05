@@ -7,8 +7,7 @@ import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 // Third-party Imports
-import * as LucideIcons from 'lucide-react'
-import { CircleQuestionMarkIcon, ContactIcon, DollarSignIcon, MailIcon, SearchIcon, TrendingUpIcon } from 'lucide-react'
+import { ContactIcon, MailIcon, SearchIcon, TrendingUpIcon, UserCogIcon, UsersIcon } from 'lucide-react'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
@@ -26,18 +25,12 @@ import {
 import { Kbd } from '@/components/ui/kbd'
 
 // Data Imports
-import { searchData, type SearchData } from '@/assets/data/search'
-
-// Util Imports
-import { getNavApps } from '@/lib/nav-apps'
+import { searchData } from '@/assets/data/search'
 
 const CommandMenu = () => {
   // States
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-
-  // State to hold the external nav-apps fetched from the API JSON. This is used to merge them into the "Apps" group in the command palette.
-  const [externalAppsSearchData, setExternalAppsSearchData] = useState<SearchData['data']>([])
 
   // Hooks
   const router = useRouter()
@@ -69,37 +62,8 @@ const CommandMenu = () => {
     return () => document.removeEventListener('keydown', down)
   }, [])
 
-  // Remove this useEffect when the nav-apps API is removed. Until then, this useEffect is used to fetch the nav-apps from the backend and merge them into the "Apps" group in the command palette.
-  useEffect(() => {
-    let mounted = true
-
-    getNavApps().then(data => {
-      if (!mounted) return
-
-      setExternalAppsSearchData(
-        data.map(app => ({
-          icon: LucideIcons[app.icon as keyof typeof LucideIcons] as SearchData['data'][number]['icon'],
-          name: app.name,
-          href: app.href,
-          ...(app.openInNewTab ? { openInNewTab: true } : {})
-        }))
-      )
-    })
-
-    return () => {
-      mounted = false
-    }
-  }, [])
-
   // Search groups rendered in the command palette.
-  let searchGroups = searchData
-
-  // Remove this condition when the nav-apps API is removed. Until then, this is used to merge external nav-apps into the "Apps" group.
-  if (externalAppsSearchData.length > 0) {
-    searchGroups = searchData.map(group =>
-      group.title === 'Apps' ? { ...group, data: group.data.concat(externalAppsSearchData) } : group
-    )
-  }
+  const searchGroups = searchData
 
   return (
     <>
@@ -189,13 +153,13 @@ const CommandMenu = () => {
                   <TrendingUpIcon />
                   <span>Sales - Dashboard</span>
                 </CommandItem>
-                <CommandItem onSelect={() => runCommand(() => router.push('/pages/pricing'))}>
-                  <DollarSignIcon />
-                  <span>Pricing - Page</span>
+                <CommandItem onSelect={() => runCommand(() => router.push('/apps/users/list'))}>
+                  <UsersIcon />
+                  <span>Users - App</span>
                 </CommandItem>
-                <CommandItem onSelect={() => runCommand(() => router.push('/pages/faq'))}>
-                  <CircleQuestionMarkIcon />
-                  <span>FAQ - Page</span>
+                <CommandItem onSelect={() => runCommand(() => router.push('/pages/user-settings?setting=general'))}>
+                  <UserCogIcon />
+                  <span>Settings - Page</span>
                 </CommandItem>
               </CommandGroup>
             )}

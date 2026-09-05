@@ -40,7 +40,7 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   {
-    groupLabel: 'Dashboard & Layouts',
+    groupLabel: 'Dashboards',
     items: [
       {
         icon: 'TrendingUp',
@@ -53,24 +53,9 @@ export const navItems: NavItem[] = [
         href: '/dashboard/finance'
       },
       {
-        icon: 'Truck',
-        label: 'Logistics',
-        href: '/dashboard/logistics'
-      },
-      {
-        icon: 'Briefcase',
-        label: 'Productivity',
-        href: '/dashboard/productivity'
-      },
-      {
-        icon: 'Megaphone',
-        label: 'Campaign',
-        href: '/dashboard/campaign'
-      },
-      {
-        icon: 'BarChart3',
-        label: 'Analytics',
-        href: '/dashboard/analytics'
+        icon: 'Package',
+        label: 'Orders',
+        href: '/dashboard/orders'
       },
       {
         icon: 'CreditCard',
@@ -78,45 +63,14 @@ export const navItems: NavItem[] = [
         href: '/dashboard/payments'
       },
       {
+        icon: 'Truck',
+        label: 'Logistics',
+        href: '/dashboard/logistics'
+      },
+      {
         icon: 'ShoppingCart',
         label: 'eCommerce',
         href: '/dashboard/ecommerce'
-      },
-      {
-        icon: 'Package',
-        label: 'Orders',
-        href: '/dashboard/orders'
-      },
-      {
-        icon: 'LayoutTemplate',
-        label: 'Layouts',
-        childItems: [
-          {
-            label: 'Default',
-            href: 'https://shadcn-nextjs-admincn-admin-template.vercel.app/',
-            target: '_blank'
-          },
-          {
-            label: 'Full Navbar',
-            href: 'https://shadcn-nextjs-admincn-full-navbar-layout-admin-template.vercel.app/',
-            target: '_blank'
-          },
-          {
-            label: 'Horizontal',
-            href: 'https://shadcn-nextjs-admincn-horizontal-layout-admin-template.vercel.app/',
-            target: '_blank'
-          },
-          {
-            label: 'Split',
-            href: 'https://shadcn-nextjs-admincn-split-layout-admin-template.vercel.app/',
-            target: '_blank'
-          },
-          {
-            label: 'Icon Menu',
-            href: 'https://shadcn-nextjs-admincn-icon-menu-layout-admin-template.vercel.app/',
-            target: '_blank'
-          }
-        ]
       }
     ]
   },
@@ -170,12 +124,6 @@ export const navItems: NavItem[] = [
     groupLabel: 'Pages',
     items: [
       {
-        icon: 'RocketIcon',
-        label: 'Landing Page',
-        href: 'https://shadcn-nextjs-flow-landing-page.vercel.app/',
-        target: '_blank'
-      },
-      {
         icon: 'UserCogIcon',
         label: 'User Settings',
         childItems: [
@@ -199,75 +147,15 @@ export const navItems: NavItem[] = [
         ]
       },
       {
-        icon: 'DollarSignIcon',
-        label: 'Pricing',
-        href: '/pages/pricing'
-      },
-      {
-        icon: 'CircleQuestionMarkIcon',
-        label: 'FAQ',
-        href: '/pages/faq'
-      },
-      {
-        icon: 'FootprintsIcon',
-        label: 'Onboarding',
-        childItems: [
-          { label: 'Onboarding v1', href: '/pages/onboarding-v1', target: '_blank' },
-          { label: 'Onboarding v2', href: '/pages/onboarding-v2', target: '_blank' }
-        ]
-      },
-      {
         icon: 'LockKeyholeIcon',
         label: 'Authentication',
         childItems: [
-          {
-            label: 'Login',
-            childItems: [
-              { label: 'Login v1', href: '/pages/auth/login-v1', target: '_blank' },
-              { label: 'Login v2', href: '/pages/auth/login-v2', target: '_blank' },
-              { label: 'Login v3', href: '/pages/auth/login-v3', target: '_blank' }
-            ]
-          },
-          {
-            label: 'Register',
-            childItems: [
-              { label: 'Register v1', href: '/pages/auth/register-v1', target: '_blank' },
-              { label: 'Register v2', href: '/pages/auth/register-v2', target: '_blank' },
-              { label: 'Register v3', href: '/pages/auth/register-v3', target: '_blank' }
-            ]
-          },
-          {
-            label: 'Forgot Password',
-            childItems: [
-              { label: 'Forgot Password v1', href: '/pages/auth/forgot-password-v1', target: '_blank' },
-              { label: 'Forgot Password v2', href: '/pages/auth/forgot-password-v2', target: '_blank' },
-              { label: 'Forgot Password v3', href: '/pages/auth/forgot-password-v3', target: '_blank' }
-            ]
-          },
-          {
-            label: 'Verify Email',
-            childItems: [
-              { label: 'Verify Email v1', href: '/pages/auth/verify-email-v1', target: '_blank' },
-              { label: 'Verify Email v2', href: '/pages/auth/verify-email-v2', target: '_blank' },
-              { label: 'Verify Email v3', href: '/pages/auth/verify-email-v3', target: '_blank' }
-            ]
-          },
-          {
-            label: 'Reset Password',
-            childItems: [
-              { label: 'Reset Password v1', href: '/pages/auth/reset-password-v1', target: '_blank' },
-              { label: 'Reset Password v2', href: '/pages/auth/reset-password-v2', target: '_blank' },
-              { label: 'Reset Password v3', href: '/pages/auth/reset-password-v3', target: '_blank' }
-            ]
-          },
-          {
-            label: 'Two Steps',
-            childItems: [
-              { label: 'Two Steps v1', href: '/pages/auth/two-steps-v1', target: '_blank' },
-              { label: 'Two Steps v2', href: '/pages/auth/two-steps-v2', target: '_blank' },
-              { label: 'Two Steps v3', href: '/pages/auth/two-steps-v3', target: '_blank' }
-            ]
-          }
+          { label: 'Login', href: '/pages/auth/login-v1', target: '_blank' },
+          { label: 'Register', href: '/pages/auth/register-v1', target: '_blank' },
+          { label: 'Forgot Password', href: '/pages/auth/forgot-password-v1', target: '_blank' },
+          { label: 'Reset Password', href: '/pages/auth/reset-password-v1', target: '_blank' },
+          { label: 'Verify Email', href: '/pages/auth/verify-email-v1', target: '_blank' },
+          { label: 'Two Steps', href: '/pages/auth/two-steps-v1', target: '_blank' }
         ]
       },
       {
@@ -280,112 +168,6 @@ export const navItems: NavItem[] = [
           { label: 'Server Error - 500', href: '/pages/misc/server-error-500', target: '_blank' },
           { label: 'Under Maintenance', href: '/pages/misc/maintenance-page', target: '_blank' }
         ]
-      },
-      {
-        icon: 'FileIcon',
-        label: 'Empty State',
-        childItems: [
-          { label: 'Empty State v1', href: '/pages/empty-state-v1' },
-          { label: 'Empty State v2', href: '/pages/empty-state-v2' }
-        ]
-      }
-    ]
-  },
-  {
-    groupLabel: 'Forms & Tables',
-    items: [
-      {
-        icon: 'LayoutTemplateIcon',
-        label: 'Form Layouts',
-        childItems: [
-          { label: 'Vertical Layout', href: '/forms/form-layouts/vertical' },
-          { label: 'Horizontal Layout', href: '/forms/form-layouts/horizontal' },
-          { label: 'Sticky Actions', href: '/forms/form-layouts/sticky-actions' }
-        ]
-      },
-      {
-        icon: 'BadgeCheckIcon',
-        label: 'Form Validation',
-        href: '/forms/form-validation'
-      },
-      {
-        icon: 'ListTodoIcon',
-        label: 'Form Wizard',
-        childItems: [
-          { label: 'Icons', href: '/forms/form-wizard/icons' },
-          { label: 'Numbered', href: '/forms/form-wizard/numbered' }
-        ]
-      },
-      {
-        icon: 'TableIcon',
-        label: 'Data Table',
-        href: '/datatable'
-      }
-    ]
-  },
-  {
-    groupLabel: 'Components & Charts',
-    items: [
-      {
-        icon: 'LayoutGrid',
-        label: 'Components',
-        href: 'https://shadcnstudio.com/components',
-        target: '_blank'
-      },
-      {
-        icon: 'LineChart',
-        label: 'Charts',
-        href: 'https://shadcnstudio.com/blocks/dashboard-and-application/charts-component',
-        target: '_blank'
-      },
-      {
-        icon: 'ChartNoAxesColumnIncreasing',
-        label: 'Statistics',
-        href: 'https://shadcnstudio.com/blocks/dashboard-and-application/statistics-component',
-        target: '_blank'
-      },
-      {
-        icon: 'PanelTop',
-        label: 'Card Nav',
-        href: 'https://shadcnstudio.com/blocks/dashboard-and-application/card-nav',
-        target: '_blank'
-      },
-      {
-        icon: 'Puzzle',
-        label: 'Widgets',
-        href: 'https://shadcnstudio.com/blocks/dashboard-and-application/widgets-component',
-        target: '_blank'
-      }
-    ]
-  },
-  {
-    groupLabel: 'Miscellaneous',
-    items: [
-      {
-        icon: 'MenuIcon',
-        label: 'Menu Level',
-        childItems: [
-          {
-            label: 'Menu Item ',
-            href: '#'
-          },
-          {
-            label: 'Menu Level 1',
-            childItems: [{ label: 'Menu Level 2', href: '#' }]
-          }
-        ]
-      },
-      {
-        icon: 'InfoIcon',
-        label: 'Support',
-        href: 'https://shadcnstudio.com/support',
-        target: '_blank'
-      },
-      {
-        icon: 'BookOpenTextIcon',
-        label: 'Documentation',
-        href: 'https://shadcnstudio.com/docs/documentation-admin/getting-started',
-        target: '_blank'
       }
     ]
   }

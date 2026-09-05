@@ -8,8 +8,6 @@
 import { db as calendarDb } from '@/fake-db/apps/calendar'
 import { initialColumns, teamMembers } from '@/fake-db/apps/kanban'
 import { db as mailDb } from '@/fake-db/apps/mail'
-import { db as faqDb } from '@/fake-db/pages/faq'
-import { db as pricingDb } from '@/fake-db/pages/pricing'
 import { db as userSettingsDb } from '@/fake-db/pages/user-settings'
 import { db as userProfileDb } from '@/fake-db/pages/user-profile'
 
@@ -40,13 +38,3 @@ export const getIntegrationsData = async () => userSettingsDb.integrations
 
 // User Profile Actions
 export const getProfileData = async () => userProfileDb
-
-// Pricing Actions
-export const getPricingData = async () => {
-  return pricingDb
-}
-
-// FAQ Actions
-export const getFaqData = async () => {
-  return faqDb
-}

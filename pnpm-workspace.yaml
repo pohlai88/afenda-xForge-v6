@@ -1,5 +1,10 @@
 packages:
   - .
+allowBuilds:
+  sharp: false
+  styled-components: false
+  unrs-resolver: false
 ignoredBuiltDependencies:
   - sharp
+  - styled-components
   - unrs-resolver
