@@ -25,7 +25,7 @@ const LoginV1 = () => {
           </Link>
 
           <div>
-            <CardTitle className='mb-2 text-2xl font-semibold'>Sign in to Shadcn Studio</CardTitle>
+            <CardTitle className='mb-2 text-2xl font-semibold'>Sign in to Afenda xForge</CardTitle>
             <CardDescription className='text-base'>Ship Faster and Focus on Growth.</CardDescription>
           </div>
         </CardHeader>

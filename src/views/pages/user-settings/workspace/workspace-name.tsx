@@ -59,7 +59,7 @@ const WorkspaceName = () => {
         {/* Workspace Name */}
         <div className='flex flex-col items-start gap-1'>
           <Label htmlFor='workspace-name'>Workspace Name</Label>
-          <Input id='workspace-name' placeholder='Shadcn Studio' defaultValue='Shadcn Studio' />
+          <Input id='workspace-name' placeholder='Afenda xForge' defaultValue='Afenda xForge' />
         </div>
         {/* Workspace ID */}
         <div className='w-full space-y-2'>

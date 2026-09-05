@@ -124,10 +124,10 @@ export const db: UserProfilePageData = {
     },
     {
       id: 'upp-003',
-      name: 'Shadcn UI Admin Dashboard',
-      type: 'Shadcn Project',
-      logo: '/images/brands/shadcn-logo.webp',
-      logoDark: '/images/brands/shadcn-logo.webp',
+      name: 'Afenda xForge Rollout',
+      type: 'Internal Project',
+      logo: '/images/brands/claude.webp',
+      logoDark: '/images/brands/claude.webp',
       leader: 'Sophia Patel',
       team: [{ avatar: '/images/avatars/avatar-5.webp', initials: 'SP' }, { initials: 'AL' }],
       teamExtraCount: 3,
@@ -410,12 +410,12 @@ export const db: UserProfilePageData = {
     },
     {
       id: 2,
-      title: 'Shadcn Team',
+      title: 'Platform Team',
       description:
-        'The development of Shadcn and its ecosystem is guided by an international team, some of whom have chosen.',
+        'The platform and its ecosystem are guided by an international team, some of whom have chosen.',
       initials: 'SD',
-      avatar: '/images/brands/shadcn-logo.webp',
-      avatarDark: '/images/brands/shadcn-logo.webp',
+      avatar: '/images/brands/claude.webp',
+      avatarDark: '/images/brands/claude.webp',
       members: [
         { name: 'Ethan Ross', initials: 'ER', avatar: '/images/avatars/avatar-8.webp' },
         { name: 'Mia Stewart', initials: 'MS', avatar: '/images/avatars/avatar-2.webp' },
@@ -424,7 +424,7 @@ export const db: UserProfilePageData = {
       extraMembersCount: 4,
       tags: [
         {
-          label: 'Shadcn'
+          label: 'Platform'
         },
         { label: 'Developer' }
       ]

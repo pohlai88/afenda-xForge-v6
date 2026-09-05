@@ -65,7 +65,7 @@ const LoginV1Form = () => {
         </div>
         <Field>
           <Button className='w-full' type='submit'>
-            Sign in to Shadcn Studio
+            Sign in to Afenda xForge
           </Button>
         </Field>
       </FieldGroup>

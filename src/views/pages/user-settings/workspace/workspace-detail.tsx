@@ -125,7 +125,7 @@ const WorkspaceDetail = () => {
         {/* Workspace slug */}
         <div className='w-full space-y-2'>
           <Label htmlFor='workspace-slug'>Workspace Slug</Label>
-          <Input id='workspace-slug' type='text' placeholder='shadcn-studio' />
+          <Input id='workspace-slug' type='text' placeholder='afenda-xforge' />
           <p className='text-muted-foreground text-xs'>
             Only lowercase letters, numbers, and hyphens. Max 48 Characters
           </p>

@@ -25,7 +25,7 @@ const RegisterV1 = () => {
           </Link>
 
           <div>
-            <CardTitle className='mb-2 text-2xl font-semibold'>Sign Up to Shadcn studio</CardTitle>
+            <CardTitle className='mb-2 text-2xl font-semibold'>Sign up to Afenda xForge</CardTitle>
             <CardDescription className='text-base'>Ship Faster and Focus on Growth.</CardDescription>
           </div>
         </CardHeader>

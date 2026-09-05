@@ -96,7 +96,7 @@ const RegisterV1Form = () => {
         </Field>
         <Field>
           <Button className='w-full' type='submit'>
-            Sign Up to Shadcn Studio
+            Sign up to Afenda xForge
           </Button>
         </Field>
       </FieldGroup>

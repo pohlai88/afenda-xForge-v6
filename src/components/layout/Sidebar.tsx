@@ -443,7 +443,7 @@ const SidebarLayout = () => {
               className='gap-2.5 bg-transparent! [&>svg]:size-8'
               render={<Link href={`${themeConfig.homePageUrl}`} />}
             >
-              <LogoSvg className='[&_rect]:fill-sidebar [&_rect:first-child]:fill-primary' />
+              <LogoSvg />
               <div className='flex flex-col items-start'>
                 <span className='text-lg font-semibold text-nowrap'>{themeConfig.templateName}</span>
                 <span className='text-xs font-light text-nowrap'>{themeConfig.tagline}</span>
