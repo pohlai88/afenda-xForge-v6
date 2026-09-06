@@ -42,23 +42,34 @@ Only after all three come up empty is new construction the right answer.
 **Never use Tailwind palette colours** (`text-green-600`, `bg-sky-500`, `border-slate-200`) or hex
 values in `src/views` or `src/app`. They ignore the theme, so they do not move when the theme does.
 
-The repo has no `success` or `warning` token. The established mapping is:
-
 | Meaning | Token |
 |---|---|
-| Good / positive / approved | `chart-2` |
-| Warning / pending / attention | `chart-5` |
+| Good / positive / approved | `success` |
+| Warning / pending / attention | `warning` |
+| Informational / connected / neutral-blue | `info` |
 | Bad / error / blocking | `destructive` |
-| Done / settled / primary action | `primary` |
 | Secondary text, inert state | `muted-foreground` |
-| Series 1–5 on charts | `chart-1` … `chart-5` |
+| Categories in a set — file types, chart series | `chart-1` … `chart-5` |
+
+**`chart-1`…`chart-5` are a categorical palette, not semantic colours.** Their job is to be
+distinguishable from each other inside one chart, and their hues legitimately differ between light
+and dark. Using them for status once put `chart-5` (warning) at ΔE 20 from `destructive` in dark
+mode, so a Warning and a Blocking exception were the same colour — while looking fine in light.
+Use them for sets of peers; never to mean something.
+
+Note `--primary` in this theme is monochrome (near-black in light, near-white in dark). It is not a
+hue and cannot stand in for a status colour.
 
 Soft badges and icon chips use a tint of the token, not the solid colour:
-`bg-destructive/10 text-destructive`, `bg-chart-2/15 text-chart-2`.
+`bg-destructive/10 text-destructive`, `bg-success/15 text-success`.
 
-**Current state: 46 offending lines across 25 files**, almost all inherited from the AdminCN
-template — run the audit below to confirm. Do not add to them; convert opportunistically when you
-touch a file.
+Status colours are decided once, in `PAY_RUN_STATUS_STYLES` (`src/utils/payroll-metrics.ts`) for
+pay runs. A component renders the status; it does not re-decide the colour.
+
+**Current state: zero.** All 59 inherited palette usages were converted; the audit below should
+stay at zero. A light/dark pair collapses to one token — `text-green-600 dark:text-green-400`
+became `text-success`, because the token is already theme-aware and the pair only ever hand-rolled
+what the token does for free.
 
 ## Cards: use the primitives, not lookalikes
 
@@ -160,8 +171,8 @@ Not negotiable, and not a separate "accessibility pass" — a change is not done
 This is a data-dense product, so these carry more weight here than generic UI advice.
 
 - **Sortable tables need `aria-sort`** on the active column header (`ascending` / `descending`,
-  `none` on other sortable columns). A chevron is invisible to a screen reader. Every datatable in
-  `src/views/datatables` is currently missing this; `payroll-run-history.tsx` is the one that has it.
+  `none` on other sortable columns). A chevron is invisible to a screen reader. All six sortable
+  tables use the shared `ariaSortFor` helper in `src/utils/table-utils.ts` — do not inline a copy.
 - **A chart is not screen-reader accessible on its own.** Give it a text alternative — either an
   `aria-label` summarising the insight, or the same figures rendered as text nearby.
   `payroll-run-status.tsx` does the latter deliberately: the gross-to-net bridge chart's numbers also

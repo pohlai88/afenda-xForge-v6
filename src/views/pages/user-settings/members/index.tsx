@@ -128,7 +128,7 @@ const Members = ({ membersData }: MembersProps) => {
                   {isAdmin && (
                     <span className='absolute -top-1.5 -right-1.5'>
                       <span className='sr-only'>Verified</span>
-                      <BadgeCheck className='text-background size-5 fill-sky-500' />
+                      <BadgeCheck className='text-background size-5 fill-info' />
                     </span>
                   )}
                 </div>

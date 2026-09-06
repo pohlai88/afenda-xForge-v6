@@ -244,7 +244,7 @@ const ApiKey = () => {
                       variant={apiKey.status === 'active' ? 'default' : 'secondary'}
                       className={
                         apiKey.status === 'active'
-                          ? 'bg-green-600/10 text-green-600'
+                          ? 'bg-success/10 text-success'
                           : 'bg-destructive/10 text-destructive'
                       }
                     >

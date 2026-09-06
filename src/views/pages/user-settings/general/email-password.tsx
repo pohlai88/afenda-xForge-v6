@@ -42,14 +42,15 @@ const EmailPass = () => {
     return strength.filter(req => req.met).length
   }, [strength])
 
+  // Buckets match getText below. They did not before: score 1 was red and score 2 orange, but
+  // both read "Weak password", and score 4 was amber while reading "Strong". The bar's length
+  // carries the degree; its colour should agree with the words next to it.
   const getColor = (score: number) => {
     if (score === 0) return 'bg-border'
-    if (score <= 1) return 'bg-destructive'
-    if (score <= 2) return 'bg-orange-500 '
-    if (score <= 3) return 'bg-amber-500'
-    if (score === 4) return 'bg-yellow-400'
+    if (score <= 2) return 'bg-destructive'
+    if (score <= 3) return 'bg-warning'
 
-    return 'bg-green-500'
+    return 'bg-success'
   }
 
   const getText = (score: number) => {
@@ -152,13 +153,11 @@ const EmailPass = () => {
               {strength.map((req, index) => (
                 <li key={index} className='flex items-center gap-2'>
                   {req.met ? (
-                    <CheckIcon className='size-4 text-green-600 dark:text-green-400' />
+                    <CheckIcon className='text-success size-4' />
                   ) : (
                     <XIcon className='text-muted-foreground size-4' />
                   )}
-                  <span
-                    className={cn('text-xs', req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground')}
-                  >
+                  <span className={cn('text-xs', req.met ? 'text-success' : 'text-muted-foreground')}>
                     {req.text}
                     <span className='sr-only'>{req.met ? ' - Requirement met' : ' - Requirement not met'}</span>
                   </span>

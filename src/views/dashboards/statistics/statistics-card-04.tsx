@@ -28,7 +28,7 @@ const StatisticsCard = ({ title, badgeContent, value, changePercentage, svg, cla
       <CardContent className='flex items-center gap-2 lg:max-[1100px]:flex-col lg:max-[1100px]:items-start'>
         <span className='text-2xl font-semibold'>{value}</span>
         <span
-          className={cn('text-sm', changePercentage >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}
+          className={cn('text-sm', changePercentage >= 0 ? 'text-success' : 'text-destructive')}
         >
           {changePercentage > 0 ? '+' : ''}
           {changePercentage}%

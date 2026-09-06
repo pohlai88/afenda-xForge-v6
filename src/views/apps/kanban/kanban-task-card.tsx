@@ -96,8 +96,8 @@ export function TaskCard({ task, isOverlay, onEdit, onDelete, className, ...prop
                   task.priority === 'high'
                     ? 'bg-destructive/10 text-destructive'
                     : task.priority === 'medium'
-                      ? 'bg-amber-600/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400'
-                      : 'bg-indigo-500/10 text-indigo-500'
+                      ? 'bg-warning/10 text-warning'
+                      : 'bg-info/10 text-info'
                 )}
               >
                 {task.priority}

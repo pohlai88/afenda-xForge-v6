@@ -28,10 +28,14 @@ const ATTACHMENT_FILE_ICONS: Record<ActivityFileType, typeof FileTextIcon> = {
 }
 
 const ATTACHMENT_BADGE_STYLES: Record<ActivityFileType, string> = {
-  pdf: 'border-red-600 text-red-600 dark:border-red-400 dark:text-red-400',
-  image: 'border-sky-600 text-sky-600 dark:border-sky-400 dark:text-sky-400',
-  doc: 'border-primary text-primary',
-  excel: 'border-green-600 text-green-600 dark:border-green-400 dark:text-green-400'
+  // File types are categories, not statuses: a PDF is not an error and a spreadsheet is not a
+  // success. chart-1..4 is the categorical palette — its job is mutual distinguishability, which
+  // is exactly what is wanted here. The icon and filename already identify the type, so colour is
+  // reinforcement rather than the signal, and losing the red-means-PDF convention costs nothing.
+  pdf: 'border-chart-1 text-chart-1',
+  image: 'border-chart-2 text-chart-2',
+  doc: 'border-chart-3 text-chart-3',
+  excel: 'border-chart-4 text-chart-4'
 }
 
 function ActivityAttachment({ attachment }: { attachment: NonNullable<UserActivityItem['attachment']> }) {

@@ -66,7 +66,7 @@ const ListView = ({ groupedContacts, className }: ListViewProps) => {
                     <span className='font-medium'>
                       {contact.firstName} {contact.lastName}
                     </span>
-                    <span className='truncate text-sm text-gray-500'>{contact.email}</span>
+                    <span className='truncate text-sm text-muted-foreground'>{contact.email}</span>
                   </div>
                 </div>
                 <div className='flex shrink-0 items-center gap-2'>

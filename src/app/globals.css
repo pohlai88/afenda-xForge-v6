@@ -29,6 +29,7 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -73,6 +74,7 @@
      theme, and --chart-5 is amber in light but red in dark. */
   --success: oklch(0.6 0.13 152);
   --warning: oklch(0.75 0.15 75);
+  --info: oklch(0.6 0.13 240);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -110,6 +112,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --success: oklch(0.7 0.16 162);
   --warning: oklch(0.8 0.15 80);
+  --info: oklch(0.7 0.14 240);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);

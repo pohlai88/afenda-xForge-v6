@@ -18,8 +18,8 @@ import { getInitialsFromName } from '@/configs/mailConfig'
 import { cn } from '@/lib/utils'
 
 const STATUS_DOT_STYLES: Record<UserStatus, string> = {
-  Active: 'bg-green-500',
-  Pending: 'bg-amber-500',
+  Active: 'bg-success',
+  Pending: 'bg-warning',
   Suspended: 'bg-destructive',
   Inactive: 'bg-muted-foreground'
 }

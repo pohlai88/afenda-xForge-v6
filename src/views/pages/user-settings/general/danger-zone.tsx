@@ -36,7 +36,7 @@ const DangerZone = () => {
                   render={
                     <Button
                       variant='outline'
-                      className='border-destructive! text-destructive! hover:bg-destructive/10! focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 max-lg:w-full'
+                      className='border-destructive! text-destructive! hover:bg-destructive/10! focus-visible:ring-destructive/20 max-lg:w-full'
                     />
                   }
                 >

@@ -18,8 +18,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 
 const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
-  paid: 'bg-green-600/10 text-green-600 dark:bg-green-400/10 dark:text-green-400',
-  pending: 'bg-amber-600/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400',
+  paid: 'bg-success/10 text-success',
+  pending: 'bg-warning/10 text-warning',
   cancelled: 'bg-destructive/10 text-destructive',
   draft: 'bg-muted text-muted-foreground'
 }

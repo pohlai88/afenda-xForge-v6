@@ -60,7 +60,7 @@ const GridView = ({ contacts }: GridViewProps) => {
               <span className='self-center truncate font-medium'>
                 {contact.firstName} {contact.lastName}
               </span>
-              <span className='truncate text-sm text-gray-500'>{contact.email}</span>
+              <span className='truncate text-sm text-muted-foreground'>{contact.email}</span>
             </div>
             <div className='flex flex-wrap gap-1'>
               {/* sm–md: 2 badges | md–lg: 1 badge | lg+: 2 badges */}

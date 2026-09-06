@@ -53,7 +53,7 @@ const IntegrationsPlanning = ({ apps }: { apps: IntegrationApp[] }) => {
                   aria-label={`Toggle connect for ${app.name}`}
                   className={cn(
                     connected[index]
-                      ? 'border-sky-600 text-sky-600! hover:bg-sky-600/10 focus-visible:border-sky-600 focus-visible:ring-sky-600/20 dark:border-sky-400 dark:text-sky-400! dark:hover:bg-sky-400/10 dark:focus-visible:border-sky-400 dark:focus-visible:ring-sky-400/40'
+                      ? 'border-info text-info! hover:bg-info/10 focus-visible:border-info focus-visible:ring-info/20!'
                       : ''
                   )}
                 >

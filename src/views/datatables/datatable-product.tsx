@@ -186,11 +186,11 @@ const columns: ColumnDef<Item>[] = [
 
       const styles = {
         publish:
-          'bg-green-600/10 text-green-600 focus-visible:ring-green-600/20 dark:bg-green-400/10 dark:text-green-400 dark:focus-visible:ring-green-400/40 [a&]:hover:bg-green-600/5 dark:[a&]:hover:bg-green-400/5',
+          'bg-success/10 text-success focus-visible:ring-success/20 [a&]:hover:bg-success/5 dark:[a&]:hover:bg-success/5',
         inactive:
-          'bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 text-destructive',
+          'bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 text-destructive',
         scheduled:
-          'bg-amber-600/10 text-amber-600 focus-visible:ring-amber-600/20 dark:bg-amber-400/10 dark:text-amber-400 dark:focus-visible:ring-amber-400/40 [a&]:hover:bg-amber-600/5 dark:[a&]:hover:bg-amber-400/5'
+          'bg-warning/10 text-warning focus-visible:ring-warning/20 [a&]:hover:bg-warning/5 dark:[a&]:hover:bg-warning/5'
       }[status]
 
       return (
