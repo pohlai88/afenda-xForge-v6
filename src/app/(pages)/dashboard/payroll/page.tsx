@@ -4,7 +4,7 @@ import { BanknoteIcon, UsersIcon, WalletIcon } from 'lucide-react'
 // Component Imports
 import PayrollKpiStrip, { type KpiMetric } from '@/views/dashboards/payroll/payroll-kpi-strip'
 import PayrollOvertimeGauge from '@/views/dashboards/payroll/payroll-overtime-gauge'
-import PayrollByDepartment from '@/views/dashboards/payroll/payroll-by-department'
+import PayrollByDepartment, { type DepartmentRow } from '@/views/dashboards/payroll/payroll-by-department'
 import PayrollCostTrend from '@/views/dashboards/payroll/payroll-cost-trend'
 import PayrollExceptionQueue, { type ExceptionRow } from '@/views/dashboards/payroll/payroll-exception-queue'
 import PayrollGrossToNet from '@/views/dashboards/payroll/payroll-gross-to-net'
@@ -137,6 +137,19 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
     }
   ]
 
+  const departmentHeads = new Map(departments.map(d => [d.id, d.headEmployeeId]))
+
+  const departmentRows: DepartmentRow[] = costByDepartment(
+    slips,
+    employees,
+    departments,
+    currentRun.currency
+  ).map(row => {
+    const head = employeeById.get(departmentHeads.get(row.departmentId) ?? '')
+
+    return { ...row, headName: head && `${head.firstName} ${head.lastName}`, headAvatar: head?.avatar }
+  })
+
   const costTrend = runs.map(run => ({
     reference: run.reference.replace('PR-', ''),
     cost: toMajorUnits(run.totals.employerCost),
@@ -175,10 +188,7 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
         className='col-span-full lg:col-span-4'
       />
 
-      <PayrollByDepartment
-        departments={costByDepartment(slips, employees, departments, currentRun.currency)}
-        className='col-span-full lg:col-span-2'
-      />
+      <PayrollByDepartment departments={departmentRows} className='col-span-full lg:col-span-2' />
 
       <PayrollCostTrend points={costTrend} currencySymbol={CURRENCY_SYMBOL} className='col-span-full' />
 
