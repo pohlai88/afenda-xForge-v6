@@ -109,6 +109,12 @@ card-action slot is present.
 
 - `<Button>` not `<button>`; `<Input>`/`<InputGroup>` not `<input>`. A raw `<button>` gets none of
   the app's focus ring, which is visible the moment it sits beside a real `Button`.
+- **Exception: fixed visual conventions.** A few things are deliberately not themeable and stay on
+  literal colours: `src/assets/svg/logo.tsx` (brand gradient), the `yellow` variant in
+  `components/ui/rating.tsx` (gold stars are the star metaphor, not a status), and the default
+  colour props of the canvas effects `bg-silk.tsx` / `background-ripple.tsx` (a canvas cannot read a
+  Tailwind class). Each is a convention that must survive a theme change, which is the opposite of
+  what a token is for.
 - **Exception: hidden file inputs.** A native file picker cannot be styled, so the pattern is a
   hidden `<input type='file'>` clicked programmatically by a `Button`, or one owned by a library
   through `getInputProps`. Those five stay raw — wrapping them in `<Input>` would style an element
@@ -267,10 +273,10 @@ first, watch it go red, then fix.
 
 ```bash
 # palette colours that should be semantic tokens (target: 0 in files you touched)
-grep -rnE "\b(bg|text|border)-(red|green|blue|yellow|orange|purple|pink|gray|slate|zinc|sky|emerald)-[0-9]{2,3}" src/views src/app --include=*.tsx
+grep -rnE "\b(bg|text|border)-(red|green|blue|yellow|orange|purple|pink|gray|slate|zinc|sky|emerald)-[0-9]{2,3}" src/views src/app src/components/shared --include=*.tsx
 
 # hardcoded hex
-grep -rnE "#[0-9a-fA-F]{6}\b" src/views src/app --include=*.tsx
+grep -rnE "#[0-9a-fA-F]{6}\b" src/views src/app src/components/shared --include=*.tsx
 
 # card headers faking a title instead of using CardTitle.
 # Must look INSIDE the header: a file-level grep counts a metric value in CardContent as a title,
@@ -280,7 +286,7 @@ import io, os, re
 H = re.compile(r'<CardHeader[^>]*>(.*?)</CardHeader>', re.S)
 A = re.compile(r'<CardAction[^>]*>.*?</CardAction>', re.S)
 T = re.compile(r"<span className='text-lg font-semibold'>")
-for d, _, fs in os.walk('src/views'):
+for d, _, fs in os.walk('src'):
     for f in fs:
         if not f.endswith('.tsx'): continue
         p = os.path.join(d, f)
@@ -290,7 +296,7 @@ EOF
 
 # raw elements where a primitive exists. Exclude hidden and library-owned file inputs — see the
 # exception below; without the filter this reports 6 and 5 of them are correct.
-grep -rnE "<(button|input)[ >]" src/views src/app --include=*.tsx | grep -vE "type='file'|getInputProps"
+grep -rnE "<(button|input)[ >]" src/views src/app src/components/shared --include=*.tsx | grep -vE "type='file'|getInputProps"
 ```
 
 Then the real gates:

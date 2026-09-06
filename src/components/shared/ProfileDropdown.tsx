@@ -34,7 +34,7 @@ const ProfileDropdown = () => {
           <AvatarImage src={STATIC_USER.imageUrl} alt={STATIC_USER.fullName} />
           <AvatarFallback>{STATIC_USER.initials}</AvatarFallback>
         </Avatar>
-        <span className='ring-card absolute right-0 bottom-0 block size-2 rounded-full bg-green-600 ring-2' />
+        <span className='ring-card bg-success absolute right-0 bottom-0 block size-2 rounded-full ring-2' />
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end' className='w-60'>
         <DropdownMenuGroup>
@@ -44,7 +44,7 @@ const ProfileDropdown = () => {
                 <AvatarImage src={STATIC_USER.imageUrl} alt={STATIC_USER.fullName} />
                 <AvatarFallback>{STATIC_USER.initials}</AvatarFallback>
               </Avatar>
-              <span className='ring-card absolute right-0 bottom-0 block size-2 rounded-full bg-green-600 ring-2' />
+              <span className='ring-card bg-success absolute right-0 bottom-0 block size-2 rounded-full ring-2' />
             </div>
             <div className='flex flex-1 flex-col items-start'>
               <span className='text-foreground text-base font-semibold'>{STATIC_USER.fullName}</span>
