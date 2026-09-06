@@ -2,7 +2,7 @@
 
 // React Imports
 import * as React from 'react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 
 // Next Imports
@@ -71,8 +71,9 @@ const ObjectCommandItems = ({
   object,
   commands,
   onOpenProperties,
-  parts
-}: ObjectCommandsProps & { parts: MenuParts }) => {
+  parts,
+  anchorRef
+}: ObjectCommandsProps & { parts: MenuParts; anchorRef?: React.Ref<HTMLDivElement> }) => {
   const { Group, Item, Separator } = parts
   const groups = groupCommands(commands)
 
@@ -80,7 +81,17 @@ const ObjectCommandItems = ({
 
   return (
     <>
-      <div aria-hidden='true' className='text-muted-foreground truncate px-2 py-1.5 text-xs font-medium'>
+      {/*
+        The object's name, and — when the caller asks for it — the handle by which the mounted
+        popup is found. It is already inside the popup and already rendered, so a menu needs no
+        extra element to be reachable from its own content, and nothing is added to the accessible
+        tree that was not there before.
+      */}
+      <div
+        ref={anchorRef}
+        aria-hidden='true'
+        className='text-muted-foreground truncate px-2 py-1.5 text-xs font-medium'
+      >
         {object.label}
       </div>
       {groups.map((group, index) => (
@@ -120,6 +131,66 @@ const ObjectCommandItems = ({
   )
 }
 
+/** The control the keypress came from, remembered so focus can be handed back to exactly it. */
+type KeyboardInvocation = { target: HTMLElement | null }
+
+const FIRST_ENABLED_ITEM = '[role="menuitem"]:not([data-disabled]):not([aria-disabled="true"])'
+
+/**
+ * Whether an opening came from the keyboard, read from the event that opened the menu.
+ *
+ * Shift+F10 and the Menu key make the browser raise a `contextmenu` reporting no mouse button at
+ * all; a right-click reports button 2. Measured on this app: keyboard `button: -1, buttons: 0,
+ * detail: 0`, right-click `button: 2`.
+ *
+ * Taken from Base UI's own opening event rather than from an `onKeyDown` passed alongside
+ * `render`, because whether a caller's handler survives the primitive's prop merging is not
+ * something a keyboard user's only route to a command should rest on.
+ */
+const keyboardInvocationFrom = (event: Event | undefined): KeyboardInvocation | null => {
+  if (!event || event.type !== 'contextmenu') return null
+
+  const mouse = event as MouseEvent
+
+  if (mouse.button === 2 || mouse.buttons !== 0 || mouse.detail !== 0) return null
+
+  return { target: (event.target as HTMLElement | null) ?? null }
+}
+
+/**
+ * Hands focus to the first command when the menu was opened from the keyboard.
+ *
+ * This renders *inside* the popup, which is the whole point. The previous attempt ran from
+ * `onOpenChange` — which fires before the portalled popup exists — and chased it across ten
+ * animation frames; that is a race, and it lost, observed on Run History as a menu that opened
+ * correctly and could not then be driven. Mounting is the signal: by the time this effect runs its
+ * siblings are in the document, so there is nothing to poll for and nothing to cancel, because the
+ * popup unmounts on close and takes the effect with it.
+ *
+ * The first enabled item takes focus rather than the popup itself, so a keyboard user lands on
+ * something actionable and Base UI's roving focus continues from there. Focusing twice under
+ * Strict Mode is the same as focusing once.
+ *
+ * Nothing here runs for a pointer opening.
+ */
+const KeyboardFocusHandoff = ({
+  invocation,
+  anchorRef
+}: {
+  invocation: React.RefObject<KeyboardInvocation | null>
+  anchorRef: React.RefObject<HTMLDivElement | null>
+}) => {
+  useEffect(() => {
+    if (!invocation.current) return
+
+    const popup = anchorRef.current?.closest<HTMLElement>('[role="menu"]')
+
+    popup?.querySelector<HTMLElement>(FIRST_ENABLED_ITEM)?.focus()
+  }, [invocation, anchorRef])
+
+  return null
+}
+
 /**
  * Wraps a row, card or header so right-clicking it asks "what can I do with this object?".
  *
@@ -138,66 +209,41 @@ export const ObjectContextMenu = ({
   render,
   children
 }: ObjectCommandsProps & { render?: ReactElement; children: ReactNode }) => {
-  const popupRef = useRef<HTMLDivElement>(null)
-  const keyboardInvoked = useRef(false)
+  const anchorRef = useRef<HTMLDivElement>(null)
 
-  // The keypress lands on whatever focusable control the object owns — its link or name button —
-  // and bubbles here, which is why the row itself never needs to be focusable.
-  const handleTriggerKeyDown = (event: React.KeyboardEvent) => {
-    if ((event.shiftKey && event.key === 'F10') || event.key === 'ContextMenu') {
-      keyboardInvoked.current = true
-    }
-  }
+  // Decided afresh on every opening, so a pointer open can never inherit a keyboard one.
+  const invocation = useRef<KeyboardInvocation | null>(null)
 
   return (
     <ContextMenu
-      onOpenChange={open => {
-        // Base UI builds this menu for right-click and long-press, so it leaves focus on the
-        // trigger. Opened with Shift+F10 that gave a menu the keyboard could not drive at all:
-        // it appeared, but arrow keys still went to the row behind it. Handing focus to the
-        // popup starts the menu's own roving focus, and Base UI returns focus to the trigger
-        // on close. A frame's delay because the popup mounts into a portal.
-        //
-        // Only for keyboard invocation. Pointer users already get the behaviour they expect,
-        // and moving focus underneath a right-click would be a change to a path that works.
-        if (open && keyboardInvoked.current) {
-          // The popup mounts into a portal after this callback, so a single frame is too early —
-          // the first attempt found nothing to focus and the menu opened undriveable. Retry across
-          // a few frames and give up quietly rather than leave a loop running.
-          let attempts = 0
-
-          const focusPopup = () => {
-            if (popupRef.current) {
-              popupRef.current.focus()
-
-              return
-            }
-
-            attempts += 1
-
-            if (attempts < 10) {
-              requestAnimationFrame(focusPopup)
-            }
-          }
-
-          requestAnimationFrame(focusPopup)
-        }
-
-        if (!open) {
-          keyboardInvoked.current = false
-        }
+      onOpenChange={(open, details) => {
+        if (open) invocation.current = keyboardInvocationFrom(details.event)
       }}
     >
-      <ContextMenuTrigger render={render ?? <div className='contents' />} onKeyDown={handleTriggerKeyDown}>
-        {children}
-      </ContextMenuTrigger>
-      <ContextMenuContent ref={popupRef} className='min-w-52' aria-label={`Commands for ${object.label}`}>
+      <ContextMenuTrigger render={render ?? <div className='contents' />}>{children}</ContextMenuTrigger>
+      <ContextMenuContent
+
+        /*
+         * Back to the exact control the keypress came from, never the row or the table.
+         *
+         * Needed only because the user may have arrowed away from where focus was handed: Base UI
+         * restores correctly while focus is still on the item it was given, and strands it on the
+         * unmounting popup once the highlight has moved. Observed both ways. `true` hands the
+         * pointer path back to Base UI's own behaviour, which is what returns focus to the ellipsis
+         * trigger and is left untouched.
+         */
+        finalFocus={() => invocation.current?.target ?? true}
+        className='min-w-52'
+        aria-label={`Commands for ${object.label}`}
+      >
         <ObjectCommandItems
           object={object}
           commands={commands}
           onOpenProperties={onOpenProperties}
           parts={CONTEXT_PARTS}
+          anchorRef={anchorRef}
         />
+        <KeyboardFocusHandoff invocation={invocation} anchorRef={anchorRef} />
       </ContextMenuContent>
     </ContextMenu>
   )

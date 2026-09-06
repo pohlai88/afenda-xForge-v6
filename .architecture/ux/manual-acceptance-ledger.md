@@ -50,27 +50,30 @@ rows with a bank reference to copy, and the rows that have no reference yet rend
 cell rather than a button whose menu would only repeat the click. Right-click still reaches them, so
 the manual pass should check one of each.
 
-## Observed 2026-09-07 on Run history — the open half PASSES, the focus half FAILS
+## Observed 2026-09-07 — keyboard handoff fixed, one gate still open
 
-Key delivery worked for one session, on `/payroll/entities/ent-sg`, and settled two of these gates
-for that surface.
+Key delivery worked for a long stretch, and settled most of this table on two surfaces:
+**Run history** (`/payroll/entities/ent-sg`, run reference link) and the **Run queue**
+(`/payroll/runs`, run reference link).
 
-**`Shift+F10` opens: PASS.** Focusing the `PR-SG-2026-07` reference and pressing it produced a
-**trusted** `contextmenu` on the link and opened `Commands for PR-SG-2026-07` with
-`Open run · Copy reference · View audit trail`.
+| Gate | Run history | Run queue |
+| --- | --- | --- |
+| `Shift+F10` opens the right menu | PASS | PASS |
+| Focus lands on the first enabled command | PASS | PASS |
+| Arrows move through the items | PASS | PASS |
+| Escape closes | PASS | PASS |
+| Escape returns focus to the originating control | **FAIL after arrowing** | **FAIL after arrowing** |
 
-**Focus lifecycle: FAIL.** Focus stayed on the link. `ArrowDown` did not enter the menu, no item
-took `data-highlighted`, and `document.activeElement` was still the reference afterwards. Focusing
-the popup by hand worked immediately and it carries `tabindex="-1"`, so the popup is fine — the
-Phase 01 keyboard-origin bridge in `ObjectCommands.tsx` is not taking effect. Phase 01 recorded the
-same symptom on the Register and the Run Queue; this is the first time it has been observed rather
-than inferred.
+**The one open gate.** Escape restores focus correctly while focus is still on the item the
+handoff put there. Once the user has arrowed to a different item, the menu closes but focus is
+stranded on the unmounting popup item, and the `finalFocus` that names the originating control is
+not honoured. Reproduced on both surfaces, against a bundle verified to contain the fix.
 
-**The `⋮` still does not open** from a synthetic pointer event — all five triggers stayed
-`aria-expanded="false"` — so rows 2, 4, 7 and 10 remain NOT VERIFIED.
+**The `⋮` still does not open** from a synthetic pointer event — the trigger takes focus and stays
+`aria-expanded="false"`, the documented Base UI limitation. Rows 2, 4, 7 and 10 remain NOT VERIFIED.
 
-This is a Phase 01 defect, not a table-engine one. The documented ownership boundary puts initial
-popup focus on the Afenda bridge; the engine owns which object a row is and nothing about focus.
+**Right-click is unaffected** by the keyboard work: it opens for the correct object with the same
+commands and Properties last, focus stays on the document, and no item is highlighted.
 
 ## What has been observed
 
