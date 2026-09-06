@@ -185,7 +185,23 @@ const PayrollRunHistory = ({ runs, selectedReference, className }: Props) => {
                     const sorted = header.column.getIsSorted()
 
                     return (
-                      <TableHead key={header.id} className={cn(alignRight && 'text-right')}>
+                      <TableHead
+                        key={header.id}
+                        className={cn(alignRight && 'text-right')}
+
+                        // Screen readers announce sort state from aria-sort, not from the chevron.
+                        // Only the actively sorted column carries it; 'none' on every other sortable
+                        // column is noise.
+                        aria-sort={
+                          sorted === 'asc'
+                            ? 'ascending'
+                            : sorted === 'desc'
+                              ? 'descending'
+                              : header.column.getCanSort()
+                                ? 'none'
+                                : undefined
+                        }
+                      >
                         {header.column.getCanSort() ? (
                           <span
                             role='button'
