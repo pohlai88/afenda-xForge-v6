@@ -72,16 +72,21 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
     ? null
     : daysBetween(new Date().toISOString(), currentRun.cutoffAt)
 
-  const employeeNames = new Map(employees.map(e => [e.id, `${e.firstName} ${e.lastName}`]))
+  const employeeById = new Map(employees.map(e => [e.id, e]))
   const departmentNames = new Map(departments.map(d => [d.id, d.name]))
 
   const exceptionRows: ExceptionRow[] = currentRun.exceptions.map(exception => ({
     ...exception,
     subject: exception.employeeId
-      ? employeeNames.get(exception.employeeId)
+      ? (() => {
+          const employee = employeeById.get(exception.employeeId)
+
+          return employee ? `${employee.firstName} ${employee.lastName}` : undefined
+        })()
       : exception.departmentId
         ? departmentNames.get(exception.departmentId)
-        : undefined
+        : undefined,
+    avatar: exception.employeeId ? employeeById.get(exception.employeeId)?.avatar : undefined
   }))
 
   const overtime = overtimeSummary(slips, currentRun.currency)

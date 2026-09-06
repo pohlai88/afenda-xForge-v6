@@ -65,14 +65,14 @@ const PayrollOvertimeGauge = ({ shareOfGross, threshold, hours, cost, change, cl
       <CardContent className='flex flex-1 flex-col justify-between gap-4'>
         {/* The gauge is decorative once the figures below state the same thing in words. */}
         <ChartContainer config={chartConfig} className='mx-auto aspect-square max-h-44 w-full' aria-hidden='true'>
-          <RadialBarChart data={data} startAngle={210} endAngle={-30} innerRadius='72%' outerRadius='100%'>
+          <RadialBarChart data={data} startAngle={210} endAngle={-30} innerRadius='62%' outerRadius='100%'>
             <PolarAngleAxis type='number' domain={[0, scaleMax]} tick={false} axisLine={false} />
-            <RadialBar background dataKey='share' cornerRadius={8} />
+            <RadialBar background={{ fill: 'var(--muted)' }} dataKey='share' cornerRadius={10} />
           </RadialBarChart>
         </ChartContainer>
 
         <div className='-mt-24 flex flex-col items-center gap-0.5'>
-          <span className='text-2xl font-semibold'>{shareOfGross.toFixed(1)}%</span>
+          <span className='text-3xl leading-none font-semibold tracking-tight'>{shareOfGross.toFixed(1)}%</span>
           <span className='text-muted-foreground text-xs'>target {threshold.toFixed(1)}%</span>
         </div>
 

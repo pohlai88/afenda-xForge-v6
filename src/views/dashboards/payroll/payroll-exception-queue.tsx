@@ -5,6 +5,7 @@ import { CheckCircle2Icon } from 'lucide-react'
 import type { PayRunException, PayRunExceptionSeverity } from '@/types/payroll/pay-run-types'
 
 // Component Imports
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -12,8 +13,17 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 // Util Imports
 import { cn } from '@/lib/utils'
 
-/** An exception plus the human name of whatever it is about, resolved by the caller. */
-export type ExceptionRow = PayRunException & { subject?: string }
+/** An exception plus the human name and face of whatever it is about, resolved by the caller. */
+export type ExceptionRow = PayRunException & { subject?: string; avatar?: string }
+
+/** 'Yuki Tanaka' -> 'YT'. Run-wide exceptions have no person, so they fall back to a glyph. */
+const initials = (name?: string) =>
+  name
+    ?.split(' ')
+    .slice(0, 2)
+    .map(part => part[0])
+    .join('')
+    .toUpperCase() ?? '—'
 
 const SEVERITY_STYLES: Record<PayRunExceptionSeverity, string> = {
   blocking: 'bg-destructive/10 text-destructive',
@@ -63,14 +73,20 @@ const PayrollExceptionQueue = ({ exceptions, className }: Props) => {
           <ScrollArea className='h-83'>
             <ul className='flex flex-col gap-3 pr-3'>
               {open.map(exception => (
-                <li key={exception.id} className='flex flex-col gap-1.5 rounded-md border p-3'>
-                  <div className='flex items-center justify-between gap-2'>
-                    <span className='text-sm font-medium'>{exception.subject ?? 'Run-wide'}</span>
-                    <Badge className={cn('shrink-0 text-xs', SEVERITY_STYLES[exception.severity])}>
-                      {SEVERITY_LABELS[exception.severity]}
-                    </Badge>
+                <li key={exception.id} className='hover:bg-muted/40 flex gap-3 rounded-md border p-3 transition-colors'>
+                  <Avatar className='size-9 shrink-0'>
+                    {exception.avatar && <AvatarImage src={exception.avatar} alt='' />}
+                    <AvatarFallback className='text-xs'>{initials(exception.subject)}</AvatarFallback>
+                  </Avatar>
+                  <div className='flex min-w-0 flex-1 flex-col gap-1'>
+                    <div className='flex items-center justify-between gap-2'>
+                      <span className='truncate text-sm font-medium'>{exception.subject ?? 'Run-wide'}</span>
+                      <Badge className={cn('shrink-0 text-xs', SEVERITY_STYLES[exception.severity])}>
+                        {SEVERITY_LABELS[exception.severity]}
+                      </Badge>
+                    </div>
+                    <p className='text-muted-foreground text-sm'>{exception.message}</p>
                   </div>
-                  <p className='text-muted-foreground text-sm'>{exception.message}</p>
                 </li>
               ))}
             </ul>

@@ -51,13 +51,15 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
         <CardDescription>
           {run.periodStart} – {run.periodEnd} · pays {run.payDate}
         </CardDescription>
-        <CardAction className='flex flex-col items-end gap-1'>
-          <span className='text-2xl font-semibold'>{formatMoney(run.totals.employerCost)}</span>
+        <CardAction className='flex flex-col items-end gap-0.5'>
+          <span className='text-3xl leading-none font-semibold tracking-tight sm:text-4xl'>
+            {formatMoney(run.totals.employerCost)}
+          </span>
           <span className='text-muted-foreground text-sm'>Total employer cost</span>
         </CardAction>
       </CardHeader>
 
-      <CardContent className='flex flex-1 flex-col gap-6'>
+      <CardContent className='flex flex-1 flex-col gap-5'>
         {/* Stage track. A run that was cancelled or failed is not partway along this path, so
             it is rendered as a plain status above rather than a position on the track. */}
         <div className='flex items-center'>
@@ -93,8 +95,8 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
           })}
         </div>
 
-        <div className='grid gap-4 sm:grid-cols-3'>
-          <div className='flex items-center gap-3'>
+        <div className='grid flex-1 items-center gap-4 sm:grid-cols-3'>
+          <div className='bg-muted/40 flex items-center gap-3 rounded-md p-3'>
             <span className='bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-sm'>
               <UsersIcon className='size-4.5' />
             </span>
@@ -104,7 +106,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             </span>
           </div>
 
-          <div className='flex items-center gap-3'>
+          <div className='bg-muted/40 flex items-center gap-3 rounded-md p-3'>
             <span
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-sm',
@@ -127,7 +129,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             </span>
           </div>
 
-          <div className='flex items-center gap-3'>
+          <div className='bg-muted/40 flex items-center gap-3 rounded-md p-3'>
             <span
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-sm',
@@ -147,7 +149,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
 
         {/* The same figures the bridge chart draws, as exact amounts. The chart shows the shape
             of the run; someone signing it off needs the numbers to the cent. */}
-        <div className='mt-auto grid grid-cols-2 gap-4 border-t pt-5 sm:grid-cols-4'>
+        <div className='bg-muted/40 mt-auto grid grid-cols-2 gap-4 rounded-md p-4 sm:grid-cols-4'>
           {[
             { label: 'Gross', value: run.totals.grossPay },
             { label: 'Tax', value: run.totals.employeeTaxes },
@@ -156,7 +158,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
           ].map(item => (
             <div key={item.label} className='flex flex-col gap-1'>
               <span className='text-muted-foreground text-xs tracking-wide uppercase'>{item.label}</span>
-              <span className='font-semibold'>{formatMoney(item.value)}</span>
+              <span className='text-base font-semibold'>{formatMoney(item.value)}</span>
             </div>
           ))}
         </div>
