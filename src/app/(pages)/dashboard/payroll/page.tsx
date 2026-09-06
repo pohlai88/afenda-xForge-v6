@@ -1,8 +1,9 @@
 // Third-party Imports
-import { BanknoteIcon, ClockIcon, WalletIcon } from 'lucide-react'
+import { BanknoteIcon, UsersIcon, WalletIcon } from 'lucide-react'
 
 // Component Imports
-import PayrollStatCard from '@/views/dashboards/payroll/payroll-stat-card'
+import PayrollKpiStrip, { type KpiMetric } from '@/views/dashboards/payroll/payroll-kpi-strip'
+import PayrollOvertimeGauge from '@/views/dashboards/payroll/payroll-overtime-gauge'
 import PayrollByDepartment from '@/views/dashboards/payroll/payroll-by-department'
 import PayrollCostTrend from '@/views/dashboards/payroll/payroll-cost-trend'
 import PayrollExceptionQueue, { type ExceptionRow } from '@/views/dashboards/payroll/payroll-exception-queue'
@@ -14,7 +15,7 @@ import PayrollRunStatus from '@/views/dashboards/payroll/payroll-run-status'
 import { getDepartments, getEmployees, getPayRuns, getPayslipsForRun } from '@/app/server/actions'
 
 // Util Imports
-import { formatMoneyCompact, toMajorUnits } from '@/utils/money'
+import { formatMoney, formatMoneyCompact, toMajorUnits } from '@/utils/money'
 import {
   changeVsPrevious,
   costByDepartment,
@@ -25,6 +26,9 @@ import {
 } from '@/utils/payroll-metrics'
 
 const CURRENCY_SYMBOL = 'S$'
+
+/** Share of gross above which overtime stops being noise and becomes a staffing question. */
+const OVERTIME_TARGET_SHARE = 2
 
 /** Once a run reaches one of these, the cut-off has passed and counting down to it is noise. */
 const TERMINAL_STATUSES = new Set(['paid', 'closed', 'cancelled', 'failed'])
@@ -92,6 +96,42 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
   const costSeries = historyToDate.map(run => run.totals.employerCost.amount)
   const netSeries = historyToDate.map(run => run.totals.netPay.amount)
 
+  // One block, three measures. Three copies of one card was the only repeated block on any
+  // dashboard here, and grouping the figures lets them be read against each other.
+  const metrics: KpiMetric[] = [
+    {
+      key: 'employer-cost',
+      icon: <WalletIcon />,
+      value: formatMoneyCompact(currentRun.totals.employerCost),
+      title: 'Total employer cost',
+      change: changeVsPrevious(currentRun.totals.employerCost, previousRun?.totals.employerCost),
+      polarity: 'higher-is-worse',
+      series: costSeries
+    },
+    {
+      key: 'net-pay',
+      icon: <BanknoteIcon />,
+      value: formatMoneyCompact(currentRun.totals.netPay),
+      title: 'Net pay to employees',
+      change: changeVsPrevious(currentRun.totals.netPay, previousRun?.totals.netPay),
+      polarity: 'neutral',
+      series: netSeries,
+      iconClassName: 'bg-chart-2/10 text-chart-2'
+    },
+    {
+      key: 'employees',
+      icon: <UsersIcon />,
+      value: String(currentRun.employeeCount),
+      title: 'Employees paid',
+      change: previousRun
+        ? ((currentRun.employeeCount - previousRun.employeeCount) / previousRun.employeeCount) * 100
+        : null,
+      polarity: 'neutral',
+      series: historyToDate.map(run => run.employeeCount),
+      iconClassName: 'bg-chart-1/10 text-chart-1'
+    }
+  ]
+
   const costTrend = runs.map(run => ({
     reference: run.reference.replace('PR-', ''),
     cost: toMajorUnits(run.totals.employerCost),
@@ -109,38 +149,19 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
 
       <PayrollExceptionQueue exceptions={exceptionRows} className='col-span-full lg:col-span-2' />
 
-      <PayrollStatCard
-        icon={<WalletIcon />}
-        value={formatMoneyCompact(currentRun.totals.employerCost)}
-        title='Total employer cost'
-        change={changeVsPrevious(currentRun.totals.employerCost, previousRun?.totals.employerCost)}
-        polarity='higher-is-worse'
-        caption='vs last run'
-        series={costSeries}
-        className='col-span-full sm:col-span-3 lg:col-span-2'
+      <PayrollKpiStrip
+        metrics={metrics}
+        caption={`${currentRun.reference} · ${currentRun.periodStart} to ${currentRun.periodEnd}`}
+        className='col-span-full lg:col-span-4'
       />
 
-      <PayrollStatCard
-        icon={<BanknoteIcon />}
-        value={formatMoneyCompact(currentRun.totals.netPay)}
-        title='Net pay to employees'
-        change={changeVsPrevious(currentRun.totals.netPay, previousRun?.totals.netPay)}
-        polarity='neutral'
-        caption='vs last run'
-        series={netSeries}
-        className='col-span-full sm:col-span-3 lg:col-span-2'
-        iconClassName='bg-chart-2/10 text-chart-2'
-      />
-
-      <PayrollStatCard
-        icon={<ClockIcon />}
-        value={`${overtime.hours} hrs`}
-        title={`Overtime · ${overtime.shareOfGross.toFixed(1)}% of gross`}
+      <PayrollOvertimeGauge
+        shareOfGross={overtime.shareOfGross}
+        threshold={OVERTIME_TARGET_SHARE}
+        hours={overtime.hours}
+        cost={formatMoney(overtime.cost)}
         change={changeVsPrevious(overtime.cost, previousOvertime.cost)}
-        polarity='higher-is-worse'
-        caption='vs last run'
-        className='col-span-full sm:col-span-3 lg:col-span-2'
-        iconClassName='bg-chart-5/10 text-chart-5'
+        className='col-span-full lg:col-span-2'
       />
 
       <PayrollGrossToNet
