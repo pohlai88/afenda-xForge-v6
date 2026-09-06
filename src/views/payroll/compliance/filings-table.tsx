@@ -282,8 +282,8 @@ const FilingsTable = ({ rows, selectedId, onOpen, className }: Props) => {
     getDefaultCommandId: () => 'open',
 
     // The filing the inspector is currently showing, so the row it came from stays findable
-    // behind the sheet. The engine decides what that emphasis looks like.
-    getRowState: row => (row.id === selectedId ? 'emphasis' : 'default'),
+    // behind the sheet, and announced as the current row rather than only tinted.
+    getRowState: row => (row.id === selectedId ? 'current' : 'default'),
 
     // Sorting and per-row commands are the whole of this surface's job. It is a full list read
     // top to bottom, so it asks for no pagination even though the engine can page.

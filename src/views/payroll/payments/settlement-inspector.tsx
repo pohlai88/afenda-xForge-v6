@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import PayrollAuditTimeline from '@/views/payroll/run/payroll-audit-timeline'
-import { SettlementStatusBadge } from './settlement-table'
+import SettlementStatusBadge from './settlement-status-badge'
 
 // Util Imports
 import { formatMoney } from '@/utils/money'

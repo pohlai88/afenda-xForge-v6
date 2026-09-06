@@ -19,6 +19,7 @@ import type { PayRunQueueRow } from '@/types/payroll/run-queue-types'
 import type { PayrollRunRow } from '@/types/payroll/run-workspace-types'
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
 import type { PropertySection } from '@/components/shared/PropertiesSheet'
+import type { SettlementRow } from '@/utils/payroll-payments'
 
 // Util Imports
 import { formatCount, formatMoney } from '@/utils/money'
@@ -313,3 +314,60 @@ export const filingCommands = (row: FilingRow, handlers: { onOpen: (id: string) 
     onSelect: () => handlers.onOpen(row.id)
   }
 ]
+
+// ---------------------------------------------------------------------------
+// Settlement
+// ---------------------------------------------------------------------------
+
+/**
+ * No `href`: a payment is read in the inspector over the payments page. The label names it the
+ * way a person does — who was paid, on which run — because the same person appears once per run
+ * and the run is what separates two otherwise identical rows.
+ */
+export const settlementObject = (row: SettlementRow): ObjectContext => ({
+  type: 'settlement',
+  id: row.id,
+  label: `${row.employeeName} · ${row.runReference}`
+})
+
+/**
+ * Opening the payment, and copying the reference the bank knows it by.
+ *
+ * Re-issuing is deliberately absent even for a failed payment. It is an operation with a rule —
+ * only a genuinely returned or failed payment, not one already re-issued — and the surfaces that
+ * offer it (the outstanding-failures list and the inspector) show the reason alongside it. A menu
+ * item cannot state a reason, so offering it here would move the action away from its evidence.
+ *
+ * The reference is present only once a payment has actually been released, so the command is
+ * absent until there is something to copy rather than copying an empty string.
+ */
+export const settlementCommands = (
+  row: SettlementRow,
+  handlers: { onOpen: (row: SettlementRow) => void }
+): ObjectCommand[] => {
+  const commands: ObjectCommand[] = [
+    {
+      id: 'open',
+      label: 'Open payment',
+      family: 'read',
+      icon: ExternalLinkIcon,
+      onSelect: () => handlers.onOpen(row)
+    }
+  ]
+
+  if (row.reference) {
+    const reference = row.reference
+
+    commands.push({
+      id: 'copy-reference',
+      label: 'Copy bank reference',
+      family: 'search',
+      icon: CopyIcon,
+      onSelect: () => {
+        void copyReference(reference, 'Bank reference')
+      }
+    })
+  }
+
+  return commands
+}

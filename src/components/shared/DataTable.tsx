@@ -450,7 +450,11 @@ const DataTable = <TRow,>({
               </TableRow>
             ) : (
               rows.map(row => {
-                const emphasis = definition.getRowState?.(row.original) === 'emphasis'
+                // Both standings are tinted; only the one that claims to be *the* row an inspector
+                // is showing is announced. A tint alone says it to sighted readers only, and saying
+                // it of a whole category would be worse than saying nothing.
+                const state = definition.getRowState?.(row.original)
+                const emphasis = state === 'emphasis' || state === 'current'
                 const activates = activationFor(row.original) !== undefined
 
                 const cells = (
@@ -504,6 +508,7 @@ const DataTable = <TRow,>({
                   return (
                     <TableRow
                       key={row.id}
+                      aria-current={state === 'current' ? 'true' : undefined}
                       data-state={row.getIsSelected() || emphasis ? 'selected' : undefined}
                       className={rowClass}
                     >
@@ -522,6 +527,7 @@ const DataTable = <TRow,>({
                     }
                     render={
                       <TableRow
+                        aria-current={state === 'current' ? 'true' : undefined}
                         data-state={row.getIsSelected() || emphasis ? 'selected' : undefined}
                         className={cn(rowClass, 'hover:bg-muted/50', activates && 'cursor-pointer')}
                         onClick={activates ? handleRowClick(row.original) : undefined}

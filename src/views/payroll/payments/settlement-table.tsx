@@ -6,49 +6,57 @@ import { useMemo, useState } from 'react'
 // Third-party Imports
 import type { ColumnDef, ColumnFiltersState, PaginationState, SortingState } from '@tanstack/react-table'
 import {
-  flexRender,
   getCoreRowModel,
+  getFacetedRowModel,
+  getFacetedUniqueValues,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, SearchIcon, XIcon } from 'lucide-react'
 
 // Type Imports
 import type { EmployeePaymentStatus } from '@/types/payroll/run-workspace-types'
 import type { SettlementRow } from '@/utils/payroll-payments'
+import type { TableColumn, TableDefinition } from '@/types/common/table-types'
 
 // Component Imports
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import DataTable from '@/components/shared/DataTable'
+import { settlementCommands, settlementObject } from '@/views/payroll/payroll-objects'
+import SettlementStatusBadge from './settlement-status-badge'
 
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
-import {
-  PAYMENT_STATUS_LABELS,
-  PAYMENT_STATUS_STYLES,
-  formatDate,
-  formatInstant,
-  initials
-} from '@/utils/payroll-workspace'
-import { ariaSortFor } from '@/utils/table-utils'
+import { PAYMENT_STATUS_LABELS, formatDate, formatInstant, initials } from '@/utils/payroll-workspace'
+import { inSet } from '@/utils/table-utils'
 
 const STATUSES = Object.keys(PAYMENT_STATUS_LABELS) as EmployeePaymentStatus[]
 
-const RIGHT_ALIGNED = new Set(['amount'])
-
-export const SettlementStatusBadge = ({ status, className }: { status: EmployeePaymentStatus; className?: string }) => (
-  <Badge className={cn('h-auto rounded-sm px-1.5 py-0.5 text-xs', PAYMENT_STATUS_STYLES[status], className)}>
-    {PAYMENT_STATUS_LABELS[status]}
-  </Badge>
-)
+/**
+ * What each column means.
+ *
+ * `status` is a `status` and not a `signal`, which is the distinction the two semantics exist to
+ * make: the accessor holds the payment state itself, so the filter's options *are* the column's
+ * values and its counts are real. A filing's status column looks identical on screen and is a
+ * `signal`, because its accessor holds a rank instead. The semantic follows the accessor, not the
+ * badge.
+ *
+ * `account` says where the money goes — a masked account, or the method when there is no account
+ * to mask. It is neither sorted nor searched: a last-four is an ending, so ordering by it is
+ * meaningless and matching a typed fragment against it would return strangers.
+ */
+const SETTLEMENT_COLUMNS: TableColumn[] = [
+  { id: 'employee', label: 'Employee', semantic: 'identity', isAnchor: true },
+  { id: 'run', label: 'Run', semantic: 'relation' },
+  { id: 'amount', label: 'Amount', semantic: 'money' },
+  { id: 'account', label: 'Account', semantic: 'text', capabilities: { sortable: false, searchable: false } },
+  { id: 'reference', label: 'Bank reference', semantic: 'identifier', capabilities: { sortable: false } },
+  { id: 'settled', label: 'Settled', semantic: 'datetime' },
+  { id: 'status', label: 'Status', semantic: 'status' }
+]
 
 const buildColumns = (onSelect: (row: SettlementRow) => void): ColumnDef<SettlementRow>[] => [
   {
@@ -81,7 +89,7 @@ const buildColumns = (onSelect: (row: SettlementRow) => void): ColumnDef<Settlem
     id: 'run',
     header: 'Run',
     accessorKey: 'payRunId',
-    filterFn: 'equalsString',
+    filterFn: inSet<SettlementRow>(),
     cell: ({ row }) => (
       <span className='flex flex-col'>
         <span>{row.original.runReference}</span>
@@ -132,7 +140,7 @@ const buildColumns = (onSelect: (row: SettlementRow) => void): ColumnDef<Settlem
     id: 'status',
     header: 'Status',
     accessorKey: 'status',
-    filterFn: 'equalsString',
+    filterFn: inSet<SettlementRow>(),
     cell: ({ row }) => (
       <span className='flex items-center gap-1.5'>
         <SettlementStatusBadge status={row.original.status} />
@@ -155,15 +163,19 @@ type Props = {
 }
 
 /**
- * Every payment, every run. Same TanStack rendering as the run workspace table; filters are a
- * run select and a status select because both lists are short and fixed.
+ * Every payment, every run — described for the table engine rather than rendered by hand.
+ *
+ * Run and status are the two dimensions a person narrows by, and both are genuinely faceted: the
+ * column stores the run id and the payment state themselves, so the counts beside each option are
+ * the rows actually behind it. The engine owns the controls, the counts, reset and the collapse
+ * into one popover when this box is narrow.
  */
 const SettlementTable = ({ rows, runs, selectedId, onSelect, initialStatus = null, className }: Props) => {
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
-    initialStatus ? [{ id: 'status', value: initialStatus }] : []
+    initialStatus ? [{ id: 'status', value: [initialStatus] }] : []
   )
 
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 })
@@ -189,6 +201,9 @@ const SettlementTable = ({ rows, runs, selectedId, onSelect, initialStatus = nul
 
       if (!needle) return true
 
+      // What the identity column shows, plus the reference that has a column of its own. The
+      // department is shown too but is not matched here: it is a `relation`, and answering a
+      // structured question with a substring is what the narrowing exists to prevent.
       return [row.original.employeeName, row.original.employeeNumber, row.original.reference ?? ''].some(field =>
         field.toLowerCase().includes(needle)
       )
@@ -196,200 +211,77 @@ const SettlementTable = ({ rows, runs, selectedId, onSelect, initialStatus = nul
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getFacetedUniqueValues: getFacetedUniqueValues(),
     getPaginationRowModel: getPaginationRowModel()
   })
 
-  const runFilter = (table.getColumn('run')?.getFilterValue() as string | undefined) ?? 'all'
-  const statusFilter = (table.getColumn('status')?.getFilterValue() as string | undefined) ?? 'all'
   const filtered = globalFilter.length > 0 || columnFilters.length > 0
-  const total = table.getFilteredRowModel().rows.length
-  const { pageIndex, pageSize } = table.getState().pagination
 
-  return (
-    <div className={cn('bg-card flex flex-col overflow-hidden rounded-lg border', className)}>
-      <div className='flex flex-wrap items-center gap-2 border-b px-4 py-2'>
-        <div className='w-full sm:w-60'>
-          <Label htmlFor='settlement-search' className='sr-only'>
-            Search payments
-          </Label>
-          <InputGroup className='h-8'>
-            <InputGroupAddon>
-              <SearchIcon />
-            </InputGroupAddon>
-            <InputGroupInput
-              id='settlement-search'
-              value={globalFilter}
-              onChange={event => setGlobalFilter(event.target.value)}
-              placeholder='Search name, number, reference'
-            />
-          </InputGroup>
-        </div>
+  // Built eagerly, so the branch for a company that has never paid anyone is a case rather than a
+  // fallback — the same defect the filings empty state had.
+  const emptyMessage =
+    rows.length === 0
+      ? 'No payments have been made for this company.'
+      : globalFilter
+        ? `No payments match “${globalFilter}”.`
+        : 'No payments match these filters.'
 
-        <Select
-          value={runFilter}
-          onValueChange={value => table.getColumn('run')?.setFilterValue(value === 'all' || !value ? undefined : value)}
-        >
-          <SelectTrigger size='sm' className='w-40' aria-label='Filter by run'>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='all'>All runs</SelectItem>
-            {runs.map(run => (
-              <SelectItem key={run.id} value={run.id}>
-                {run.reference}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+  const definition: TableDefinition<SettlementRow> = {
+    id: 'payroll-settlements',
+    getRowId: row => row.id,
+    columns: SETTLEMENT_COLUMNS,
+    mode: 'client',
+    noun: { one: 'payment', many: 'payments' },
+    density: 'compact',
+    getObject: settlementObject,
+    getCommands: row => settlementCommands(row, { onOpen: onSelect }),
 
-        <Select
-          value={statusFilter}
-          onValueChange={value =>
-            table.getColumn('status')?.setFilterValue(value === 'all' || !value ? undefined : value)
+    // Named, not inferred: opening the payment is what a row means, wherever it sits in the menu.
+    getDefaultCommandId: () => 'open',
+
+    // The payment the inspector is currently showing, so the row it came from stays findable
+    // behind the sheet, and announced as the current row rather than only tinted.
+    getRowState: row => (row.id === selectedId ? 'current' : 'default'),
+
+    // Reconciling a bank statement is done a page at a time, so this one offers to widen the page
+    // rather than making a person move through a long list twenty-five rows at a time.
+    pageSizes: [25, 50, 100],
+    task: ['sort', 'filter', 'search', 'paginate', 'rowCommands'],
+    filters: [
+      {
+        columnId: 'run',
+        label: 'Run',
+        options: runs.map(run => ({ value: run.id, label: run.reference }))
+      },
+      {
+        columnId: 'status',
+        label: 'Status',
+        options: STATUSES.map(status => ({ value: status, label: PAYMENT_STATUS_LABELS[status] }))
+      }
+    ],
+    emptyState: {
+      message: emptyMessage,
+      onClear: filtered
+        ? () => {
+            table.resetColumnFilters()
+            setGlobalFilter('')
           }
-        >
-          <SelectTrigger size='sm' className='w-44' aria-label='Filter by status'>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='all'>All statuses</SelectItem>
-            {STATUSES.map(status => (
-              <SelectItem key={status} value={status}>
-                {PAYMENT_STATUS_LABELS[status]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        : undefined
+    }
+  }
 
-        {filtered && (
-          <Button
-            variant='ghost'
-            size='sm'
-            onClick={() => {
-              table.resetColumnFilters()
-              setGlobalFilter('')
-            }}
-          >
-            Reset
-            <XIcon />
-          </Button>
-        )}
-      </div>
-
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map(headerGroup => (
-            <TableRow key={headerGroup.id} className='h-10'>
-              {headerGroup.headers.map(header => {
-                const alignRight = RIGHT_ALIGNED.has(header.column.id)
-                const sorted = header.column.getIsSorted()
-
-                return (
-                  <TableHead
-                    key={header.id}
-                    aria-sort={ariaSortFor(header.column)}
-                    className={cn('text-muted-foreground text-xs first:pl-4 last:pr-4', alignRight && 'text-right')}
-                  >
-                    {header.column.getCanSort() ? (
-                      <span
-                        role='button'
-                        tabIndex={0}
-                        className={cn(
-                          'flex cursor-pointer items-center gap-1 select-none',
-                          alignRight && 'justify-end'
-                        )}
-                        onClick={header.column.getToggleSortingHandler()}
-                        onKeyDown={event => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault()
-                            header.column.getToggleSortingHandler()?.(event)
-                          }
-                        }}
-                        aria-label={`Sort by ${String(header.column.columnDef.header)}`}
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                        {sorted === 'asc' && (
-                          <ChevronUpIcon className='size-3.5 shrink-0 opacity-60' aria-hidden='true' />
-                        )}
-                        {sorted === 'desc' && (
-                          <ChevronDownIcon className='size-3.5 shrink-0 opacity-60' aria-hidden='true' />
-                        )}
-                      </span>
-                    ) : (
-                      flexRender(header.column.columnDef.header, header.getContext())
-                    )}
-                  </TableHead>
-                )
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={columns.length} className='text-muted-foreground h-32 text-center text-sm'>
-                {globalFilter ? `No payments match “${globalFilter}”.` : 'No payments match these filters.'}
-              </TableCell>
-            </TableRow>
-          ) : (
-            table.getRowModel().rows.map(row => {
-              const inspected = row.original.id === selectedId
-
-              return (
-                <TableRow
-                  key={row.id}
-                  aria-current={inspected ? 'true' : undefined}
-                  className={cn('h-11 cursor-pointer', inspected && 'bg-primary/5 hover:bg-primary/5')}
-                  onClick={event => {
-                    if ((event.target as HTMLElement).closest('button, a')) return
-
-                    onSelect(row.original)
-                  }}
-                >
-                  {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id} className='py-1.5 first:pl-4 last:pr-4'>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              )
-            })
-          )}
-        </TableBody>
-      </Table>
-
-      <div className='flex flex-wrap items-center justify-between gap-3 border-t px-4 py-2'>
-        <p className='text-muted-foreground text-xs tabular-nums' aria-live='polite'>
-          {total === 0
-            ? 'No payments'
-            : `Showing ${pageIndex * pageSize + 1}–${Math.min((pageIndex + 1) * pageSize, total)} of ${total}`}
-        </p>
-        <div className='flex items-center gap-3'>
-          <span className='text-muted-foreground text-xs tabular-nums'>
-            Page {table.getPageCount() === 0 ? 0 : pageIndex + 1} of {table.getPageCount()}
-          </span>
-          <div className='flex items-center gap-1'>
-            <Button
-              variant='outline'
-              size='icon-sm'
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              aria-label='Previous page'
-            >
-              <ChevronLeftIcon />
-            </Button>
-            <Button
-              variant='outline'
-              size='icon-sm'
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              aria-label='Next page'
-            >
-              <ChevronRightIcon />
-            </Button>
-          </div>
-        </div>
-      </div>
+  // An `@container`, because the toolbar's collapse is decided by this box rather than the window:
+  // the payments page puts it at full width, and a narrower host would still get the right form.
+  return (
+    <div className={cn('bg-card @container flex flex-col overflow-hidden rounded-lg border', className)}>
+      <DataTable
+        definition={definition}
+        table={table}
+        caption='Every payment, every run'
+        search={globalFilter}
+        onSearchChange={setGlobalFilter}
+      />
     </div>
   )
 }

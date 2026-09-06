@@ -361,10 +361,18 @@ export type TableDefinition<TRow> = {
  * A row's standing, in the domain's terms rather than the engine's.
  *
  * Deliberately not a className hook. A domain says a run is the one still needing work; the engine
- * decides what that looks like, so emphasis means the same thing in every table instead of each
+ * decides what that looks like, so a standing means the same thing in every table instead of each
  * one inventing its own highlight.
+ *
+ * `emphasis` and `current` look alike and are not the same claim, which is why both exist.
+ * `emphasis` marks rows that stand out for a business reason — the runs still needing work — and
+ * any number of rows can qualify. `current` marks the single row an open inspector or sheet is
+ * showing, so the engine can say so with `aria-current` rather than leaving the tint as the only
+ * signal. Announcing a category as "current" would tell a screen-reader user that several rows are
+ * each the one being looked at, which is why the distinction is in the type rather than guessed at
+ * from how many rows come back.
  */
-export type TableRowState = 'default' | 'emphasis'
+export type TableRowState = 'default' | 'emphasis' | 'current'
 
 export type TableCapabilities = Record<TableCapability, boolean>
 

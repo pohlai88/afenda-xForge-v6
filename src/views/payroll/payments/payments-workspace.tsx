@@ -17,7 +17,8 @@ import type { SettlementRow } from '@/utils/payroll-payments'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import SettlementInspector from './settlement-inspector'
-import SettlementTable, { SettlementStatusBadge } from './settlement-table'
+import SettlementStatusBadge from './settlement-status-badge'
+import SettlementTable from './settlement-table'
 
 // Action Imports
 import { reissueSettlement } from '@/app/server/actions'
