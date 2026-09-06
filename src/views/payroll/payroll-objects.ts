@@ -58,10 +58,21 @@ export const payRunObject = (run: Pick<PayRun, 'id' | 'reference'>): ObjectConte
 })
 
 /**
+ * One command list for a pay run, wherever a pay run appears. Doctrine `identity_rule`: the same
+ * object offers the same things to do with it, so there is never a second, shorter vocabulary for
+ * the same type that could drift from this one.
+ *
  * `isCurrent` drops Open when the user is already looking at the run. A command that would
  * navigate to where you already are is noise, not capability.
+ *
+ * `href` overrides where Open goes, because that is the one thing about a run that depends on
+ * where you are reading it. A company's run history selects the run on the page it is already on;
+ * the group's run queue opens the workspace. The commands are the same either way.
  */
-export const payRunCommands = (run: Pick<PayRun, 'id' | 'reference'>, isCurrent = false): ObjectCommand[] => {
+export const payRunCommands = (
+  run: Pick<PayRun, 'id' | 'reference'>,
+  { isCurrent = false, href }: { isCurrent?: boolean; href?: string } = {}
+): ObjectCommand[] => {
   const commands: ObjectCommand[] = []
 
   if (!isCurrent) {
@@ -70,7 +81,7 @@ export const payRunCommands = (run: Pick<PayRun, 'id' | 'reference'>, isCurrent 
       label: 'Open run',
       family: 'read',
       icon: ExternalLinkIcon,
-      href: `/payroll/runs/${run.id}`
+      href: href ?? `/payroll/runs/${run.id}`
     })
   }
 

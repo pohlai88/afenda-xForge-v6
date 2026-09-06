@@ -5,46 +5,32 @@ import { useCallback, useMemo, useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 // Third-party Imports
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table'
 import {
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, SearchIcon } from 'lucide-react'
 
 // Type Imports
 import type { PayRun } from '@/types/payroll/pay-run-types'
+import type { TableColumn, TableDefinition } from '@/types/common/table-types'
 
 // Component Imports
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import DataTable from '@/components/shared/DataTable'
+import { payRunCommands, payRunObject } from '@/views/payroll/payroll-objects'
 
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
 import { PAY_RUN_STATUS_LABELS, PAY_RUN_STATUS_STYLES } from '@/utils/payroll-metrics'
-import { ariaSortFor } from '@/utils/table-utils'
 
-/** Numeric columns, right-aligned so digits line up under one another. */
-const RIGHT_ALIGNED = new Set(['employeeCount', 'gross', 'net', 'employerCost'])
-
-/**
- * Money columns sort on the raw minor-unit amount and format only at render.
- *
- * Sorting the formatted string would order 'S$9,120.00' above 'S$84,300.00', which is the
- * kind of bug that looks like a display glitch and is actually wrong data.
- */
 /**
  * Where a run row leads. A name rather than a function because this is a client component and
  * server pages cannot hand it a callback; the dashboard re-scopes itself, the runs page opens
@@ -57,8 +43,33 @@ const HREF_FOR: Record<RunLinkTarget, (run: PayRun, basePath: string) => string>
   workspace: run => `/payroll/runs/${run.id}`
 }
 
+/**
+ * What each column means.
+ *
+ * Money columns sort on the raw minor-unit amount and format only at render, which is why each
+ * declares `money` rather than `text`: sorting the formatted string would order 'S$9,120.00' above
+ * 'S$84,300.00', the kind of bug that looks like a display glitch and is actually wrong data. The
+ * engine reads the same declaration to right-align them.
+ *
+ * Only `reference` is searchable. Period and pay date are dates, the figures are figures, and
+ * status is a closed vocabulary — matching a typed fragment against any of them is the
+ * indiscriminate string search this vocabulary exists to replace. Nothing is lost: a reference
+ * carries its own period, so `2026-08` still finds the August run.
+ */
+const RUN_COLUMNS: TableColumn[] = [
+  { id: 'reference', label: 'Run', semantic: 'identity', isAnchor: true },
+  { id: 'period', label: 'Period', semantic: 'date' },
+  { id: 'payDate', label: 'Pay date', semantic: 'date' },
+  { id: 'employeeCount', label: 'Employees', semantic: 'quantity' },
+  { id: 'gross', label: 'Gross', semantic: 'money' },
+  { id: 'net', label: 'Net', semantic: 'money' },
+  { id: 'employerCost', label: 'Employer cost', semantic: 'money' },
+  { id: 'status', label: 'Status', semantic: 'status' }
+]
+
 const buildColumns = (hrefFor: (run: PayRun) => string): ColumnDef<PayRun>[] => [
   {
+    id: 'reference',
     header: 'Run',
     accessorKey: 'reference',
     cell: ({ row }) => (
@@ -72,6 +83,7 @@ const buildColumns = (hrefFor: (run: PayRun) => string): ColumnDef<PayRun>[] => 
     )
   },
   {
+    id: 'period',
     header: 'Period',
     accessorKey: 'periodStart',
     cell: ({ row }) => (
@@ -81,36 +93,36 @@ const buildColumns = (hrefFor: (run: PayRun) => string): ColumnDef<PayRun>[] => 
     )
   },
   {
+    id: 'payDate',
     header: 'Pay date',
     accessorKey: 'payDate',
     cell: ({ row }) => <span className='text-muted-foreground'>{row.original.payDate}</span>
   },
   {
+    id: 'employeeCount',
     header: 'Employees',
-    accessorKey: 'employeeCount',
-    cell: ({ row }) => <span className='block text-right'>{row.original.employeeCount}</span>
+    accessorKey: 'employeeCount'
   },
   {
     id: 'gross',
     header: 'Gross',
     accessorFn: row => row.totals.grossPay.amount,
-    cell: ({ row }) => <span className='block text-right'>{formatMoney(row.original.totals.grossPay)}</span>
+    cell: ({ row }) => formatMoney(row.original.totals.grossPay)
   },
   {
     id: 'net',
     header: 'Net',
     accessorFn: row => row.totals.netPay.amount,
-    cell: ({ row }) => <span className='block text-right'>{formatMoney(row.original.totals.netPay)}</span>
+    cell: ({ row }) => formatMoney(row.original.totals.netPay)
   },
   {
     id: 'employerCost',
     header: 'Employer cost',
     accessorFn: row => row.totals.employerCost.amount,
-    cell: ({ row }) => (
-      <span className='block text-right font-medium'>{formatMoney(row.original.totals.employerCost)}</span>
-    )
+    cell: ({ row }) => <span className='font-medium'>{formatMoney(row.original.totals.employerCost)}</span>
   },
   {
+    id: 'status',
     header: 'Status',
     accessorKey: 'status',
     cell: ({ row }) => (
@@ -139,6 +151,15 @@ type Props = {
   className?: string
 }
 
+/**
+ * Every run this company has had, newest first — a list to read and step back through rather than
+ * a place to work.
+ *
+ * It offers no filters and no selection. Seven runs of one company do not make a status filter
+ * meaningful, and there is nothing to do with several runs at once; the status column sorts, which
+ * is the affordance that fits the size. Sorting, searching, paging and the commands are all the
+ * engine's.
+ */
 const PayrollRunHistory = ({
   runs,
   selectedReference,
@@ -148,7 +169,6 @@ const PayrollRunHistory = ({
   pageSize = 5,
   className
 }: Props) => {
-  const router = useRouter()
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize })
@@ -165,163 +185,67 @@ const PayrollRunHistory = ({
     data,
     columns,
     state: { sorting, globalFilter, pagination },
+    getRowId: row => row.id,
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
+    globalFilterFn: (row, _columnId, value: string) => {
+      const needle = value.trim().toLowerCase()
+
+      return !needle || row.original.reference.toLowerCase().includes(needle)
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel()
   })
 
-  const pageCount = table.getPageCount()
+  const shown = table.getFilteredRowModel().rows.length
 
+  // The run the page is already showing. Not an inspector's selection — the hero above the table
+  // is that run, so the mark is checkable against something on screen.
+  const isCurrent = (run: PayRun) => run.reference === selectedReference
+
+  const definition: TableDefinition<PayRun> = {
+    id: 'payroll-run-history',
+    getRowId: row => row.id,
+    columns: RUN_COLUMNS,
+    mode: 'client',
+    noun: { one: 'run', many: 'runs' },
+    getObject: payRunObject,
+    getCommands: run => payRunCommands(run, { isCurrent: isCurrent(run), href: hrefFor(run) }),
+
+    // The run on screen has no Open, so it has nothing to activate to. The engine renders it
+    // without the pointer affordance rather than pretending a click would do something.
+    getDefaultCommandId: run => (isCurrent(run) ? undefined : 'open'),
+    getRowState: run => (isCurrent(run) ? 'current' : 'default'),
+    pageSizes: [...new Set([5, 10, 25, pageSize])].sort((a, b) => a - b),
+    task: ['sort', 'search', 'paginate', 'rowCommands'],
+    emptyState: {
+      message: runs.length === 0 ? 'This company has no runs yet.' : `No runs match “${globalFilter}”.`,
+      onClear: globalFilter ? () => setGlobalFilter('') : undefined
+    }
+  }
+
+  // An `@container`, because the engine sizes its own controls against this card rather than the
+  // window: the entity page gives it the full width, a narrower host would get the compact form.
   return (
-    <Card className={cn('gap-0 py-0', className)}>
+    <Card className={cn('@container gap-0 py-0', className)}>
       <CardHeader className='py-6'>
         <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
         <CardDescription>
-          {table.getFilteredRowModel().rows.length} of {runs.length} runs
+          {shown} of {runs.length} runs
         </CardDescription>
-        <CardAction className='w-full sm:w-64'>
-          <InputGroup>
-            <InputGroupAddon>
-              <SearchIcon className='size-4' />
-            </InputGroupAddon>
-            <InputGroupInput
-              value={globalFilter}
-              onChange={event => setGlobalFilter(event.target.value)}
-              placeholder='Search runs'
-              aria-label='Search runs'
-            />
-          </InputGroup>
-        </CardAction>
       </CardHeader>
 
       <CardContent className='px-0 pb-0'>
-        <div className='overflow-x-auto'>
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(header => {
-                    const alignRight = RIGHT_ALIGNED.has(header.column.id)
-                    const sorted = header.column.getIsSorted()
-
-                    return (
-                      <TableHead
-                        key={header.id}
-                        className={cn(alignRight && 'text-right')}
-                        aria-sort={ariaSortFor(header.column)}
-                      >
-                        {header.column.getCanSort() ? (
-                          <span
-                            role='button'
-                            tabIndex={0}
-                            className={cn(
-                              'flex cursor-pointer items-center gap-1 select-none',
-                              alignRight && 'justify-end'
-                            )}
-                            onClick={header.column.getToggleSortingHandler()}
-                            onKeyDown={event => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault()
-                                header.column.getToggleSortingHandler()?.(event)
-                              }
-                            }}
-                            aria-label={`Sort by ${String(header.column.columnDef.header)}`}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {sorted === 'asc' && <ChevronUpIcon className='size-4 shrink-0 opacity-60' />}
-                            {sorted === 'desc' && <ChevronDownIcon className='size-4 shrink-0 opacity-60' />}
-                          </span>
-                        ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
-                        )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className='text-muted-foreground h-24 text-center'>
-                    No runs match “{globalFilter}”.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                table.getRowModel().rows.map(row => {
-                  const selected = row.original.reference === selectedReference
-
-                  return (
-                    <TableRow
-                      key={row.id}
-                      data-state={selected ? 'selected' : undefined}
-                      aria-current={selected ? 'true' : undefined}
-                      className='hover:bg-muted/50 cursor-pointer'
-
-                      // Mouse convenience only. The reference cell holds the real link, so
-                      // keyboard and assistive-tech users never depend on this handler.
-                      onClick={() => router.push(hrefFor(row.original), { scroll: false })}
-                    >
-                      {row.getVisibleCells().map(cell => (
-                        <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                      ))}
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className='flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4'>
-          <div className='flex items-center gap-2'>
-            <span className='text-muted-foreground text-sm'>Rows per page</span>
-            <Select value={String(pagination.pageSize)} onValueChange={value => table.setPageSize(Number(value))}>
-              <SelectTrigger className='w-18' aria-label='Rows per page'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {[...new Set([5, 10, 25, pageSize])]
-                  .sort((a, b) => a - b)
-                  .map(size => (
-                    <SelectItem key={size} value={String(size)}>
-                      {size}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className='flex items-center gap-3'>
-            <span className='text-muted-foreground text-sm'>
-              Page {pageCount === 0 ? 0 : pagination.pageIndex + 1} of {pageCount}
-            </span>
-            <div className='flex items-center gap-1'>
-              <Button
-                variant='outline'
-                size='icon'
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                aria-label='Previous page'
-              >
-                <ChevronLeftIcon className='size-4' />
-              </Button>
-              <Button
-                variant='outline'
-                size='icon'
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                aria-label='Next page'
-              >
-                <ChevronRightIcon className='size-4' />
-              </Button>
-            </div>
-          </div>
-        </div>
+        <DataTable
+          definition={definition}
+          table={table}
+          caption='Every run this company has had'
+          search={globalFilter}
+          onSearchChange={setGlobalFilter}
+        />
       </CardContent>
     </Card>
   )

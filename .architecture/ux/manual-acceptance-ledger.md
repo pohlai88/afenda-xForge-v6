@@ -39,7 +39,8 @@ button, the filing name button — never against the row, which is deliberately 
 | 7   | Payments          | `⋮` by pointer and by keyboard     | As row 2, on a payment that has one. A payment with no bank reference has no `⋮` — check right-click there   |
 | 8   | Group payroll     | `Shift+F10` on a company name      | As row 1. No `⋮` — `Open company` is the whole vocabulary, so right-click is the only menu                   |
 | 9   | Group payroll     | Selection by keyboard              | Space toggles a checkbox, the engine's bar and the truth strip below the table both update                   |
-| 10  | All five          | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
+| 10  | Run history       | `⋮` by pointer and by keyboard     | As row 2. The run the page is showing has a `⋮` but no `Open run` — it is already open                        |
+| 11  | All six           | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
 
 ### Note on row 7 — a row without a trigger
 
@@ -48,6 +49,28 @@ table's geometry; the **trigger** is decided per row. On Payments the column is 
 rows with a bank reference to copy, and the rows that have no reference yet render an empty command
 cell rather than a button whose menu would only repeat the click. Right-click still reaches them, so
 the manual pass should check one of each.
+
+## Observed 2026-09-07 on Run history — the open half PASSES, the focus half FAILS
+
+Key delivery worked for one session, on `/payroll/entities/ent-sg`, and settled two of these gates
+for that surface.
+
+**`Shift+F10` opens: PASS.** Focusing the `PR-SG-2026-07` reference and pressing it produced a
+**trusted** `contextmenu` on the link and opened `Commands for PR-SG-2026-07` with
+`Open run · Copy reference · View audit trail`.
+
+**Focus lifecycle: FAIL.** Focus stayed on the link. `ArrowDown` did not enter the menu, no item
+took `data-highlighted`, and `document.activeElement` was still the reference afterwards. Focusing
+the popup by hand worked immediately and it carries `tabindex="-1"`, so the popup is fine — the
+Phase 01 keyboard-origin bridge in `ObjectCommands.tsx` is not taking effect. Phase 01 recorded the
+same symptom on the Register and the Run Queue; this is the first time it has been observed rather
+than inferred.
+
+**The `⋮` still does not open** from a synthetic pointer event — all five triggers stayed
+`aria-expanded="false"` — so rows 2, 4, 7 and 10 remain NOT VERIFIED.
+
+This is a Phase 01 defect, not a table-engine one. The documented ownership boundary puts initial
+popup focus on the Afenda bridge; the engine owns which object a row is and nothing about focus.
 
 ## What has been observed
 

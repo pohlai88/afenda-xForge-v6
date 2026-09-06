@@ -668,7 +668,7 @@ const PayrollRunWorkspace = ({
     <div className='flex flex-col gap-4'>
       <ObjectContextMenu
         object={payRunObject(run)}
-        commands={payRunCommands(run, true)}
+        commands={payRunCommands(run, { isCurrent: true })}
         onOpenProperties={() => setRunPropertiesOpen(true)}
       >
         <PayrollRunHeader
