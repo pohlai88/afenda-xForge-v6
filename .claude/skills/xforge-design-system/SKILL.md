@@ -144,6 +144,10 @@ card-action slot is present.
   colour props of the canvas effects `bg-silk.tsx` / `background-ripple.tsx` (a canvas cannot read a
   Tailwind class). Each is a convention that must survive a theme change, which is the opposite of
   what a token is for.
+- **Current state: 26, all inherited.** Every one is in an AdminCN template view — `apps/mail`,
+  `apps/chat`, `apps/contact`, `pages/user-settings`, `apps/calendar`. The payroll module is at
+  zero and should stay there. Do not bulk-convert the template views: that is a redraw, not an
+  edit, and the diff would be unreviewable. Convert one when you are already changing it.
 - **Exception: hidden file inputs.** A native file picker cannot be styled, so the pattern is a
   hidden `<input type='file'>` clicked programmatically by a `Button`, or one owned by a library
   through `getInputProps`. Those five stay raw — wrapping them in `<Input>` would style an element
@@ -330,7 +334,14 @@ EOF
 
 # raw elements where a primitive exists. Exclude hidden and library-owned file inputs — see the
 # exception below; without the filter this reports 6 and 5 of them are correct.
-grep -rnE "<(button|input)[ >]" src/views src/app src/components/shared --include=*.tsx | grep -vE "type='file'|getInputProps"
+#
+# The trailing character class must include a newline: a multi-line `<button
+  type='button'`
+# is the common shape once a raw element carries more than one prop, and the single-line version
+# of this check read clean while two of exactly those sat in the group views. Watch it go red on
+# `<button` followed by a line break before trusting it again.
+grep -rnPz "<(button|input)[\s>]" src/views src/app src/components/shared --include=*.tsx | tr ' ' '
+' | grep -vE "type='file'|getInputProps"
 ```
 
 Then the real gates:

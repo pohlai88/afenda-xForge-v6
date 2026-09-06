@@ -50,7 +50,15 @@ src/utils/payroll-payments.ts             settlement rows, funding summary, read
 src/views/payroll/payments/*              funding summary, readiness, batches, table, inspector
 src/types/payroll/settings-types.ts       configuration shapes, one per settings section
 src/fake-db/payroll/settings.ts           seed — the same rates and codes pay-runs.ts calculates with
-src/views/payroll/settings/*              SettingsSection shell + ten sections + tabs
+src/views/payroll/settings/*              SettingsSection shell + eleven sections + tabs
+src/types/hrm/entity-types.ts             LegalEntity — the company that employs and pays someone
+src/types/payroll/group-types.ts          PayrollGroup, FxRate, Coverage, Consolidation, MEASURES
+src/types/payroll/statutory-types.ts      StatutoryProfile — simplified, per country
+src/fake-db/hrm/entities.ts               five companies, three countries, three currencies
+src/fake-db/payroll/fx-rates.ts           rates per period per basis, plus the budget rates
+src/fake-db/payroll/statutory-profiles.ts SG CPF, MY EPF/SOCSO/EIS, VN SI/HI/UI (illustrative)
+src/utils/payroll-group.ts                consolidate, consolidateBy, entityStateOf, previousRunOf
+src/views/payroll/group/*                 the group surface and its lineage drawer
 src/views/payroll/run/payroll-import.tsx  Upload → Validate → Review → Import dialog
 ```
 

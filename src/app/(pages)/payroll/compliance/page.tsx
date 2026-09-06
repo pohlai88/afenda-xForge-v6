@@ -25,6 +25,11 @@ const PayrollCompliancePage = async () => {
         <p className='text-muted-foreground text-sm'>
           Statutory filings for every pay run: what is due, what was filed, and what came back.
         </p>
+        <p className='text-muted-foreground text-sm'>
+          Filings are prepared for Singapore companies only. CPF and IRAS are Singapore
+          institutions, and generating an equivalent for a Malaysian or Vietnamese run would be a
+          fabricated obligation. The other countries arrive with the Statutory Pack Center.
+        </p>
       </header>
 
       <ComplianceWorkspace filings={filings} employees={employees} rules={settings.statutory} today={today} />

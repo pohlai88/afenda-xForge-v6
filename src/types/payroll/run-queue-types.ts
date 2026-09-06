@@ -1,5 +1,5 @@
 // Type Imports
-import type { IsoDate, IsoDateTime, Money } from '@/types/common/primitive-types'
+import type { CountryCode, CurrencyCode, IsoDate, IsoDateTime, Money } from '@/types/common/primitive-types'
 import type { PayFrequency } from '@/types/hrm/employee-types'
 import type { PayRunStatus } from '@/types/payroll/pay-run-types'
 import type { ExceptionCounts } from '@/utils/payroll-metrics'
@@ -22,6 +22,12 @@ export type RunLifecycle = 'open' | 'done' | 'exited'
 export interface PayRunQueueRow {
   id: string
   reference: string
+
+  /** The company whose payroll this is. Runs from several companies share this queue. */
+  entityId: string
+  entityName: string
+  countryCode: CountryCode
+
   payGroup: string
   frequency: PayFrequency
   periodStart: IsoDate
@@ -59,8 +65,15 @@ export interface RunQueueSummary {
 
   /** How many runs this pay frequency produces in a year, for the progress track. */
   expectedRuns: number
-  employerCostPaid: Money
-  netPaid: Money
+
+  /**
+   * The year's paid totals, one entry per currency.
+   *
+   * Not a single figure. The queue holds runs from companies that pay in different currencies,
+   * and adding those together produces a number with no meaning — the previous version stamped
+   * whichever currency the focus run happened to use onto the sum of all of them.
+   */
+  paidByCurrency: { currency: CurrencyCode; employerCost: Money; netPay: Money; runs: number }[]
 
   /** First and last period paid this year, for the caption. Null until a run is paid. */
   paidSpan: { from: IsoDate; to: IsoDate } | null

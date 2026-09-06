@@ -36,20 +36,28 @@ type Measure = {
  * to answer "how much has gone out and how far through the year are we" without a chart.
  */
 const RunQueueYear = ({ summary, className }: Props) => {
+  // One figure per currency rather than one figure. The queue spans companies that pay in
+  // different currencies, and a single total would have to pick one and be wrong about the rest.
+  // Consolidating them is Group payroll's job, where the reporting currency and the exchange
+  // rate basis are both stated on screen.
   const measures: Measure[] = [
-    {
-      key: 'employer-cost',
+    ...summary.paidByCurrency.map(entry => ({
+      key: `employer-cost-${entry.currency}`,
       icon: <WalletIcon />,
-      value: formatMoney(summary.employerCostPaid),
-      label: 'Employer cost paid'
-    },
-    {
-      key: 'net',
+      value: formatMoney(entry.employerCost),
+      label:
+        summary.paidByCurrency.length > 1
+          ? `Employer cost paid · ${entry.currency}`
+          : 'Employer cost paid'
+    })),
+    ...summary.paidByCurrency.map(entry => ({
+      key: `net-${entry.currency}`,
       icon: <BanknoteIcon />,
-      value: formatMoney(summary.netPaid),
-      label: 'Net pay to employees',
+      value: formatMoney(entry.netPay),
+      label:
+        summary.paidByCurrency.length > 1 ? `Net pay to employees · ${entry.currency}` : 'Net pay to employees',
       chipClassName: 'bg-chart-2/10 text-chart-2'
-    },
+    })),
     {
       key: 'resolved',
       icon: <CheckCheckIcon />,

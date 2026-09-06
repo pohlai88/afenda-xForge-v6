@@ -250,6 +250,10 @@ export const previousRunOf = (runs: PayRun[], run: PayRun): PayRun | undefined =
     .sort((a, b) => a.periodEnd.localeCompare(b.periodEnd))
     .at(-1)
 
+/** The newest run in a list, by period. The list is expected to be one entity's already. */
+export const latestRunFor = (runs: PayRun[]): PayRun | undefined =>
+  [...runs].sort((a, b) => a.periodStart.localeCompare(b.periodStart)).at(-1)
+
 export const runsForEntity = (runs: PayRun[], entityId: string): PayRun[] =>
   runs.filter(run => run.entityId === entityId).sort((a, b) => a.periodStart.localeCompare(b.periodStart))
 

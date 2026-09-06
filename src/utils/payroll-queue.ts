@@ -3,11 +3,13 @@ import Papa from 'papaparse'
 
 // Type Imports
 import type { Employee, PayFrequency } from '@/types/hrm/employee-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 import type { PayRun, PayRunStatus } from '@/types/payroll/pay-run-types'
 import type { PayRunQueueRow, RunLifecycle, RunQueueSummary } from '@/types/payroll/run-queue-types'
 
 // Util Imports
 import { formatMoney } from '@/utils/money'
+import { previousRunOf } from '@/utils/payroll-group'
 import { PAY_RUN_STATUS_LABELS, changeVsPrevious, countExceptions, daysBetween } from '@/utils/payroll-metrics'
 import { formatDate, formatPeriod } from '@/utils/payroll-workspace'
 
@@ -49,18 +51,24 @@ type QueueSources = {
   /** Oldest first, as the store returns them. */
   runs: PayRun[]
   employees: Employee[]
+  entities: LegalEntity[]
 
   /** Today's date, read once by the page. Never read from the clock here. */
   today: string
 }
 
 /** The queue, newest first. Deltas compare each run with the one before it in time. */
-export const buildRunQueue = ({ runs, employees, today }: QueueSources): PayRunQueueRow[] => {
+export const buildRunQueue = ({ runs, employees, entities, today }: QueueSources): PayRunQueueRow[] => {
   const employeeById = new Map(employees.map(employee => [employee.id, employee]))
+  const entityById = new Map(entities.map(entity => [entity.id, entity]))
 
   return runs
-    .map((run, index) => {
-      const previous = index > 0 ? runs[index - 1] : undefined
+    .map(run => {
+      // The previous run of the SAME company. `runs[index - 1]` was correct while every run
+      // belonged to one employer; with several interleaved it compares a Singapore run against
+      // a Malaysian one and every delta built on it is meaningless.
+      const previous = previousRunOf(runs, run)
+      const entity = entityById.get(run.entityId)
       const lifecycle = lifecycleOf(run.status)
       const approval = run.approvals[run.approvals.length - 1]
       const approver = approval ? employeeById.get(approval.approvedBy) : undefined
@@ -68,6 +76,9 @@ export const buildRunQueue = ({ runs, employees, today }: QueueSources): PayRunQ
       return {
         id: run.id,
         reference: run.reference,
+        entityId: run.entityId,
+        entityName: entity?.name ?? run.entityId,
+        countryCode: entity?.countryCode ?? 'SG',
         payGroup: run.payGroup,
         frequency: run.frequency,
         periodStart: run.periodStart,
@@ -104,13 +115,26 @@ export const buildRunQueue = ({ runs, employees, today }: QueueSources): PayRunQ
 export const queueSummary = (rows: PayRunQueueRow[]): RunQueueSummary => {
   const focus = rows.find(row => row.lifecycle === 'open') ?? rows[0]
   const year = focus.payDate.slice(0, 4)
-  const currency = focus.gross.currency
 
   const paid = rows.filter(row => row.lifecycle === 'done' && row.payDate.startsWith(year))
 
-  const sum = (pick: (row: PayRunQueueRow) => number) => ({
-    amount: paid.reduce((total, row) => total + pick(row), 0),
-    currency
+  // Grouped by currency rather than summed into one. Consolidating across currencies is the
+  // group surface's job, where a reporting currency and an exchange rate basis are stated; a
+  // queue that quietly did it here would be inventing a total nobody chose the basis for.
+  const currencies = [...new Set(paid.map(row => row.gross.currency))]
+
+  const paidByCurrency = currencies.map(currency => {
+    const own = paid.filter(row => row.gross.currency === currency)
+
+    return {
+      currency,
+      employerCost: {
+        amount: own.reduce((total, row) => total + row.employerCost.amount, 0),
+        currency
+      },
+      netPay: { amount: own.reduce((total, row) => total + row.net.amount, 0), currency },
+      runs: own.length
+    }
   })
 
   // `paid` is newest first, so the span runs from the last element to the first.
@@ -120,9 +144,12 @@ export const queueSummary = (rows: PayRunQueueRow[]): RunQueueSummary => {
     focus,
     year,
     paidRuns: paid.length,
-    expectedRuns: RUNS_PER_YEAR[focus.frequency],
-    employerCostPaid: sum(row => row.employerCost.amount),
-    netPaid: sum(row => row.net.amount),
+
+    // Twelve monthly runs per company, not twelve for the whole group. With five companies in
+    // the queue the old figure read "25 of 12", which is not a progress track, it is a bug on
+    // screen.
+    expectedRuns: RUNS_PER_YEAR[focus.frequency] * new Set(rows.map(row => row.entityId)).size,
+    paidByCurrency,
     paidSpan,
     exceptionsResolved: rows
       .filter(row => row.payDate.startsWith(year))
@@ -137,10 +164,13 @@ export const queueSummary = (rows: PayRunQueueRow[]): RunQueueSummary => {
 const toExportRows = (rows: PayRunQueueRow[]) =>
   rows.map(row => ({
     Run: row.reference,
+    Company: row.entityName,
+    Country: row.countryCode,
     'Pay group': row.payGroup,
     Period: formatPeriod(row.periodStart, row.periodEnd),
     Payday: formatDate(row.payDate),
     Employees: row.employeeCount,
+    Currency: row.gross.currency,
     Gross: formatMoney(row.gross),
     Net: formatMoney(row.net),
     'Employer cost': formatMoney(row.employerCost),

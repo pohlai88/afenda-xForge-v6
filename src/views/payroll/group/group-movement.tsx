@@ -10,6 +10,7 @@ import { ChevronDownIcon, ChevronUpIcon, MinusIcon } from 'lucide-react'
 import type { Consolidation, MovementLine } from '@/types/payroll/group-types'
 
 // Component Imports
+import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import LineageDrawer from './lineage-drawer'
 
@@ -122,13 +123,14 @@ const GroupMovement = ({ consolidation, className }: Props) => {
               return (
                 <li key={line.key}>
                   {drillable ? (
-                    <button
-                      type='button'
+                    <Button
+                      variant='ghost'
                       onClick={() => setOpenFor(line)}
-                      className='hover:bg-muted/40 focus-visible:ring-ring relative flex w-full items-center gap-3 rounded-sm px-2 py-2.5 text-left focus-visible:ring-2 focus-visible:outline-none'
+                      aria-label={`Explain ${line.label}`}
+                      className='relative h-auto w-full justify-start gap-3 px-2 py-2.5 text-left font-normal'
                     >
                       {body}
-                    </button>
+                    </Button>
                   ) : (
                     <div className='relative flex w-full items-center gap-3 rounded-sm px-2 py-2.5'>{body}</div>
                   )}

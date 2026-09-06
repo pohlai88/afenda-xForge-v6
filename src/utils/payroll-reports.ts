@@ -1,5 +1,6 @@
 // Type Imports
 import type { Department, Employee, PaymentMethod, WorkLocation } from '@/types/hrm/employee-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 import type { PayRun, Payslip } from '@/types/payroll/pay-run-types'
 import type { ReportDefinition, ReportFormat, ReportGroup, ReportKey, ReportTables } from '@/types/payroll/report-types'
 import type { Settlement } from '@/types/payroll/settlement-types'
@@ -120,6 +121,8 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 }
 
 type Sources = {
+  entities?: LegalEntity[]
+
 
   /** Oldest first, as the store returns them. */
   runs: PayRun[]
@@ -136,6 +139,7 @@ const runCaption = (run: PayRun) =>
 const right = { align: 'right' as const }
 
 export const buildReportTables = ({
+  entities = [],
   runs,
   employees,
   departments,
@@ -143,6 +147,8 @@ export const buildReportTables = ({
   payslipsByRun,
   settlementsByRun
 }: Sources): ReportTables => {
+  const entityNameById = new Map(entities.map(entity => [entity.id, entity.name]))
+
   const employeeById = new Map(employees.map(employee => [employee.id, employee]))
   const departmentNames = new Map(departments.map(department => [department.id, department.name]))
 
@@ -166,28 +172,40 @@ export const buildReportTables = ({
     bank_file: {}
   }
 
+  // Every company's runs in one list, so the currency travels with the amount on each row and
+  // there is no total. Runs priced in dollars, ringgit and dong do not add up, and the only
+  // place they legitimately combine is Group payroll, where a reporting currency and an
+  // exchange rate basis are chosen and stated.
+  const entityCount = new Set(runs.map(run => run.entityId)).size
+
   tables.run_summary.all = {
-    caption: `${runs.length} runs · ${runs[0].periodStart.slice(0, 4)}`,
+    caption: `${runs.length} runs · ${entityCount} ${entityCount === 1 ? 'company' : 'companies'} · ${runs[0].periodStart.slice(0, 4)} · each row in its own currency`,
     columns: [
       { key: 'run', label: 'Run' },
+      { key: 'company', label: 'Company' },
       { key: 'period', label: 'Period' },
       { key: 'payday', label: 'Payday' },
       { key: 'employees', label: 'Employees', ...right },
+      { key: 'currency', label: 'Currency' },
       { key: 'gross', label: 'Gross', ...right },
       { key: 'net', label: 'Net', ...right },
       { key: 'employerCost', label: 'Employer cost', ...right },
       { key: 'status', label: 'Status' }
     ],
-    rows: [...runs].reverse().map(run => ({
-      run: run.reference,
-      period: formatPeriod(run.periodStart, run.periodEnd),
-      payday: formatDate(run.payDate),
-      employees: run.employeeCount,
-      gross: formatMoney(run.totals.grossPay),
-      net: formatMoney(run.totals.netPay),
-      employerCost: formatMoney(run.totals.employerCost),
-      status: PAY_RUN_STATUS_LABELS[run.status]
-    }))
+    rows: [...runs]
+      .sort((a, b) => b.periodStart.localeCompare(a.periodStart) || a.entityId.localeCompare(b.entityId))
+      .map(run => ({
+        run: run.reference,
+        company: entityNameById.get(run.entityId) ?? run.entityId,
+        period: formatPeriod(run.periodStart, run.periodEnd),
+        payday: formatDate(run.payDate),
+        employees: run.employeeCount,
+        currency: run.currency,
+        gross: formatMoney(run.totals.grossPay),
+        net: formatMoney(run.totals.netPay),
+        employerCost: formatMoney(run.totals.employerCost),
+        status: PAY_RUN_STATUS_LABELS[run.status]
+      }))
   }
 
   runs.forEach((run, index) => {

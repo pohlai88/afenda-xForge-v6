@@ -11,7 +11,7 @@ import type { CurrencyCode } from '@/types/common/primitive-types'
 import type { Consolidation, DimensionBreakdown, DimensionRow } from '@/types/payroll/group-types'
 
 // Component Imports
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import GroupCoverage from './group-coverage'
@@ -116,16 +116,17 @@ const ConsolidateBy = ({ consolidation, breakdown, query, defaults, className }:
                       onClick={() => setOpenRow(row)}
                     >
                       <TableCell className='py-2 pl-4'>
-                        <button
-                          type='button'
+                        <Button
+                          variant='link'
                           onClick={event => {
                             event.stopPropagation()
                             setOpenRow(row)
                           }}
-                          className='font-medium underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none'
+                          aria-label={`Explain ${row.label}`}
+                          className='h-auto p-0 font-medium'
                         >
                           {row.label}
-                        </button>
+                        </Button>
                         {row.code && row.code !== row.label && (
                           <span className='text-muted-foreground ml-2 font-mono text-xs'>{row.code}</span>
                         )}

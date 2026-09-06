@@ -8,6 +8,7 @@ import ReportsWorkspace from '@/views/payroll/reports/reports-workspace'
 // Action Imports
 import {
   getCurrentPayRun,
+  getLegalEntities,
   getDepartments,
   getEmployees,
   getLocations,
@@ -30,12 +31,13 @@ export const metadata = { title: 'Payroll reports' }
  * a run and a format and writes the file.
  */
 const PayrollReportsPage = async () => {
-  const [runs, currentRun, employees, departments, locations, exports] = await Promise.all([
+  const [runs, currentRun, employees, departments, locations, entities, exports] = await Promise.all([
     getPayRuns(),
     getCurrentPayRun(),
     getEmployees(),
     getDepartments(),
     getLocations(),
+    getLegalEntities(),
     getRecentExports()
   ])
 
@@ -49,7 +51,8 @@ const PayrollReportsPage = async () => {
     ])
   }
 
-  const tables = buildReportTables({ runs, employees, departments, locations, payslipsByRun, settlementsByRun })
+  const tables = buildReportTables({
+    entities, runs, employees, departments, locations, payslipsByRun, settlementsByRun })
 
   // Newest first in the selector, so the run someone most likely wants is at the top.
   const runOptions = [...runs].reverse().map(run => ({

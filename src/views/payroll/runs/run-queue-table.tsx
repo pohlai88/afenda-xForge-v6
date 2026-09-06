@@ -39,6 +39,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { ExceptionBadge } from '@/views/payroll/run/exception-badge'
@@ -60,6 +61,16 @@ const RIGHT_ALIGNED = new Set(['employeeCount', 'gross', 'net', 'employerCost'])
 
 const hrefFor = (row: PayRunQueueRow) => `/payroll/runs/${row.id}`
 
+/** Stands in for a total that cannot honestly be produced, and says why to a screen reader. */
+const NoTotal = () => (
+  <>
+    <span aria-hidden='true' className='text-muted-foreground'>
+      —
+    </span>
+    <span className='sr-only'>Not totalled: these runs are in different currencies</span>
+  </>
+)
+
 /**
  * Money columns sort on the raw minor-unit amount and format only at render. Sorting the
  * formatted string would order 'S$9,120.00' above 'S$84,300.00'.
@@ -77,16 +88,23 @@ const columns: ColumnDef<PayRunQueueRow>[] = [
         >
           {row.original.reference}
         </Link>
-        <span className='text-muted-foreground text-xs'>{row.original.payGroup}</span>
+        <span className='text-muted-foreground text-xs whitespace-nowrap'>
+          {formatPeriod(row.original.periodStart, row.original.periodEnd)}
+        </span>
       </span>
     )
   },
   {
-    id: 'period',
-    header: 'Period',
-    accessorKey: 'periodStart',
+    id: 'entity',
+    header: 'Company',
+    accessorKey: 'entityName',
     cell: ({ row }) => (
-      <span className='whitespace-nowrap'>{formatPeriod(row.original.periodStart, row.original.periodEnd)}</span>
+      <span className='flex flex-col'>
+        <span className='whitespace-nowrap'>{row.original.entityName}</span>
+        <span className='text-muted-foreground text-xs'>
+          {row.original.countryCode} · {row.original.payGroup}
+        </span>
+      </span>
     )
   },
   {
@@ -249,6 +267,7 @@ type Props = {
 const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
   const router = useRouter()
   const [lifecycle, setLifecycle] = useState<RunLifecycle | 'all'>('all')
+  const [entityFilter, setEntityFilter] = useState<string>('all')
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize })
@@ -263,8 +282,8 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
   )
 
   const data = useMemo(
-    () => (lifecycle === 'all' ? rows : rows.filter(row => row.lifecycle === lifecycle)),
-    [rows, lifecycle]
+    () => (rows.filter(row => (lifecycle === 'all' || row.lifecycle === lifecycle) && (entityFilter === 'all' || row.entityId === entityFilter))),
+    [rows, lifecycle, entityFilter]
   )
 
   // Same opt-out the other datatables in this repo carry: useReactTable returns functions the
@@ -299,7 +318,7 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
   const filteredRows = table.getFilteredRowModel().rows.map(row => row.original)
   const pageRows = table.getRowModel().rows
   const pageCount = table.getPageCount()
-  const filtered = lifecycle !== 'all' || globalFilter.length > 0
+  const filtered = lifecycle !== 'all' || entityFilter !== 'all' || globalFilter.length > 0
 
   const totals = filteredRows.reduce(
     (sum, row) => ({
@@ -311,10 +330,19 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
     { employees: 0, gross: 0, net: 0, employerCost: 0 }
   )
 
-  const currency = rows[0]?.gross.currency ?? 'SGD'
+  // A total is only meaningful when every row shares a currency. With companies paying in
+  // dollars, ringgit and dong in one table, adding the columns and stamping the first row's
+  // currency on the result produces a figure that looks precise and means nothing. Filter to
+  // one company, or read the consolidated number on Group payroll where the exchange rate
+  // basis is stated.
+  const currencies = [...new Set(filteredRows.map(row => row.gross.currency))]
+  const currency = currencies.length === 1 ? currencies[0] : null
+
+  const entityOptions = [...new Map(rows.map(row => [row.entityId, row.entityName])).entries()]
 
   const resetFilters = () => {
     setLifecycle('all')
+    setEntityFilter('all')
     setGlobalFilter('')
     setPagination(p => ({ ...p, pageIndex: 0 }))
   }
@@ -382,6 +410,33 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
               )
           )}
         </ToggleGroup>
+
+        {entityOptions.length > 1 && (
+          <Select
+            value={entityFilter}
+            onValueChange={value => {
+              if (!value) return
+              setEntityFilter(value)
+              setPagination(p => ({ ...p, pageIndex: 0 }))
+            }}
+            items={[
+              { value: 'all', label: 'All companies' },
+              ...entityOptions.map(([id, name]) => ({ value: id, label: name }))
+            ]}
+          >
+            <SelectTrigger size='sm' className='w-56' aria-label='Filter runs by company'>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>All companies</SelectItem>
+              {entityOptions.map(([id, name]) => (
+                <SelectItem key={id} value={id}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {filtered && (
           <Button variant='ghost' size='sm' onClick={resetFilters}>
@@ -489,16 +544,21 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
                 <TableRow>
                   <TableCell colSpan={3} className='pl-6 font-medium'>
                     {filteredRows.length} runs
+                    {!currency && (
+                      <span className='text-muted-foreground ml-2 font-normal'>
+                        · {currencies.length} currencies · filter by company to total
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className='text-right tabular-nums'>{totals.employees}</TableCell>
                   <TableCell className='text-right tabular-nums'>
-                    {formatMoney({ amount: totals.gross, currency })}
+                    {currency ? formatMoney({ amount: totals.gross, currency }) : <NoTotal />}
                   </TableCell>
                   <TableCell className='text-right tabular-nums'>
-                    {formatMoney({ amount: totals.net, currency })}
+                    {currency ? formatMoney({ amount: totals.net, currency }) : <NoTotal />}
                   </TableCell>
                   <TableCell className='text-right font-medium tabular-nums'>
-                    {formatMoney({ amount: totals.employerCost, currency })}
+                    {currency ? formatMoney({ amount: totals.employerCost, currency }) : <NoTotal />}
                   </TableCell>
                   <TableCell colSpan={3} />
                 </TableRow>

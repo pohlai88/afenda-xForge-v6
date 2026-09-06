@@ -4,7 +4,7 @@ import RunQueueTable from '@/views/payroll/runs/run-queue-table'
 import RunQueueYear from '@/views/payroll/runs/run-queue-year'
 
 // Action Imports
-import { getEmployees, getPayRuns } from '@/app/server/actions'
+import { getEmployees, getLegalEntities, getPayRuns } from '@/app/server/actions'
 
 // Util Imports
 import { buildRunQueue, queueSummary } from '@/utils/payroll-queue'
@@ -16,13 +16,13 @@ export const metadata = { title: 'Payroll runs' }
  * run underneath. Rows open the run workspace rather than re-pointing the dashboard.
  */
 const PayrollRunsPage = async () => {
-  const [runs, employees] = await Promise.all([getPayRuns(), getEmployees()])
+  const [runs, employees, entities] = await Promise.all([getPayRuns(), getEmployees(), getLegalEntities()])
 
   // The clock is read once, here, and passed down as a date — components that read it
   // themselves render differently on the server and the client.
   const today = new Date().toISOString().slice(0, 10)
 
-  const rows = buildRunQueue({ runs, employees, today })
+  const rows = buildRunQueue({ runs, employees, entities, today })
   const summary = queueSummary(rows)
 
   return (
