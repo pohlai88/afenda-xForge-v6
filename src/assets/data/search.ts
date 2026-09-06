@@ -4,6 +4,7 @@ import type { ForwardRefExoticComponent, RefAttributes } from 'react'
 // Third-party Imports
 import {
   BanIcon,
+  BanknoteIcon,
   CalendarIcon,
   CircleAlertIcon,
   ConstructionIcon,
@@ -78,6 +79,11 @@ export const searchData: SearchData[] = [
         icon: TruckIcon,
         name: 'Logistics Dashboard',
         href: '/dashboard/logistics'
+      },
+      {
+        icon: BanknoteIcon,
+        name: 'Payroll Dashboard',
+        href: '/dashboard/payroll'
       },
       {
         icon: ShoppingCartIcon,

@@ -1,0 +1,159 @@
+// Third-party Imports
+import { AlertTriangleIcon, CalendarClockIcon, UsersIcon } from 'lucide-react'
+
+// Type Imports
+import type { PayRun } from '@/types/payroll/pay-run-types'
+
+// Component Imports
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+
+// Util Imports
+import { cn } from '@/lib/utils'
+import { formatMoney } from '@/utils/money'
+import { RUN_STAGES, stageIndexFor } from '@/utils/payroll-metrics'
+
+const STAGE_LABELS: Record<string, string> = {
+  draft: 'Draft',
+  calculated: 'Calculated',
+  pending_approval: 'Approval',
+  approved: 'Approved',
+  paid: 'Paid'
+}
+
+type Props = {
+  run: PayRun
+
+  /** Supplied by the caller rather than read from the clock here, so this stays deterministic. */
+  daysToCutoff: number
+  blockingCount: number
+  className?: string
+}
+
+const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props) => {
+  const currentStage = stageIndexFor(run)
+  const overdue = daysToCutoff < 0
+
+  return (
+    <Card className={className}>
+      <CardHeader className='flex flex-wrap items-start justify-between gap-3'>
+        <div className='flex flex-col gap-1'>
+          <div className='flex items-center gap-2'>
+            <span className='text-lg font-semibold'>{run.reference}</span>
+            <Badge className={cn(blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary')}>
+              {STAGE_LABELS[run.status] ?? run.status}
+            </Badge>
+          </div>
+          <span className='text-muted-foreground text-sm'>
+            {run.periodStart} – {run.periodEnd} · pays {run.payDate}
+          </span>
+        </div>
+        <div className='flex flex-col items-end gap-1'>
+          <span className='text-2xl font-semibold'>{formatMoney(run.totals.employerCost)}</span>
+          <span className='text-muted-foreground text-sm'>Total employer cost</span>
+        </div>
+      </CardHeader>
+
+      <CardContent className='flex flex-1 flex-col gap-6'>
+        {/* Stage track. A run that was cancelled or failed is not partway along this path, so
+            it is rendered as a plain status above rather than a position on the track. */}
+        <div className='flex items-center'>
+          {RUN_STAGES.map((stage, index) => {
+            const done = index < currentStage
+            const active = index === currentStage
+
+            return (
+              <div key={stage} className='flex flex-1 items-center last:flex-none'>
+                <div className='flex flex-col items-center gap-2'>
+                  <span
+                    className={cn(
+                      'size-3 shrink-0 rounded-full border-2',
+                      done && 'bg-primary border-primary',
+                      active && 'border-primary bg-primary/20 ring-primary/20 ring-4',
+                      !done && !active && 'border-muted-foreground/30'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'text-xs whitespace-nowrap',
+                      active ? 'text-foreground font-medium' : 'text-muted-foreground'
+                    )}
+                  >
+                    {STAGE_LABELS[stage]}
+                  </span>
+                </div>
+                {index < RUN_STAGES.length - 1 && (
+                  <span className={cn('mx-2 mb-6 h-0.5 flex-1', done ? 'bg-primary' : 'bg-muted-foreground/20')} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <div className='grid gap-4 sm:grid-cols-3'>
+          <div className='flex items-center gap-3'>
+            <span className='bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-sm'>
+              <UsersIcon className='size-4.5' />
+            </span>
+            <span className='flex flex-col'>
+              <span className='font-semibold'>{run.employeeCount}</span>
+              <span className='text-muted-foreground text-sm'>Employees in run</span>
+            </span>
+          </div>
+
+          <div className='flex items-center gap-3'>
+            <span
+              className={cn(
+                'flex size-9 shrink-0 items-center justify-center rounded-sm',
+                overdue ? 'bg-destructive/10 text-destructive' : 'bg-chart-2/10 text-chart-2'
+              )}
+            >
+              <CalendarClockIcon className='size-4.5' />
+            </span>
+            <span className='flex flex-col'>
+              <span className='font-semibold'>
+                {overdue ? `${Math.abs(daysToCutoff)} days overdue` : `${daysToCutoff} days left`}
+              </span>
+              <span className='text-muted-foreground text-sm'>Until cut-off</span>
+            </span>
+          </div>
+
+          <div className='flex items-center gap-3'>
+            <span
+              className={cn(
+                'flex size-9 shrink-0 items-center justify-center rounded-sm',
+                blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-chart-2/10 text-chart-2'
+              )}
+            >
+              <AlertTriangleIcon className='size-4.5' />
+            </span>
+            <span className='flex flex-col'>
+              <span className='font-semibold'>{blockingCount}</span>
+              <span className='text-muted-foreground text-sm'>
+                {blockingCount === 1 ? 'Blocking issue' : 'Blocking issues'}
+              </span>
+            </span>
+          </div>
+        </div>
+
+        {/* The same figures the bridge chart draws, as exact amounts. The chart shows the shape
+            of the run; someone signing it off needs the numbers to the cent. */}
+        <div className='mt-auto grid grid-cols-2 gap-4 border-t pt-5 sm:grid-cols-4'>
+          {[
+            { label: 'Gross', value: run.totals.grossPay },
+            { label: 'Tax', value: run.totals.employeeTaxes },
+            { label: 'Deductions', value: run.totals.employeeDeductions },
+            { label: 'Net pay', value: run.totals.netPay }
+          ].map(item => (
+            <div key={item.label} className='flex flex-col gap-1'>
+              <span className='text-muted-foreground text-xs tracking-wide uppercase'>{item.label}</span>
+              <span className='font-semibold'>{formatMoney(item.value)}</span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default PayrollRunStatus

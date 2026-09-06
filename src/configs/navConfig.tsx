@@ -68,6 +68,11 @@ export const navItems: NavItem[] = [
         href: '/dashboard/logistics'
       },
       {
+        icon: 'Banknote',
+        label: 'Payroll',
+        href: '/dashboard/payroll'
+      },
+      {
         icon: 'ShoppingCart',
         label: 'eCommerce',
         href: '/dashboard/ecommerce'

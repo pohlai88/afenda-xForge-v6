@@ -10,6 +10,8 @@ import { initialColumns, teamMembers } from '@/fake-db/apps/kanban'
 import { db as mailDb } from '@/fake-db/apps/mail'
 import { db as userSettingsDb } from '@/fake-db/pages/user-settings'
 import { db as userProfileDb } from '@/fake-db/pages/user-profile'
+import { activeEmployees, departments, employees, locations } from '@/fake-db/hrm/employees'
+import { currentPayRun, payRuns, payslips } from '@/fake-db/payroll/pay-runs'
 
 // Calendar App Actions
 export const getCalendarData = async () => {
@@ -38,3 +40,19 @@ export const getIntegrationsData = async () => userSettingsDb.integrations
 
 // User Profile Actions
 export const getProfileData = async () => userProfileDb
+
+// HRM Actions
+export const getEmployees = async () => employees
+
+export const getActiveEmployees = async () => activeEmployees
+
+export const getDepartments = async () => departments
+
+export const getLocations = async () => locations
+
+// Payroll Actions
+export const getPayRuns = async () => payRuns
+
+export const getCurrentPayRun = async () => currentPayRun
+
+export const getPayslipsForRun = async (payRunId: string) => payslips.filter(slip => slip.payRunId === payRunId)
