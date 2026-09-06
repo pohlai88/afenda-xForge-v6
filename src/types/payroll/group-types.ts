@@ -273,6 +273,15 @@ export interface MovementLine {
   key: string
   label: string
 
+  /**
+   * What kind of contribution this is.
+   *
+   * It decides how the row reads, and the distinction matters: a company that dropped out of the
+   * period lowers the total, but that is not payroll getting cheaper. Colouring it as an
+   * improvement would tell the reader the opposite of the truth.
+   */
+  kind: 'entity' | 'absence' | 'fx'
+
   /** Entity, when the contributor is one; absent for an aggregated remainder. */
   entityId?: string
 

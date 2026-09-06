@@ -60,6 +60,15 @@ const scaleOf = (currency: CurrencyCode) => 10 ** DIGITS[currency]
 
 const groupDigits = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
+/**
+ * A whole number with thousands separators: 3412 -> '3,412'.
+ *
+ * Not money, but the same reason to exist. `toLocaleString` is Intl, and Intl in anything that
+ * server-renders is the hydration mismatch this file was written to avoid — which includes a
+ * client component's first render.
+ */
+export const formatCount = (value: number): string => groupDigits(String(Math.round(value)))
+
 /** 28446495 SGD -> 'S$284,464.95'; 12500000 VND -> '₫12,500,000'. Input is minor units. */
 export const formatMoney = (money: Money): string => {
   const digits = DIGITS[money.currency]

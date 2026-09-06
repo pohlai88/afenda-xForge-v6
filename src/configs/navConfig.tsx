@@ -81,7 +81,8 @@ export const navItems: NavItem[] = [
         icon: 'Banknote',
         label: 'Payroll',
         childItems: [
-          { label: 'Overview', href: '/payroll' },
+          { label: 'Group', href: '/payroll' },
+          { label: 'Companies', href: '/payroll/entities/ent-sg', activePath: '/payroll/entities' },
           { label: 'Runs', href: '/payroll/runs', activePath: '/payroll/runs' },
           { label: 'Payments', href: '/payroll/payments' },
           { label: 'Compliance', href: '/payroll/compliance' },

@@ -817,6 +817,7 @@ const buildMovement = (
       .map(row => ({
         key: row.entity.id,
         label: row.entity.name,
+        kind: 'entity' as const,
         entityId: row.entity.id,
         change: row.change!,
         share: 0,
@@ -825,6 +826,7 @@ const buildMovement = (
     ...droppedOut.map(item => ({
       key: item.entity.id,
       label: `${item.entity.name} — no calculation this period`,
+      kind: 'absence' as const,
       entityId: item.entity.id,
       change: { amount: -item.previous.amount, currency: reporting },
       share: 0,
@@ -844,6 +846,7 @@ const buildMovement = (
       lines.push({
         key: 'fx',
         label: 'Exchange rate movement',
+        kind: 'fx' as const,
         change: { amount: residual, currency: reporting },
         share: 0
       })

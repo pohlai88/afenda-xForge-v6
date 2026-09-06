@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
@@ -52,8 +52,8 @@ const RIGHT_ALIGNED = new Set(['employeeCount', 'gross', 'net', 'employerCost'])
  */
 export type RunLinkTarget = 'dashboard' | 'workspace'
 
-const HREF_FOR: Record<RunLinkTarget, (run: PayRun) => string> = {
-  dashboard: run => `/payroll?run=${encodeURIComponent(run.reference)}`,
+const HREF_FOR: Record<RunLinkTarget, (run: PayRun, basePath: string) => string> = {
+  dashboard: (run, basePath) => `${basePath}?run=${encodeURIComponent(run.reference)}`,
   workspace: run => `/payroll/runs/${run.id}`
 }
 
@@ -129,6 +129,12 @@ type Props = {
   title?: string
 
   linkTo?: RunLinkTarget
+
+  /**
+   * Which page a row link goes to. Defaults to the group route; the entity page passes its own
+   * path so a click stays inside the company being looked at.
+   */
+  basePath?: string
   pageSize?: number
   className?: string
 }
@@ -138,6 +144,7 @@ const PayrollRunHistory = ({
   selectedReference,
   title = 'Run history',
   linkTo = 'dashboard',
+  basePath = '/payroll',
   pageSize = 5,
   className
 }: Props) => {
@@ -147,7 +154,7 @@ const PayrollRunHistory = ({
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize })
 
   const data = useMemo(() => runs, [runs])
-  const hrefFor = HREF_FOR[linkTo]
+  const hrefFor = useCallback((run: PayRun) => HREF_FOR[linkTo](run, basePath), [linkTo, basePath])
   const columns = useMemo(() => buildColumns(hrefFor), [hrefFor])
 
   // Same opt-out the other datatables in this repo carry: useReactTable returns functions the
@@ -278,11 +285,13 @@ const PayrollRunHistory = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[...new Set([5, 10, 25, pageSize])].sort((a, b) => a - b).map(size => (
-                  <SelectItem key={size} value={String(size)}>
-                    {size}
-                  </SelectItem>
-                ))}
+                {[...new Set([5, 10, 25, pageSize])]
+                  .sort((a, b) => a - b)
+                  .map(size => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>

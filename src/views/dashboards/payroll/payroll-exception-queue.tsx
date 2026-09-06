@@ -44,15 +44,28 @@ type Props = {
 
   /** Id of the run, for the link into the workspace where exceptions are actually worked. */
   runId: string
+
+  /**
+   * Which page a row link goes to. Defaults to the group route; the entity page passes its own
+   * path so a click stays inside the company being looked at.
+   */
+  basePath?: string
   className?: string
 }
 
-const PayrollExceptionQueue = ({ exceptions, departmentFilter, runReference, runId, className }: Props) => {
+const PayrollExceptionQueue = ({
+  exceptions,
+  departmentFilter,
+  runReference,
+  runId,
+  basePath = '/payroll',
+  className
+}: Props) => {
   const open = [...exceptions]
     .filter(exception => !exception.resolvedAt)
     .sort((a, b) => EXCEPTION_SEVERITY_ORDER[a.severity] - EXCEPTION_SEVERITY_ORDER[b.severity])
 
-  const clearFilterHref = `/payroll?run=${encodeURIComponent(runReference)}`
+  const clearFilterHref = `${basePath}?run=${encodeURIComponent(runReference)}`
 
   return (
     <Card className={className}>

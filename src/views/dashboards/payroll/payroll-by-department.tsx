@@ -50,6 +50,12 @@ type Props = {
 
   /** Department the exception queue is filtered to, set by a chip below the chart. */
   selectedDepartmentId?: string
+
+  /**
+   * Which page a row link goes to. Defaults to the group route; the entity page passes its own
+   * path so a click stays inside the company being looked at.
+   */
+  basePath?: string
   className?: string
 }
 
@@ -68,7 +74,9 @@ type Props = {
  * Not a pie: six categories is past the point one can be read, and the question here is a
  * ranking, not a composition.
  */
-const PayrollByDepartment = ({ departments, runReference, selectedDepartmentId, className }: Props) => {
+const PayrollByDepartment = ({ departments, runReference, selectedDepartmentId, className,
+  basePath = '/payroll'
+}: Props) => {
   const data = departments.map((department, index) => ({
     ...department,
 
@@ -79,7 +87,7 @@ const PayrollByDepartment = ({ departments, runReference, selectedDepartmentId, 
   }))
 
   const hrefFor = (departmentId: string | null) =>
-    `/payroll?run=${encodeURIComponent(runReference)}${departmentId ? `&dept=${encodeURIComponent(departmentId)}` : ''}`
+    `${basePath}?run=${encodeURIComponent(runReference)}${departmentId ? `&dept=${encodeURIComponent(departmentId)}` : ''}`
 
   return (
     <Card className={className}>

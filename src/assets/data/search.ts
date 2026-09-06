@@ -83,7 +83,7 @@ export const searchData: SearchData[] = [
       },
       {
         icon: BanknoteIcon,
-        name: 'Payroll Overview',
+        name: 'Group Payroll',
         href: '/payroll',
         tags: ['payroll', 'salary', 'pay run']
       },
