@@ -6,7 +6,7 @@ import type { PayRun } from '@/types/payroll/pay-run-types'
 
 // Component Imports
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 // Util Imports
 import { cn } from '@/lib/utils'
@@ -36,22 +36,22 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
 
   return (
     <Card className={className}>
-      <CardHeader className='flex flex-wrap items-start justify-between gap-3'>
-        <div className='flex flex-col gap-1'>
-          <div className='flex items-center gap-2'>
-            <span className='text-lg font-semibold'>{run.reference}</span>
-            <Badge className={cn(blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary')}>
-              {STAGE_LABELS[run.status] ?? run.status}
-            </Badge>
-          </div>
-          <span className='text-muted-foreground text-sm'>
-            {run.periodStart} – {run.periodEnd} · pays {run.payDate}
-          </span>
-        </div>
-        <div className='flex flex-col items-end gap-1'>
+      <CardHeader>
+        <CardTitle className='flex items-center gap-2 text-lg font-semibold'>
+          {run.reference}
+          <Badge
+            className={cn(blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary')}
+          >
+            {STAGE_LABELS[run.status] ?? run.status}
+          </Badge>
+        </CardTitle>
+        <CardDescription>
+          {run.periodStart} – {run.periodEnd} · pays {run.payDate}
+        </CardDescription>
+        <CardAction className='flex flex-col items-end gap-1'>
           <span className='text-2xl font-semibold'>{formatMoney(run.totals.employerCost)}</span>
           <span className='text-muted-foreground text-sm'>Total employer cost</span>
-        </div>
+        </CardAction>
       </CardHeader>
 
       <CardContent className='flex flex-1 flex-col gap-6'>

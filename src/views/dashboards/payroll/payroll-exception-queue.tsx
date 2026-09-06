@@ -6,7 +6,7 @@ import type { PayRunException, PayRunExceptionSeverity } from '@/types/payroll/p
 
 // Component Imports
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 // Util Imports
@@ -42,14 +42,16 @@ const PayrollExceptionQueue = ({ exceptions, className }: Props) => {
 
   return (
     <Card className={className}>
-      <CardHeader className='flex items-start justify-between gap-2'>
-        <div className='flex flex-col gap-1'>
-          <span className='text-lg font-semibold'>Exceptions</span>
-          <span className='text-muted-foreground text-sm'>Clear before approving the run</span>
-        </div>
-        <Badge className={cn(open.length === 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}>
-          {open.length} open
-        </Badge>
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>Exceptions</CardTitle>
+        <CardDescription>Clear before approving the run</CardDescription>
+        <CardAction>
+          <Badge
+            className={cn(open.length === 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}
+          >
+            {open.length} open
+          </Badge>
+        </CardAction>
       </CardHeader>
       <CardContent className='pt-0'>
         {open.length === 0 ? (

@@ -2,7 +2,7 @@
 import type { DepartmentCost } from '@/utils/payroll-metrics'
 
 // Component Imports
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 
 // Util Imports
@@ -16,9 +16,9 @@ type Props = {
 const PayrollByDepartment = ({ departments, className }: Props) => {
   return (
     <Card className={className}>
-      <CardHeader className='flex flex-col gap-1'>
-        <span className='text-lg font-semibold'>Cost by department</span>
-        <span className='text-muted-foreground text-sm'>Employer cost, this run</span>
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>Cost by department</CardTitle>
+        <CardDescription>Employer cost, this run</CardDescription>
       </CardHeader>
       <CardContent className='flex flex-col gap-5'>
         {departments.map(department => (

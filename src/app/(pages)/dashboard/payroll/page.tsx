@@ -2,7 +2,7 @@
 import { BanknoteIcon, ClockIcon, WalletIcon } from 'lucide-react'
 
 // Component Imports
-import StatisticsCard from '@/views/dashboards/statistics/statistics-card-03'
+import PayrollStatCard from '@/views/dashboards/payroll/payroll-stat-card'
 import PayrollByDepartment from '@/views/dashboards/payroll/payroll-by-department'
 import PayrollCostTrend from '@/views/dashboards/payroll/payroll-cost-trend'
 import PayrollExceptionQueue, { type ExceptionRow } from '@/views/dashboards/payroll/payroll-exception-queue'
@@ -20,7 +20,6 @@ import {
   costByDepartment,
   countExceptions,
   daysBetween,
-  formatChange,
   grossToNetBridge,
   overtimeSummary
 } from '@/utils/payroll-metrics'
@@ -57,6 +56,11 @@ const PayrollDashboard = async () => {
   const previousSlips = previousRun ? await getPayslipsForRun(previousRun.id) : []
   const previousOvertime = overtimeSummary(previousSlips, currentRun.currency)
 
+  // Sparkline series, oldest first. Overtime has no equivalent: it is derived from payslips,
+  // and fetching every run's payslips to draw one 80px line is not a trade worth making.
+  const costSeries = runs.map(run => run.totals.employerCost.amount)
+  const netSeries = runs.map(run => run.totals.netPay.amount)
+
   const costTrend = runs.map(run => ({
     reference: run.reference.replace('PR-', ''),
     cost: toMajorUnits(run.totals.employerCost),
@@ -74,34 +78,36 @@ const PayrollDashboard = async () => {
 
       <PayrollExceptionQueue exceptions={exceptionRows} className='col-span-full lg:col-span-2' />
 
-      <StatisticsCard
+      <PayrollStatCard
         icon={<WalletIcon />}
         value={formatMoneyCompact(currentRun.totals.employerCost)}
         title='Total employer cost'
-        trend={(changeVsPrevious(currentRun.totals.employerCost, previousRun?.totals.employerCost) ?? 0) >= 0 ? 'up' : 'down'}
-        changePercentage={formatChange(changeVsPrevious(currentRun.totals.employerCost, previousRun?.totals.employerCost))}
-        badgeContent='vs last run'
+        change={changeVsPrevious(currentRun.totals.employerCost, previousRun?.totals.employerCost)}
+        polarity='higher-is-worse'
+        caption='vs last run'
+        series={costSeries}
         className='col-span-full sm:col-span-3 lg:col-span-2'
       />
 
-      <StatisticsCard
+      <PayrollStatCard
         icon={<BanknoteIcon />}
         value={formatMoneyCompact(currentRun.totals.netPay)}
         title='Net pay to employees'
-        trend={(changeVsPrevious(currentRun.totals.netPay, previousRun?.totals.netPay) ?? 0) >= 0 ? 'up' : 'down'}
-        changePercentage={formatChange(changeVsPrevious(currentRun.totals.netPay, previousRun?.totals.netPay))}
-        badgeContent='vs last run'
+        change={changeVsPrevious(currentRun.totals.netPay, previousRun?.totals.netPay)}
+        polarity='neutral'
+        caption='vs last run'
+        series={netSeries}
         className='col-span-full sm:col-span-3 lg:col-span-2'
         iconClassName='bg-chart-2/10 text-chart-2'
       />
 
-      <StatisticsCard
+      <PayrollStatCard
         icon={<ClockIcon />}
         value={`${overtime.hours} hrs`}
         title={`Overtime · ${overtime.shareOfGross.toFixed(1)}% of gross`}
-        trend={(changeVsPrevious(overtime.cost, previousOvertime.cost) ?? 0) >= 0 ? 'up' : 'down'}
-        changePercentage={formatChange(changeVsPrevious(overtime.cost, previousOvertime.cost))}
-        badgeContent='vs last run'
+        change={changeVsPrevious(overtime.cost, previousOvertime.cost)}
+        polarity='higher-is-worse'
+        caption='vs last run'
         className='col-span-full sm:col-span-3 lg:col-span-2'
         iconClassName='bg-chart-5/10 text-chart-5'
       />

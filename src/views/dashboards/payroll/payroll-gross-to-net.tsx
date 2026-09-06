@@ -7,7 +7,7 @@ import { Bar, BarChart, Cell, XAxis } from 'recharts'
 import type { BridgeStep } from '@/utils/payroll-metrics'
 
 // Component Imports
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
 const chartConfig = {
@@ -31,9 +31,9 @@ type Props = {
 const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
   return (
     <Card className={className}>
-      <CardHeader className='flex flex-col gap-1'>
-        <span className='text-lg font-semibold'>Gross to net</span>
-        <span className='text-muted-foreground text-sm'>Where this run&apos;s pay goes</span>
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>Gross to net</CardTitle>
+        <CardDescription>Where this run&apos;s pay goes</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className='h-72 w-full'>

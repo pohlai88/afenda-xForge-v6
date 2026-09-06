@@ -4,7 +4,7 @@
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 'recharts'
 
 // Component Imports
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
 export type CostTrendPoint = {
@@ -36,9 +36,9 @@ type Props = {
 const PayrollCostTrend = ({ points, currencySymbol, className }: Props) => {
   return (
     <Card className={className}>
-      <CardHeader className='flex flex-col gap-1'>
-        <span className='text-lg font-semibold'>Cost and headcount</span>
-        <span className='text-muted-foreground text-sm'>Last six runs</span>
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>Cost and headcount</CardTitle>
+        <CardDescription>Last six runs</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className='h-72 w-full'>
