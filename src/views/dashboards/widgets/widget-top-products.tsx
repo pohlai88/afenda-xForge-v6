@@ -8,7 +8,7 @@ import { EllipsisVerticalIcon } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,23 +49,25 @@ const TopProductsCard = ({ salesTitle, productsBySalesData, volumeTitle, product
     <Card className={cn('gap-x-2 gap-y-6 lg:flex-row', className)}>
       {/* Products by sales card */}
       <div className='flex flex-1 flex-col gap-9'>
-        <CardHeader className='flex items-center justify-between'>
-          <span className='text-lg font-semibold'>{salesTitle}</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
-            >
-              <EllipsisVerticalIcon />
-              <span className='sr-only'>Edit menu</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuGroup>
-                {listItems.map((item, index) => (
-                  <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <CardHeader>
+          <CardTitle className='text-lg font-semibold'>{salesTitle}</CardTitle>
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
+              >
+                <EllipsisVerticalIcon />
+                <span className='sr-only'>Edit menu</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuGroup>
+                  {listItems.map((item, index) => (
+                    <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
         </CardHeader>
         <CardContent className='flex flex-1 flex-col justify-between gap-4'>
           {productsBySalesData.map((product, index) => (
@@ -97,23 +99,25 @@ const TopProductsCard = ({ salesTitle, productsBySalesData, volumeTitle, product
       </div>
       {/* Products by volume card */}
       <div className='flex flex-1 flex-col gap-9'>
-        <CardHeader className='flex items-center justify-between'>
-          <span className='text-lg font-semibold'>{volumeTitle}</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
-            >
-              <EllipsisVerticalIcon />
-              <span className='sr-only'>Menu</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuGroup>
-                {listItems.map((item, index) => (
-                  <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <CardHeader>
+          <CardTitle className='text-lg font-semibold'>{volumeTitle}</CardTitle>
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
+              >
+                <EllipsisVerticalIcon />
+                <span className='sr-only'>Menu</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuGroup>
+                  {listItems.map((item, index) => (
+                    <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
         </CardHeader>
         <CardContent className='flex flex-1 flex-col justify-between gap-4'>
           {productsByVolumeData.map((product, index) => (

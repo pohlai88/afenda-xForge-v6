@@ -5,7 +5,7 @@ import { EllipsisVerticalIcon, ThumbsUpIcon, MessageSquareIcon } from 'lucide-re
 import { Avatar, AvatarFallback, AvatarGroup, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,32 +46,32 @@ const avatars = [
 const AdvertisementCard = ({ className }: { className?: string }) => {
   return (
     <Card className={cn('justify-between', className)}>
-      <CardHeader className='flex justify-between'>
-        <div className='flex items-center gap-4'>
-          <Avatar className='size-10.5 rounded-full'>
-            <AvatarImage src='/images/avatars/avatar-1.webp' alt='Hallie Richards' className='rounded-full' />
-            <AvatarFallback className='text-xs'>JW</AvatarFallback>
-          </Avatar>
-          <div className='flex flex-col gap-1'>
-            <span className='text-lg font-semibold'>Design strategy master class</span>
-            <span className='text-muted-foreground text-sm'>07 Jun 2025 at 10:00 PM</span>
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>Design strategy master class</CardTitle>
+        <CardDescription>07 Jun 2025 at 10:00 PM</CardDescription>
+        <CardAction>
+          <div className='flex items-center gap-4'>
+            <Avatar className='size-10.5 rounded-full'>
+              <AvatarImage src='/images/avatars/avatar-1.webp' alt='Hallie Richards' className='rounded-full' />
+              <AvatarFallback className='text-xs'>JW</AvatarFallback>
+            </Avatar>
           </div>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
-          >
-            <EllipsisVerticalIcon />
-            <span className='sr-only'>Menu</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuGroup>
-              {listItems.map((item, index) => (
-                <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
+            >
+              <EllipsisVerticalIcon />
+              <span className='sr-only'>Menu</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuGroup>
+                {listItems.map((item, index) => (
+                  <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </CardAction>
       </CardHeader>
       <div className='flex flex-col gap-9'>
         <div className='relative'>

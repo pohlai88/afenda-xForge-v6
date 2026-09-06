@@ -8,7 +8,7 @@ import { EllipsisVerticalIcon, WalletIcon, CreditCardIcon } from 'lucide-react'
 // Component Imports
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,8 +31,9 @@ const UpgradeYourPlanCard = ({ className }: { className?: string }) => {
   return (
     <Card className={cn('justify-between', className)}>
       <CardHeader>
-        <div className='flex items-center justify-between gap-2'>
-          <span className='text-lg font-semibold'>Upgrade your plan</span>
+        <CardTitle className='text-lg font-semibold'>Upgrade your plan</CardTitle>
+        <CardDescription>To fully enjoy all the amazing features and benefits of our premium plan.</CardDescription>
+        <CardAction>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
@@ -48,10 +49,7 @@ const UpgradeYourPlanCard = ({ className }: { className?: string }) => {
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-        <p className='text-muted-foreground text-sm'>
-          To fully enjoy all the amazing features and benefits of our premium plan.
-        </p>
+        </CardAction>
       </CardHeader>
       <CardContent>
         <div className='bg-primary/10 flex items-center justify-between gap-2 rounded-md px-2 py-1.5'>

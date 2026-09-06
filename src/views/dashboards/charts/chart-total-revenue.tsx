@@ -7,7 +7,7 @@ import { CircleDollarSignIcon, WalletIcon, EllipsisVerticalIcon } from 'lucide-r
 // Component Imports
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   type ChartConfig,
   ChartContainer,
@@ -145,23 +145,25 @@ const TotalRevenueCard = ({ className }: { className?: string }) => {
   return (
     <Card className={cn('grid lg:grid-cols-5', className)}>
       <div className='flex flex-col gap-4 max-lg:border-b max-lg:pb-6 lg:col-span-3 lg:border-r'>
-        <CardHeader className='flex justify-between'>
-          <span className='text-lg font-semibold'>Total Revenue</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
-            >
-              <EllipsisVerticalIcon />
-              <span className='sr-only'>Menu</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuGroup>
-                {listItems.map((item, index) => (
-                  <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <CardHeader>
+          <CardTitle className='text-lg font-semibold'>Total Revenue</CardTitle>
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
+              >
+                <EllipsisVerticalIcon />
+                <span className='sr-only'>Menu</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuGroup>
+                  {listItems.map((item, index) => (
+                    <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
         </CardHeader>
         <CardContent className='flex-1 max-[475px]:mx-auto'>
           <ChartContainer

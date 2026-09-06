@@ -79,9 +79,7 @@ const PayrollCostTrend = ({ points, currencySymbol, className }: Props) => {
               content={
                 <ChartTooltipContent
                   formatter={(value, name) =>
-                    name === 'cost'
-                      ? `${currencySymbol}${Number(value).toLocaleString('en-US')}`
-                      : `${value} employees`
+                    name === 'cost' ? `${currencySymbol}${Number(value).toLocaleString('en-US')}` : `${value} employees`
                   }
                 />
               }

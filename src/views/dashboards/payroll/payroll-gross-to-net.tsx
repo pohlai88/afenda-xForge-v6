@@ -45,9 +45,7 @@ const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
             sr-only summary below is the accessible version. */}
         <p className='sr-only'>
           How gross pay reduces to net for this run.{' '}
-          {steps
-            .map(step => `${step.label}: ${formatMajorUnits(step.value, currencySymbol)}.`)
-            .join(' ')}
+          {steps.map(step => `${step.label}: ${formatMajorUnits(step.value, currencySymbol)}.`).join(' ')}
         </p>
         <ChartContainer config={chartConfig} className='max-h-85 min-h-60 w-full' aria-hidden='true'>
           <BarChart data={steps} margin={{ top: 20, right: 8, left: -8 }}>

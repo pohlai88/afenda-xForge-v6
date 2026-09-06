@@ -3,7 +3,7 @@ import { EllipsisVerticalIcon } from 'lucide-react'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,26 +29,26 @@ type Props = {
 const PopularProductCard = ({ title, subTitle, productsData, className }: Props) => {
   return (
     <Card className={className}>
-      <CardHeader className='flex justify-between'>
-        <div className='flex flex-col gap-1'>
-          <span className='text-lg font-semibold'>{title}</span>
-          <span className='text-muted-foreground text-sm'>{subTitle}</span>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
-          >
-            <EllipsisVerticalIcon />
-            <span className='sr-only'>Menu</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuGroup>
-              {listItems.map((item, index) => (
-                <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
+        <CardDescription>{subTitle}</CardDescription>
+        <CardAction>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
+            >
+              <EllipsisVerticalIcon />
+              <span className='sr-only'>Menu</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuGroup>
+                {listItems.map((item, index) => (
+                  <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </CardAction>
       </CardHeader>
       <CardContent className='flex flex-1 flex-col justify-between gap-3'>
         {productsData.map((product, index) => (

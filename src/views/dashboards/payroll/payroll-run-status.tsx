@@ -46,9 +46,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
       <CardHeader>
         <CardTitle className='flex items-center gap-2 text-lg font-semibold'>
           {run.reference}
-          <Badge className={PAY_RUN_STATUS_STYLES[run.status]}>
-            {cardLabel(run.status)}
-          </Badge>
+          <Badge className={PAY_RUN_STATUS_STYLES[run.status]}>{cardLabel(run.status)}</Badge>
         </CardTitle>
         <CardDescription>
           {run.periodStart} – {run.periodEnd} · pays {run.payDate}

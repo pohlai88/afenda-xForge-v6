@@ -6,7 +6,7 @@ import { EllipsisVerticalIcon } from 'lucide-react'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,23 +36,25 @@ type Props = {
 const VehicleOverviewCard = ({ title, vehicleData, className }: Props) => {
   return (
     <Card className={className}>
-      <CardHeader className='flex justify-between border-b'>
-        <span className='text-lg font-semibold'>{title}</span>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
-          >
-            <EllipsisVerticalIcon />
-            <span className='sr-only'>Menu</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align='end'>
-            <DropdownMenuGroup>
-              {listItems.map((item, index) => (
-                <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
+        <CardAction>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
+            >
+              <EllipsisVerticalIcon />
+              <span className='sr-only'>Menu</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='end'>
+              <DropdownMenuGroup>
+                {listItems.map((item, index) => (
+                  <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </CardAction>
       </CardHeader>
       <CardContent className='text-muted-foreground flex text-sm'>
         {vehicleData.map((item, index) => (

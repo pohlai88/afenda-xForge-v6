@@ -4,7 +4,7 @@
 import { Bar, BarChart } from 'recharts'
 
 // Component Imports
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type ChartConfig, ChartContainer } from '@/components/ui/chart'
 import { Separator } from '@/components/ui/separator'
 
@@ -43,12 +43,12 @@ const orderPlacedChartConfig = {
 const ProductInsightsCard = ({ className }: { className?: string }) => {
   return (
     <Card className={className}>
-      <CardHeader className='flex justify-between'>
-        <div className='flex flex-col gap-1'>
-          <span className='text-lg font-semibold'>Product insight</span>
-          <span className='text-muted-foreground text-sm'>Published on 12 MAY 2025 - 6:10 PM</span>
-        </div>
-        <img src='/images/widgets/image-7.webp' alt='Product' className='w-20.5 rounded-md' />
+      <CardHeader>
+        <CardTitle className='text-lg font-semibold'>Product insight</CardTitle>
+        <CardDescription>Published on 12 MAY 2025 - 6:10 PM</CardDescription>
+        <CardAction>
+          <img src='/images/widgets/image-7.webp' alt='Product' className='w-20.5 rounded-md' />
+        </CardAction>
       </CardHeader>
       <CardContent>
         <Separator />

@@ -7,7 +7,7 @@ import { EllipsisVerticalIcon, CircleDollarSignIcon, WalletIcon } from 'lucide-r
 // Component Imports
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import {
   DropdownMenu,
@@ -44,26 +44,26 @@ const TotalTransactionCard = ({ className }: { className?: string }) => {
   return (
     <Card className={cn('grid grid-cols-1 gap-4 md:grid-cols-5', className)}>
       <div className='max-md:border-b md:col-span-3 md:border-r md:pr-4'>
-        <CardHeader className='flex justify-between'>
-          <div className='flex flex-col gap-1'>
-            <span className='text-lg font-semibold'>Total Transaction</span>
-            <span className='text-muted-foreground text-sm'>Weekly overview</span>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
-            >
-              <EllipsisVerticalIcon />
-              <span className='sr-only'>Menu</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuGroup>
-                {listItems.map((item, index) => (
-                  <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <CardHeader>
+          <CardTitle className='text-lg font-semibold'>Total Transaction</CardTitle>
+          <CardDescription>Weekly overview</CardDescription>
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
+              >
+                <EllipsisVerticalIcon />
+                <span className='sr-only'>Menu</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuGroup>
+                  {listItems.map((item, index) => (
+                    <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
         </CardHeader>
         <CardContent className='max-md:pb-6'>
           <ChartContainer config={transactionsChartConfig} className='h-83 w-full'>
@@ -98,26 +98,26 @@ const TotalTransactionCard = ({ className }: { className?: string }) => {
         </CardContent>
       </div>
       <div className='flex flex-col gap-8 md:col-span-2'>
-        <CardHeader className='flex justify-between'>
-          <div className='flex flex-col gap-1'>
-            <span className='text-lg font-semibold'>Report</span>
-            <span className='text-muted-foreground text-sm'>Last month transactions $23.4K</span>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
-            >
-              <EllipsisVerticalIcon />
-              <span className='sr-only'>Menu</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end'>
-              <DropdownMenuGroup>
-                {listItems.map((item, index) => (
-                  <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <CardHeader>
+          <CardTitle className='text-lg font-semibold'>Report</CardTitle>
+          <CardDescription>Last month transactions $23.4K</CardDescription>
+          <CardAction>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant='ghost' size='icon' className='text-muted-foreground size-6 rounded-full' />}
+              >
+                <EllipsisVerticalIcon />
+                <span className='sr-only'>Menu</span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuGroup>
+                  {listItems.map((item, index) => (
+                    <DropdownMenuItem key={index}>{item}</DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </CardAction>
         </CardHeader>
         <CardContent className='flex flex-1 items-center text-base'>
           <div className='flex flex-1 justify-around gap-1'>

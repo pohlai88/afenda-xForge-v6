@@ -98,9 +98,12 @@ changes card spacing, every file using the primitives moves and every file fakin
 </CardHeader>
 ```
 
-**Current state: 29 files hand-roll titles, 28 use `CardTitle`.** Roughly half the app bypasses the
-primitive. `src/views/dashboards/payroll/` is the reference implementation — it uses the primitives
-throughout and zero palette colours.
+**Current state: zero faked titles.** Every card header uses the primitives, and the check below
+should stay at zero.
+
+The action goes in `CardAction`, and the layout classes come off `CardHeader` — `flex
+justify-between` existed only to force the two-column row the grid produces by itself once a
+card-action slot is present.
 
 ## Other primitives
 
@@ -264,8 +267,21 @@ grep -rnE "\b(bg|text|border)-(red|green|blue|yellow|orange|purple|pink|gray|sla
 # hardcoded hex
 grep -rnE "#[0-9a-fA-F]{6}\b" src/views src/app --include=*.tsx
 
-# card headers faking a title instead of using CardTitle
-grep -rlE "CardHeader" src/views --include=*.tsx | xargs grep -lE "<span className='text-(lg|xl|2xl) font-semibold'>"
+# card headers faking a title instead of using CardTitle.
+# Must look INSIDE the header: a file-level grep counts a metric value in CardContent as a title,
+# which is how this check once reported 29 files when 17 were affected.
+python - <<'EOF'
+import io, os, re
+H = re.compile(r'<CardHeader[^>]*>(.*?)</CardHeader>', re.S)
+A = re.compile(r'<CardAction[^>]*>.*?</CardAction>', re.S)
+T = re.compile(r"<span className='text-lg font-semibold'>")
+for d, _, fs in os.walk('src/views'):
+    for f in fs:
+        if not f.endswith('.tsx'): continue
+        p = os.path.join(d, f)
+        for m in H.finditer(io.open(p, encoding='utf-8').read()):
+            if T.search(A.sub('', m.group(1))): print(p)
+EOF
 
 # raw elements that have primitives
 grep -rnE "<(button|input)[ >]" src/views src/app --include=*.tsx
