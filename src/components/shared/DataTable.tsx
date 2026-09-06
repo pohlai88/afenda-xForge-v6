@@ -20,7 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ObjectCommandsButton, ObjectContextMenu } from '@/components/shared/ObjectCommands'
 import DataTableToolbar from '@/components/shared/DataTableToolbar'
 
@@ -139,7 +139,20 @@ const DataTable = <TRow,>({
           )
         ))
 
-  const columnCount = leafColumns.length + (capabilities.select ? 1 : 0) + (offersMenu ? 1 : 0)
+  /*
+   * The sequence of columns the engine actually renders, structural ones included. `null` marks a
+   * column the engine owns and no domain can name — the checkbox and the overflow menu.
+   *
+   * Everything that has to agree with the table's real width is measured from here, so a
+   * structural column appearing or disappearing cannot leave anything a cell short.
+   */
+  const sequence: (string | null)[] = [
+    ...(capabilities.select ? [null] : []),
+    ...leafColumns.map(column => column.id),
+    ...(offersMenu ? [null] : [])
+  ]
+
+  const columnCount = sequence.length
 
   // Alignment is read from meaning, not from a per-table list of column ids. Money, counts and
   // percentages are the figures a reader scans down, so the engine right-aligns them everywhere
@@ -203,6 +216,38 @@ const DataTable = <TRow,>({
   const compact = definition.density === 'compact'
   const headCellClass = compact ? 'text-muted-foreground h-10 text-xs first:pl-4 last:pr-4' : 'first:pl-6 last:pr-6'
   const bodyCellClass = compact ? 'py-1.5 first:pl-4 last:pr-4' : 'first:pl-6 last:pr-6'
+
+  /*
+   * The summary row, laid out over the rendered sequence.
+   *
+   * The domain names the column each figure sits under; the span before the first of them is the
+   * label's, and everything after is filled whether or not it carries a value. That is what makes
+   * a structural column safe to add or drop — nothing here is a number a view had to count.
+   */
+  const footerRow = definition.footer
+  const footerValues = new Map((footerRow?.cells ?? []).map(cell => [cell.columnId, cell.content]))
+  const firstValued = sequence.findIndex(id => id !== null && footerValues.has(id))
+  const labelSpan = firstValued === -1 ? sequence.length : firstValued
+
+  const footer = footerRow ? (
+    <TableFooter>
+      <TableRow>
+        {labelSpan > 0 ? (
+          <TableCell colSpan={labelSpan} className={bodyCellClass}>
+            {footerRow.label}
+          </TableCell>
+        ) : null}
+        {sequence.slice(labelSpan).map((id, index) => (
+          <TableCell
+            key={`${id ?? 'structural'}-${index}`}
+            className={cn(bodyCellClass, id && isNumeric(id) && 'text-right tabular-nums')}
+          >
+            {id ? footerValues.get(id) : null}
+          </TableCell>
+        ))}
+      </TableRow>
+    </TableFooter>
+  ) : null
 
   // Pagination presentation is the engine's; the page state, page size and row count remain the
   // caller's, which is what lets a server-paged table report a total it alone knows.
@@ -490,7 +535,7 @@ const DataTable = <TRow,>({
             )}
           </TableBody>
 
-          {definition.footer}
+          {footer}
         </Table>
       </div>
 

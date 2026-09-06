@@ -10,7 +10,7 @@ import { SearchIcon, XIcon } from 'lucide-react'
 
 // Type Imports
 import type { FilingRow } from '@/types/payroll/compliance-types'
-import type { TableColumn, TableDefinition } from '@/types/common/table-types'
+import type { TableColumn, TableDefinition, TableFooterRow } from '@/types/common/table-types'
 
 // Component Imports
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
-import { TableCell, TableFooter, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import DataTable from '@/components/shared/DataTable'
 import { filingCommands, filingObject } from '@/views/payroll/payroll-objects'
@@ -265,18 +264,10 @@ const FilingsTable = ({ rows, selectedId, onOpen, className }: Props) => {
               ? 'No filings accepted yet.'
               : 'No filings match.'
 
-  const footer = (
-    <TableFooter>
-      <TableRow>
-        <TableCell colSpan={3} className='pl-6 font-medium'>
-          {filteredRows.length} filings
-        </TableCell>
-        <TableCell />
-        <TableCell className='text-right font-medium tabular-nums'>{formatMoney(total)}</TableCell>
-        <TableCell colSpan={2} />
-      </TableRow>
-    </TableFooter>
-  )
+  const footer: TableFooterRow = {
+    label: `${filteredRows.length} filings`,
+    cells: [{ columnId: 'amount', content: formatMoney(total) }]
+  }
 
   const definition: TableDefinition<FilingRow> = {
     id: 'payroll-filings',

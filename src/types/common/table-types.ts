@@ -176,6 +176,33 @@ export type TableFilter = {
 }
 
 /**
+ * A summary row under the table, said in columns rather than in markup.
+ *
+ * The split is the same one the rest of the contract makes. The domain owns whether a total is
+ * meaningful at all, what it is, what unit it is in, and what to say when it cannot honestly be
+ * produced — a `NoTotal` marker is as valid a `content` as a figure. The engine owns where those
+ * values land.
+ *
+ * A domain names the column each figure belongs under and counts nothing. It must not know that a
+ * checkbox column exists, or an overflow column, or that either can disappear: the engine lays the
+ * row out over the sequence it actually renders, so adding or removing a structural column can
+ * never leave a footer one cell short. A hand-written `colSpan` in a view is exactly the bug this
+ * type exists to make unwritable.
+ *
+ * `label` occupies the columns before the first figure, which is where a row count belongs. A
+ * table whose very first column carries a figure therefore has no room for one.
+ */
+export type TableFooterCell = {
+  columnId: string
+  content: ReactNode
+}
+
+export type TableFooterRow = {
+  label?: ReactNode
+  cells: TableFooterCell[]
+}
+
+/**
  * How much vertical room a row gets.
  *
  * A register an approver scans thirty rows of at a time and a queue of a dozen runs want
@@ -322,7 +349,7 @@ export type TableDefinition<TRow> = {
    * renders no selector.
    */
   pageSizes?: number[]
-  footer?: ReactNode
+  footer?: TableFooterRow
   mode?: TableDataMode
   grouping?: TableGrouping
   expansion?: TableExpansion<TRow>

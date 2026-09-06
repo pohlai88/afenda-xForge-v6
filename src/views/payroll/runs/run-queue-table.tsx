@@ -20,7 +20,7 @@ import { toast } from 'sonner'
 
 // Type Imports
 import type { PayRunQueueRow, RunLifecycle } from '@/types/payroll/run-queue-types'
-import type { TableColumn, TableDefinition } from '@/types/common/table-types'
+import type { TableColumn, TableDefinition, TableFooterRow } from '@/types/common/table-types'
 
 // Component Imports
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -30,7 +30,6 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { TableCell, TableFooter, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import DataTable from '@/components/shared/DataTable'
 import PropertiesSheet from '@/components/shared/PropertiesSheet'
@@ -365,31 +364,29 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
       ? 'No runs yet.'
       : `No runs are ${RUN_LIFECYCLE_LABELS[lifecycle].toLowerCase()}.`
 
-  const footer = (
-    <TableFooter>
-      <TableRow>
-        <TableCell colSpan={3} className='pl-6 font-medium'>
-          {filteredRows.length} runs
-          {!currency && (
-            <span className='text-muted-foreground ml-2 font-normal'>
-              · {currencies.length} currencies · filter by company to total
-            </span>
-          )}
-        </TableCell>
-        <TableCell className='text-right tabular-nums'>{totals.employees}</TableCell>
-        <TableCell className='text-right tabular-nums'>
-          {currency ? formatMoney({ amount: totals.gross, currency }) : <NoTotal />}
-        </TableCell>
-        <TableCell className='text-right tabular-nums'>
-          {currency ? formatMoney({ amount: totals.net, currency }) : <NoTotal />}
-        </TableCell>
-        <TableCell className='text-right font-medium tabular-nums'>
-          {currency ? formatMoney({ amount: totals.employerCost, currency }) : <NoTotal />}
-        </TableCell>
-        <TableCell colSpan={4} />
-      </TableRow>
-    </TableFooter>
-  )
+  // A total is only meaningful when every row shares a currency, so when they do not, each money
+  // column says so rather than showing a figure. Which columns those are is stated here; where
+  // they land is the engine's, because this table must not know how many columns it renders.
+  const money = (amount: number) => (currency ? formatMoney({ amount, currency }) : <NoTotal />)
+
+  const footer: TableFooterRow = {
+    label: (
+      <>
+        {filteredRows.length} runs
+        {!currency && (
+          <span className='text-muted-foreground ml-2 font-normal'>
+            · {currencies.length} currencies · filter by company to total
+          </span>
+        )}
+      </>
+    ),
+    cells: [
+      { columnId: 'employeeCount', content: totals.employees },
+      { columnId: 'gross', content: money(totals.gross) },
+      { columnId: 'net', content: money(totals.net) },
+      { columnId: 'employerCost', content: money(totals.employerCost) }
+    ]
+  }
 
   const definition: TableDefinition<PayRunQueueRow> = {
     id: 'payroll-run-queue',
