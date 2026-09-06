@@ -79,7 +79,7 @@ const PayrollByDepartment = ({ departments, runReference, selectedDepartmentId, 
   }))
 
   const hrefFor = (departmentId: string | null) =>
-    `/dashboard/payroll?run=${encodeURIComponent(runReference)}${departmentId ? `&dept=${encodeURIComponent(departmentId)}` : ''}`
+    `/payroll?run=${encodeURIComponent(runReference)}${departmentId ? `&dept=${encodeURIComponent(departmentId)}` : ''}`
 
   return (
     <Card className={className}>

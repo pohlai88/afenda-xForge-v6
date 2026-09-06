@@ -182,14 +182,23 @@ const totalsFor = (slips: Payslip[]): PayRunTotals => {
   }
 }
 
-/** Exceptions on the open run. Earlier runs closed clean. */
+/**
+ * Exceptions on the open run. Earlier runs closed clean.
+ *
+ * Owners are the people who would actually clear each one: missing HR data goes to People,
+ * calculation questions to Finance, spend questions to the department head.
+ */
 const openRunExceptions: PayRunException[] = [
   {
     id: 'exc-001',
     kind: 'missing_bank_details',
     severity: 'blocking',
     employeeId: 'emp-013',
+    title: 'No bank account on file',
     message: 'Yuki Tanaka has no bank account on file — payment cannot be issued',
+    rule: 'Every employee paid by bank transfer must have a verified account before approval',
+    source: 'Employment profile · Banking',
+    ownerId: 'emp-023',
     detectedAt: '2026-09-02T02:15:00.000Z'
   },
   {
@@ -197,15 +206,46 @@ const openRunExceptions: PayRunException[] = [
     kind: 'missing_tax_details',
     severity: 'warning',
     employeeId: 'emp-022',
+    title: 'Tax identifier missing',
     message: 'Samuel Adeyemi is missing a tax identifier — withholding defaulted to standard rate',
-    detectedAt: '2026-09-02T02:15:00.000Z'
+    rule: 'Withholding uses the standard rate when no tax identifier is on file',
+    source: 'Employment profile · Tax',
+    impact: sgd(0),
+    previousValue: 'Personal rate',
+    currentValue: 'Standard rate (15%)',
+    ownerId: 'emp-023',
+    detectedAt: '2026-09-02T02:15:00.000Z',
+    acknowledgedAt: '2026-09-10T03:20:00.000Z',
+    acknowledgedBy: 'emp-020'
+  },
+  {
+    id: 'exc-006',
+    kind: 'overtime_spike',
+    severity: 'error',
+    employeeId: 'emp-017',
+    title: 'Overtime above statutory cap',
+    message: 'Farah Aziz has 14 overtime hours this period against a 12-hour monthly cap for her grade',
+    rule: 'Overtime for grade G3 is capped at 12 hours per month unless an exemption is on file',
+    source: 'Timesheet import · 18 Sep',
+    impact: sgd(2 * 4600),
+    previousValue: '5 hours',
+    currentValue: '14 hours',
+    ownerId: 'emp-016',
+    detectedAt: '2026-09-18T01:00:00.000Z'
   },
   {
     id: 'exc-003',
     kind: 'overtime_spike',
     severity: 'warning',
     departmentId: 'dept-ops',
+    title: 'Operations overtime spike',
     message: 'Operations overtime is 2.4x its six-month average',
+    rule: 'Department overtime above 2x its trailing six-month average is flagged for review',
+    source: 'Timesheet import · 18 Sep',
+    impact: sgd(412600),
+    previousValue: '38 hours',
+    currentValue: '91 hours',
+    ownerId: 'emp-015',
     detectedAt: '2026-09-18T01:00:00.000Z'
   },
   {
@@ -213,7 +253,14 @@ const openRunExceptions: PayRunException[] = [
     kind: 'budget_variance',
     severity: 'warning',
     departmentId: 'dept-sales',
+    title: 'Sales over payroll budget',
     message: 'Sales is 8.2% over its monthly payroll budget',
+    rule: 'Department employer cost more than 5% over budget is flagged for review',
+    source: 'Budget · FY2026',
+    impact: sgd(682000),
+    previousValue: 'Budget S$83,200.00',
+    currentValue: 'Actual S$90,020.00',
+    ownerId: 'emp-009',
     detectedAt: '2026-09-18T01:00:00.000Z'
   },
   {
@@ -221,7 +268,12 @@ const openRunExceptions: PayRunException[] = [
     kind: 'manual_adjustment',
     severity: 'info',
     employeeId: 'emp-018',
+    title: 'Manual adjustment',
     message: 'Bram de Vries — SGD 420.00 shift allowance added manually',
+    rule: 'Any hand-entered component is recorded for the approver to see',
+    source: 'Payroll input · Manual',
+    impact: sgd(42000),
+    ownerId: 'emp-022',
     detectedAt: '2026-09-15T06:40:00.000Z',
     resolvedAt: '2026-09-15T07:02:00.000Z',
     resolvedBy: 'emp-022'
@@ -242,6 +294,12 @@ export const payRuns: PayRun[] = periods.map((period, index) => {
     ...period,
     frequency: 'monthly' as const,
     status: isOpen ? ('pending_approval' as const) : ('closed' as const),
+    payGroup: 'SG Monthly',
+
+    // Closed runs settled on their third calculation; the open one has been re-run each time an
+    // exception was cleared or a timesheet landed.
+    calculationVersion: isOpen ? 8 : 3,
+    lastCalculatedAt: isOpen ? '2026-09-18T01:00:00.000Z' : `${period.cutoffAt}`,
     currency: CURRENCY,
     employeeCount: slips.length,
     totals: totalsFor(slips),

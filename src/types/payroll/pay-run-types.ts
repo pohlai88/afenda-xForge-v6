@@ -68,8 +68,19 @@ export type PayRunExceptionKind =
   | 'overtime_spike'
   | 'budget_variance'
 
-/** 'blocking' must be cleared before the run may be approved. The others are advisory. */
-export type PayRunExceptionSeverity = 'blocking' | 'warning' | 'info'
+/**
+ * 'blocking' must be cleared before the run may be approved. 'error' is a calculation the engine
+ * could not trust but did not stop on — it needs a decision, not necessarily a fix. The other two
+ * are advisory.
+ */
+export type PayRunExceptionSeverity = 'blocking' | 'error' | 'warning' | 'info'
+
+/**
+ * Where an exception sits in its life. Derived from the timestamps on the record rather than
+ * stored, so the two can never disagree: resolved if `resolvedAt` is set, acknowledged if only
+ * `acknowledgedAt` is, open otherwise.
+ */
+export type PayRunExceptionStatus = 'open' | 'acknowledged' | 'resolved'
 
 export interface PayRunException {
   id: string
@@ -81,8 +92,31 @@ export interface PayRunException {
 
   /** Set when it is about a whole department, as budget variance is. */
   departmentId?: string
+
+  /** Short noun phrase for lists and badges, e.g. 'Missing bank account'. */
+  title: string
   message: string
+
+  /** The rule that raised it, so the person clearing it can read what was checked. */
+  rule?: string
+
+  /** Which record or feed the offending value came from, e.g. 'Employment profile'. */
+  source?: string
+
+  /** Money at stake, when the exception has a financial size. */
+  impact?: Money
+
+  /** Before/after, for exceptions raised by a change rather than by an absence. */
+  previousValue?: string
+  currentValue?: string
+
+  /** Employee id of whoever owns clearing it. */
+  ownerId?: string
   detectedAt: IsoDateTime
+
+  /** Someone has seen it and accepted the risk. Warnings may be approved over once acknowledged. */
+  acknowledgedAt?: IsoDateTime
+  acknowledgedBy?: string
   resolvedAt?: IsoDateTime
 
   /** Employee id of whoever cleared it. */
@@ -138,6 +172,17 @@ export interface PayRun {
 
   frequency: PayFrequency
   status: PayRunStatus
+
+  /** Which population this run pays, e.g. 'SG Monthly'. One pay group per run. */
+  payGroup: string
+
+  /**
+   * How many times the engine has calculated this run. Approval is of a specific calculation,
+   * not of "the run": an input changed after approval invalidates it, and the audit trail has
+   * to be able to say which numbers were signed off.
+   */
+  calculationVersion: number
+  lastCalculatedAt?: IsoDateTime
 
   /** One currency per run. Multi-currency payroll means multiple runs, not mixed totals. */
   currency: CurrencyCode

@@ -1,0 +1,548 @@
+'use client'
+
+// React Imports
+import { useMemo, useState } from 'react'
+
+// Next Imports
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+
+// Third-party Imports
+import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table'
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable
+} from '@tanstack/react-table'
+import {
+  ArrowRightIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+  DownloadIcon,
+  SearchIcon,
+  XIcon
+} from 'lucide-react'
+import { toast } from 'sonner'
+
+// Type Imports
+import type { PayRunQueueRow, RunLifecycle } from '@/types/payroll/run-queue-types'
+
+// Component Imports
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
+import { Label } from '@/components/ui/label'
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { ExceptionBadge } from '@/views/payroll/run/exception-badge'
+
+// Util Imports
+import { cn } from '@/lib/utils'
+import { formatMoney } from '@/utils/money'
+import { PAY_RUN_STATUS_LABELS, PAY_RUN_STATUS_STYLES } from '@/utils/payroll-metrics'
+import { RUN_LIFECYCLE_LABELS, exportRunQueueToCsv } from '@/utils/payroll-queue'
+import { formatDate, formatPeriod, formatSignedPercent, initials } from '@/utils/payroll-workspace'
+import { ariaSortFor } from '@/utils/table-utils'
+
+const LIFECYCLES: RunLifecycle[] = ['open', 'done', 'exited']
+
+const SEVERITIES = ['blocking', 'error', 'warning', 'info'] as const
+
+/** Numeric columns, right-aligned so digits line up under one another. */
+const RIGHT_ALIGNED = new Set(['employeeCount', 'gross', 'net', 'employerCost'])
+
+const hrefFor = (row: PayRunQueueRow) => `/payroll/runs/${row.id}`
+
+/**
+ * Money columns sort on the raw minor-unit amount and format only at render. Sorting the
+ * formatted string would order 'S$9,120.00' above 'S$84,300.00'.
+ */
+const columns: ColumnDef<PayRunQueueRow>[] = [
+  {
+    id: 'reference',
+    header: 'Run',
+    accessorKey: 'reference',
+    cell: ({ row }) => (
+      <span className='flex flex-col'>
+        <Link
+          href={hrefFor(row.original)}
+          className='font-medium underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none'
+        >
+          {row.original.reference}
+        </Link>
+        <span className='text-muted-foreground text-xs'>{row.original.payGroup}</span>
+      </span>
+    )
+  },
+  {
+    id: 'period',
+    header: 'Period',
+    accessorKey: 'periodStart',
+    cell: ({ row }) => (
+      <span className='whitespace-nowrap'>{formatPeriod(row.original.periodStart, row.original.periodEnd)}</span>
+    )
+  },
+  {
+    id: 'payDate',
+    header: 'Payday',
+    accessorKey: 'payDate',
+    cell: ({ row }) => {
+      const days = row.original.daysToPayday
+
+      return (
+        <span className='flex flex-col whitespace-nowrap'>
+          <span>{formatDate(row.original.payDate)}</span>
+          {days !== null && (
+            <span className={cn('text-xs', days < 0 ? 'text-destructive' : 'text-muted-foreground')}>
+              {days === 0
+                ? 'today'
+                : days < 0
+                  ? `${Math.abs(days)} ${Math.abs(days) === 1 ? 'day' : 'days'} overdue`
+                  : `in ${days} ${days === 1 ? 'day' : 'days'}`}
+            </span>
+          )}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'employeeCount',
+    header: 'Employees',
+    accessorKey: 'employeeCount',
+    cell: ({ row }) => <span className='block text-right tabular-nums'>{row.original.employeeCount}</span>
+  },
+  {
+    id: 'gross',
+    header: 'Gross',
+    accessorFn: row => row.gross.amount,
+    cell: ({ row }) => <span className='block text-right tabular-nums'>{formatMoney(row.original.gross)}</span>
+  },
+  {
+    id: 'net',
+    header: 'Net',
+    accessorFn: row => row.net.amount,
+
+    // The delta sits under the figure rather than in its own column: it qualifies the number
+    // beside it, and a twelfth column pushed Status off a 1440px screen.
+    cell: ({ row }) => {
+      const change = row.original.netChangePercent
+
+      return (
+        <span className='flex flex-col items-end tabular-nums'>
+          <span>{formatMoney(row.original.net)}</span>
+          <span
+            className={cn(
+              'text-xs',
+              change === null || change === 0
+                ? 'text-muted-foreground'
+                : change > 0
+                  ? 'text-success'
+                  : 'text-destructive'
+            )}
+          >
+            {change === null ? 'First run' : `${formatSignedPercent(change)} vs prior`}
+          </span>
+        </span>
+      )
+    }
+  },
+  {
+    id: 'employerCost',
+    header: 'Employer cost',
+    accessorFn: row => row.employerCost.amount,
+    cell: ({ row }) => (
+      <span className='block text-right font-medium tabular-nums'>{formatMoney(row.original.employerCost)}</span>
+    )
+  },
+  {
+    id: 'exceptions',
+    header: 'Exceptions',
+    accessorFn: row => row.counts.open,
+    cell: ({ row }) => {
+      const { counts } = row.original
+
+      if (counts.open === 0) {
+        return (
+          <span className='text-muted-foreground'>
+            —<span className='sr-only'>No open exceptions</span>
+          </span>
+        )
+      }
+
+      return (
+        <span className='flex gap-1 whitespace-nowrap'>
+          {SEVERITIES.map(
+            severity =>
+              counts[severity] > 0 && <ExceptionBadge key={severity} severity={severity} count={counts[severity]} />
+          )}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'status',
+    header: 'Status',
+    accessorKey: 'status',
+
+    // Who signed the run off belongs with its status: "Closed" and the approver's face are one
+    // fact about the run, and a person scanning for their own sign-offs finds them by the face.
+    cell: ({ row }) => {
+      const { status, approver } = row.original
+
+      return (
+        <span className='flex flex-col items-start gap-1'>
+          <Badge className={cn('whitespace-nowrap', PAY_RUN_STATUS_STYLES[status])}>
+            {PAY_RUN_STATUS_LABELS[status]}
+          </Badge>
+          {approver && (
+            <span className='text-muted-foreground flex items-center gap-1.5 text-xs whitespace-nowrap'>
+              <Avatar className='size-5'>
+                {approver.avatar && <AvatarImage src={approver.avatar} alt='' />}
+                <AvatarFallback className='text-[8px]'>{initials(approver.name)}</AvatarFallback>
+              </Avatar>
+              {approver.name}
+            </span>
+          )}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'open',
+    header: () => <span className='sr-only'>Open</span>,
+    enableSorting: false,
+    cell: ({ row }) => (
+      <Button
+        variant='ghost'
+        size='icon-sm'
+        className='text-muted-foreground'
+        render={<Link href={hrefFor(row.original)} />}
+        nativeButton={false}
+        aria-label={`Open ${row.original.reference}`}
+      >
+        <ArrowRightIcon />
+      </Button>
+    )
+  }
+]
+
+type Props = {
+
+  /** Newest first, as `buildRunQueue` returns them. */
+  rows: PayRunQueueRow[]
+  pageSize?: number
+  className?: string
+}
+
+/**
+ * Every run, with what each one needs. The lifecycle chips above the table are the filter most
+ * people want — "what is still open" — and carry their counts so a collapsed list still says how
+ * many runs are behind it. Pagination appears only once there is a second page to go to.
+ */
+const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
+  const router = useRouter()
+  const [lifecycle, setLifecycle] = useState<RunLifecycle | 'all'>('all')
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [globalFilter, setGlobalFilter] = useState('')
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize })
+
+  const countsByLifecycle = useMemo(
+    () =>
+      LIFECYCLES.reduce(
+        (counts, key) => ({ ...counts, [key]: rows.filter(row => row.lifecycle === key).length }),
+        {} as Record<RunLifecycle, number>
+      ),
+    [rows]
+  )
+
+  const data = useMemo(
+    () => (lifecycle === 'all' ? rows : rows.filter(row => row.lifecycle === lifecycle)),
+    [rows, lifecycle]
+  )
+
+  // Same opt-out the other datatables in this repo carry: useReactTable returns functions the
+  // React Compiler cannot memoize, so it declines to compile the component rather than risk
+  // stale UI.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({
+    data,
+    columns,
+    state: { sorting, globalFilter, pagination },
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: setPagination,
+    enableSortingRemoval: false,
+    globalFilterFn: (row, _columnId, value: string) => {
+      const needle = value.trim().toLowerCase()
+
+      if (!needle) return true
+
+      const { reference, payGroup, periodStart, periodEnd, status } = row.original
+
+      return [reference, payGroup, formatPeriod(periodStart, periodEnd), PAY_RUN_STATUS_LABELS[status]].some(field =>
+        field.toLowerCase().includes(needle)
+      )
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel()
+  })
+
+  const filteredRows = table.getFilteredRowModel().rows.map(row => row.original)
+  const pageRows = table.getRowModel().rows
+  const pageCount = table.getPageCount()
+  const filtered = lifecycle !== 'all' || globalFilter.length > 0
+
+  const totals = filteredRows.reduce(
+    (sum, row) => ({
+      employees: sum.employees + row.employeeCount,
+      gross: sum.gross + row.gross.amount,
+      net: sum.net + row.net.amount,
+      employerCost: sum.employerCost + row.employerCost.amount
+    }),
+    { employees: 0, gross: 0, net: 0, employerCost: 0 }
+  )
+
+  const currency = rows[0]?.gross.currency ?? 'SGD'
+
+  const resetFilters = () => {
+    setLifecycle('all')
+    setGlobalFilter('')
+    setPagination(p => ({ ...p, pageIndex: 0 }))
+  }
+
+  const handleExport = () => {
+    exportRunQueueToCsv(filteredRows)
+    toast.success('Export created', {
+      description: `${filteredRows.length} ${filteredRows.length === 1 ? 'run' : 'runs'} · payroll-runs.csv`
+    })
+  }
+
+  return (
+    <Card className={cn('gap-0 py-0', className)}>
+      <CardHeader className='py-6'>
+        <CardTitle className='text-lg font-semibold'>All runs</CardTitle>
+        <CardDescription>
+          {filteredRows.length} of {rows.length} runs
+        </CardDescription>
+        <CardAction className='w-full sm:w-64'>
+          <Label htmlFor='run-queue-search' className='sr-only'>
+            Search runs
+          </Label>
+          <InputGroup>
+            <InputGroupAddon>
+              <SearchIcon className='size-4' />
+            </InputGroupAddon>
+            <InputGroupInput
+              id='run-queue-search'
+              value={globalFilter}
+              onChange={event => {
+                setGlobalFilter(event.target.value)
+                setPagination(p => ({ ...p, pageIndex: 0 }))
+              }}
+              placeholder='Search run, period, status'
+            />
+          </InputGroup>
+        </CardAction>
+      </CardHeader>
+
+      <div className='flex flex-wrap items-center gap-2 border-y px-6 py-3'>
+        <ToggleGroup
+          variant='outline'
+          size='sm'
+          spacing={0}
+          value={[lifecycle]}
+          onValueChange={value => {
+            // Single-select: pressing the active chip again would empty the group, which
+            // means "show everything" here rather than "show nothing".
+            setLifecycle((value[0] as RunLifecycle | 'all' | undefined) ?? 'all')
+            setPagination(p => ({ ...p, pageIndex: 0 }))
+          }}
+          aria-label='Filter runs by lifecycle'
+        >
+          <ToggleGroupItem value='all'>
+            All
+            <span className='text-muted-foreground tabular-nums'>{rows.length}</span>
+          </ToggleGroupItem>
+          {LIFECYCLES.map(
+            key =>
+              countsByLifecycle[key] > 0 && (
+                <ToggleGroupItem key={key} value={key}>
+                  {RUN_LIFECYCLE_LABELS[key]}
+                  <span className='text-muted-foreground tabular-nums'>{countsByLifecycle[key]}</span>
+                </ToggleGroupItem>
+              )
+          )}
+        </ToggleGroup>
+
+        {filtered && (
+          <Button variant='ghost' size='sm' onClick={resetFilters}>
+            Reset
+            <XIcon />
+          </Button>
+        )}
+
+        <Button variant='outline' size='sm' className='ml-auto' onClick={handleExport}>
+          <DownloadIcon />
+          <span className='max-md:hidden'>Export runs</span>
+        </Button>
+      </div>
+
+      <CardContent className='px-0 pb-0'>
+        <div className='overflow-x-auto'>
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map(headerGroup => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map(header => {
+                    const alignRight = RIGHT_ALIGNED.has(header.column.id)
+                    const sorted = header.column.getIsSorted()
+
+                    return (
+                      <TableHead
+                        key={header.id}
+                        className={cn('first:pl-6 last:pr-6', alignRight && 'text-right')}
+                        aria-sort={ariaSortFor(header.column)}
+                      >
+                        {header.column.getCanSort() ? (
+                          <span
+                            role='button'
+                            tabIndex={0}
+                            className={cn(
+                              'flex cursor-pointer items-center gap-1 select-none',
+                              alignRight && 'justify-end'
+                            )}
+                            onClick={header.column.getToggleSortingHandler()}
+                            onKeyDown={event => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault()
+                                header.column.getToggleSortingHandler()?.(event)
+                              }
+                            }}
+                            aria-label={`Sort by ${String(header.column.columnDef.header)}`}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {sorted === 'asc' && (
+                              <ChevronUpIcon className='size-4 shrink-0 opacity-60' aria-hidden='true' />
+                            )}
+                            {sorted === 'desc' && (
+                              <ChevronDownIcon className='size-4 shrink-0 opacity-60' aria-hidden='true' />
+                            )}
+                          </span>
+                        ) : (
+                          flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+
+            <TableBody>
+              {pageRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className='h-32 text-center'>
+                    <div className='text-muted-foreground flex flex-col items-center gap-2 text-sm'>
+                      <span>
+                        {globalFilter
+                          ? `No runs match “${globalFilter}”.`
+                          : `No runs are ${RUN_LIFECYCLE_LABELS[lifecycle as RunLifecycle].toLowerCase()}.`}
+                      </span>
+                      <Button variant='link' size='sm' onClick={resetFilters}>
+                        Show all runs
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                pageRows.map(row => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.original.lifecycle === 'open' ? 'selected' : undefined}
+                    className='hover:bg-muted/50 cursor-pointer'
+
+                    // Mouse convenience only. The reference cell holds the real link, so
+                    // keyboard and assistive-tech users never depend on this handler.
+                    onClick={() => router.push(hrefFor(row.original))}
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <TableCell key={cell.id} className='first:pl-6 last:pr-6'>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+
+            {filteredRows.length > 1 && (
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3} className='pl-6 font-medium'>
+                    {filteredRows.length} runs
+                  </TableCell>
+                  <TableCell className='text-right tabular-nums'>{totals.employees}</TableCell>
+                  <TableCell className='text-right tabular-nums'>
+                    {formatMoney({ amount: totals.gross, currency })}
+                  </TableCell>
+                  <TableCell className='text-right tabular-nums'>
+                    {formatMoney({ amount: totals.net, currency })}
+                  </TableCell>
+                  <TableCell className='text-right font-medium tabular-nums'>
+                    {formatMoney({ amount: totals.employerCost, currency })}
+                  </TableCell>
+                  <TableCell colSpan={3} />
+                </TableRow>
+              </TableFooter>
+            )}
+          </Table>
+        </div>
+
+        {pageCount > 1 && (
+          <div className='flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4'>
+            <span className='text-muted-foreground text-sm'>
+              Showing {pagination.pageIndex * pagination.pageSize + 1}–
+              {Math.min((pagination.pageIndex + 1) * pagination.pageSize, filteredRows.length)} of {filteredRows.length}
+            </span>
+            <div className='flex items-center gap-3'>
+              <span className='text-muted-foreground text-sm'>
+                Page {pagination.pageIndex + 1} of {pageCount}
+              </span>
+              <div className='flex items-center gap-1'>
+                <Button
+                  variant='outline'
+                  size='icon'
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  aria-label='Previous page'
+                >
+                  <ChevronLeftIcon className='size-4' />
+                </Button>
+                <Button
+                  variant='outline'
+                  size='icon'
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  aria-label='Next page'
+                >
+                  <ChevronRightIcon className='size-4' />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+export default RunQueueTable

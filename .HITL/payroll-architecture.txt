@@ -1,0 +1,2152 @@
+Yes — that is the better architectural decision **if the immediate priority is frontend delivery without triggering a design-system migration**.
+
+The revised directive should make **Shadcn Studio AdminCN Pro the frontend authority for Payroll**, keep its design system intact, and only add payroll-domain components where the template does not already provide a sufficient pattern.
+
+# Afenda Payroll Frontend — Implementation Directive
+
+## 0. Mission
+
+Implement Afenda Payroll by **adopting Shadcn Studio AdminCN Pro as the frontend foundation and design-system authority**.
+
+Do not introduce a separate Afenda Design Language layer into this implementation.
+
+Do not restructure the existing frontend architecture merely to accommodate another design-system abstraction.
+
+The objective is:
+
+> Use the stable Shadcn Studio Admin template as the default system, preserve its conventions, and extend it only where payroll requires domain-specific functionality.
+
+The payroll frontend must be:
+
+* operational
+* dense
+* clear
+* financially precise
+* exception-oriented
+* easy to reconcile
+* easy to approve
+* easy to audit
+* consistent with the existing AdminCN visual system
+
+Do not redesign standard SaaS UI patterns that already exist in AdminCN Pro.
+
+---
+
+# 1. Frontend Authority
+
+Use this hierarchy:
+
+```text
+Shadcn Studio AdminCN Pro
+        ↓
+shadcn/ui primitives
+        ↓
+existing AdminCN patterns
+        ↓
+Payroll domain components
+        ↓
+Payroll screens
+```
+
+AdminCN Pro is the default authority for:
+
+```text
+layout
+spacing
+typography
+radius
+colors
+forms
+tables
+navigation
+dialogs
+drawers
+sheets
+filters
+charts
+responsive behavior
+interaction patterns
+```
+
+Do not introduce another token system or frontend design abstraction unless there is a demonstrated product requirement that AdminCN cannot satisfy.
+
+---
+
+# 2. Primary Rule
+
+## Default to AdminCN first.
+
+Before creating anything new:
+
+1. Search the AdminCN template.
+2. Search Shadcn Studio Pro blocks.
+3. Search existing shadcn/ui components.
+4. Reuse or adapt the closest existing pattern.
+5. Create a payroll-specific component only when payroll semantics require it.
+
+The rule is:
+
+> **Adapt before abstracting. Extend before replacing.**
+
+---
+
+# 3. Do Not Rebuild the Design System
+
+Do not create:
+
+```text
+AfendaButton
+AfendaBadge
+AfendaCard
+AfendaSheet
+AfendaDialog
+AfendaPopover
+AfendaTabs
+AfendaDataTable
+```
+
+merely to wrap existing shadcn components.
+
+Use the existing AdminCN/shadcn implementation directly unless a real shared behavior is missing.
+
+Avoid abstraction layers that only rename an existing component.
+
+Bad:
+
+```text
+Button
+→ AfendaButton
+→ PayrollButton
+```
+
+Preferred:
+
+```text
+Button
+→ payroll feature usage
+```
+
+Create a domain component only when it represents payroll meaning.
+
+Example:
+
+```text
+Badge
+→ PayrollRunStatus
+```
+
+That is justified.
+
+---
+
+# 4. Adopt AdminCN Pro as the Application Template
+
+Use AdminCN Pro as the actual application foundation, not merely a visual reference.
+
+Preserve its:
+
+```text
+application shell
+sidebar
+header
+navigation structure
+theme system
+layout primitives
+responsive conventions
+component styling
+form patterns
+table patterns
+dialog patterns
+chart conventions
+```
+
+Do not fork these patterns unless required.
+
+---
+
+# 5. Preferred AdminCN Layout
+
+Use the AdminCN **Default layout** as the baseline.
+
+Allow its existing sidebar collapse behavior.
+
+The working layout should resemble:
+
+```text
+┌──────────────┬───────────────────────────────────────────────┐
+│              │ Header                                        │
+│ Sidebar      ├───────────────────────────────────────────────┤
+│              │                                               │
+│              │ Route content                                 │
+│              │                                               │
+│              │                                               │
+│              │                                               │
+└──────────────┴───────────────────────────────────────────────┘
+```
+
+Do not create a second application shell specifically for Payroll.
+
+Payroll must live naturally inside the existing AdminCN application.
+
+---
+
+# 6. Payroll Information Architecture
+
+Use these main routes:
+
+```text
+/payroll
+/payroll/runs
+/payroll/runs/[runId]
+/payroll/payments
+/payroll/compliance
+/payroll/reports
+/payroll/settings
+```
+
+The most important route is:
+
+```text
+/payroll/runs/[runId]
+```
+
+This is the payroll operations workspace.
+
+---
+
+# 7. Primary Product Surfaces
+
+Payroll should revolve around three major surfaces:
+
+```text
+Payroll Dashboard
+        ↓
+Payroll Run Workspace
+        ↓
+Employee Pay Inspector
+```
+
+Supporting areas:
+
+```text
+Payments
+Compliance
+Reports
+Settings
+History
+```
+
+Do not create unnecessary standalone routes for every minor payroll action.
+
+Preserve context wherever possible.
+
+---
+
+# 8. Payroll Dashboard
+
+Route:
+
+```text
+/payroll
+```
+
+Use AdminCN dashboard patterns directly.
+
+Best donor dashboards:
+
+```text
+Finance
+Payments
+Orders
+Logistics
+```
+
+Do not build a new dashboard system.
+
+Compose the payroll dashboard from existing AdminCN blocks.
+
+Primary content:
+
+```text
+Current Payroll Run
+Payroll Readiness
+Open Exceptions
+Upcoming Deadlines
+Payroll Metrics
+Current Pay Groups
+Recent Payroll Runs
+Payment Readiness
+```
+
+The dashboard must answer:
+
+> Can payroll be completed correctly and on time?
+
+---
+
+# 9. Dashboard Composition
+
+Recommended structure:
+
+```text
+AdminCN App Shell
+│
+├── existing Header
+│
+├── Page Header
+│
+├── Payroll Run Summary
+│
+├── Payroll Readiness
+│
+├── Metric Row
+│
+├── Needs Attention
+│
+├── Payroll Movement
+│
+├── Deadline / Calendar
+│
+└── Payroll Run Table
+```
+
+Prefer existing AdminCN:
+
+```text
+statistics blocks
+table blocks
+progress blocks
+chart blocks
+activity/timeline patterns
+```
+
+Do not recreate equivalent layouts from scratch.
+
+---
+
+# 10. Dashboard Metrics
+
+Use existing AdminCN statistics components.
+
+Recommended metrics:
+
+```text
+Employees
+Gross Payroll
+Net Payroll
+Employer Cost
+Variance
+Open Exceptions
+```
+
+Keep metrics compact.
+
+Do not create excessive KPI cards.
+
+Prefer:
+
+```text
+Employees        218
+Gross            RM623,910
+Net              RM481,244
+Employer Cost    RM709,481
+Variance         +2.8%
+```
+
+over highly decorative KPI presentations.
+
+---
+
+# 11. Payroll Run Workspace
+
+Route:
+
+```text
+/payroll/runs/[runId]
+```
+
+This is the primary operational screen.
+
+Architecture:
+
+```text
+PayrollRunPage
+│
+├── Page Header
+├── PayrollRunHeader
+├── PayrollStageBar
+├── PayrollMetricRow
+├── PayrollToolbar
+│
+├── Main Workspace
+│   ├── Payroll Table
+│   └── Employee Inspector
+│
+└── Contextual Actions
+```
+
+Use existing AdminCN layout components wherever possible.
+
+---
+
+# 12. Payroll Run Header
+
+Create:
+
+```text
+PayrollRunHeader
+```
+
+This is a valid payroll-domain component because it represents payroll-specific information.
+
+Display:
+
+```text
+period
+pay group
+entity
+employee count
+run status
+payday
+days remaining
+last calculation
+last updated
+```
+
+Example:
+
+```text
+September 2026
+
+MY-West · Monthly · 218 employees
+
+REVIEW
+Payday 30 Sep · 8 days remaining
+Calculation #8
+```
+
+Use existing AdminCN typography, badge and layout conventions.
+
+Do not invent a separate visual language.
+
+---
+
+# 13. Payroll Stage Bar
+
+Create:
+
+```text
+PayrollStageBar
+```
+
+Stages:
+
+```text
+Inputs
+Calculate
+Review
+Approve
+Pay
+Close
+```
+
+This is not a wizard.
+
+It represents the payroll lifecycle and current operational state.
+
+Users must still be able to return to prior sections when investigating issues.
+
+Example:
+
+```text
+Inputs ✓
+Calculate ✓
+Review ●
+Approve ○
+Pay ○
+Close ○
+```
+
+Use existing:
+
+```text
+Tabs
+Progress
+Badge
+Separator
+```
+
+patterns where appropriate.
+
+Do not invent a custom navigation framework unless required.
+
+---
+
+# 14. Data Table Strategy
+
+Use the AdminCN/Shadcn Studio DataTable implementation as the starting point.
+
+Do not replace it with a new table architecture unless a measurable capability is missing.
+
+Extend the existing table for payroll requirements.
+
+Required capabilities:
+
+```text
+sorting
+filtering
+row selection
+column visibility
+column resizing where supported
+bulk actions
+pagination
+sticky headers
+dense rows
+search
+status rendering
+```
+
+Use TanStack Table through the existing AdminCN architecture.
+
+---
+
+# 15. Payroll Table
+
+Create:
+
+```text
+PayrollRunTable
+```
+
+or:
+
+```text
+PayrollRunGrid
+```
+
+Choose the term that matches the existing codebase naming.
+
+Recommended columns:
+
+```text
+Employee
+Employee ID
+Department
+Gross
+Net
+Variance
+Payroll Status
+Exceptions
+Payment Status
+```
+
+Do not create a separate generic table abstraction just for Payroll.
+
+---
+
+# 16. Payroll Table Cells
+
+Create domain-specific cells only when repeated payroll semantics justify them.
+
+Approved examples:
+
+```text
+EmployeeCell
+MoneyCell
+VarianceCell
+PayrollStatusCell
+ExceptionCell
+PaymentStatusCell
+```
+
+Prefer simple functions/components.
+
+Do not split every cell into its own module unless complexity warrants it.
+
+---
+
+# 17. Payroll Toolbar
+
+Reuse AdminCN DataTable toolbar patterns.
+
+Required controls:
+
+```text
+Search
+Status Filter
+Exception Filter
+Department Filter
+Entity Filter
+Column Visibility
+Export
+More Actions
+```
+
+Use existing:
+
+```text
+Popover
+DropdownMenu
+Command
+Combobox
+Button
+```
+
+Do not create custom filter primitives.
+
+---
+
+# 18. Filtering Rules
+
+Use:
+
+```text
+Select
+```
+
+for small fixed lists.
+
+Use:
+
+```text
+Combobox
+```
+
+for larger searchable lists.
+
+Use:
+
+```text
+Popover + Command
+```
+
+for multi-select filtering.
+
+Examples:
+
+```text
+Payroll Status
+Exception Severity
+Department
+Entity
+Location
+Pay Group
+Payment Status
+```
+
+Follow the existing AdminCN styling.
+
+---
+
+# 19. Bulk Actions
+
+Use the existing table row-selection model.
+
+When rows are selected, show a contextual action bar.
+
+Actions may include:
+
+```text
+Recalculate
+Review Exceptions
+Acknowledge Warnings
+Export Selected
+Add Payroll Input
+Assign Owner
+```
+
+Do not permanently occupy screen space with bulk controls when nothing is selected.
+
+---
+
+# 20. Employee Inspector
+
+Do not navigate to another page merely to inspect payroll details.
+
+Use:
+
+```text
+Resizable
+```
+
+or:
+
+```text
+Sheet
+```
+
+depending on the existing AdminCN implementation.
+
+Preferred desktop layout:
+
+```text
+┌────────────────────────────────────┬──────────────────────────┐
+│                                    │ Employee Inspector       │
+│ Payroll Table                      │                          │
+│                                    │                          │
+│                                    │                          │
+└────────────────────────────────────┴──────────────────────────┘
+```
+
+Recommended proportions:
+
+```text
+Table     65–75%
+Inspector 25–35%
+```
+
+---
+
+# 21. Inspector Responsive Behavior
+
+Desktop:
+
+```text
+Resizable panel
+```
+
+Laptop:
+
+```text
+Resizable panel or Sheet
+```
+
+Tablet:
+
+```text
+Sheet
+```
+
+Mobile:
+
+```text
+Drawer
+```
+
+Reuse the corresponding Shadcn Studio components.
+
+Do not create custom overlay mechanics.
+
+---
+
+# 22. Payroll Employee Inspector
+
+Create:
+
+```text
+PayrollEmployeeInspector
+```
+
+Suggested structure:
+
+```text
+Employee identity
+Current net pay
+Variance from previous payroll
+Primary exception
+
+Tabs:
+Overview
+Pay
+Inputs
+Exceptions
+History
+Audit
+```
+
+Use existing:
+
+```text
+Tabs
+ScrollArea
+Separator
+Badge
+Collapsible
+```
+
+Avoid unnecessary cards.
+
+---
+
+# 23. Pay Breakdown
+
+Create:
+
+```text
+PayBreakdown
+```
+
+Suggested structure:
+
+```text
+Earnings
+──────────────
+Basic
+Overtime
+Allowances
+Bonus
+
+Deductions
+──────────────
+Tax
+EPF
+SOCSO
+EIS
+Other
+
+Net Pay
+```
+
+Use standard AdminCN typography and separators.
+
+Do not create a new style system for financial values.
+
+---
+
+# 24. Payroll Variance
+
+Create:
+
+```text
+PayVariance
+```
+
+Purpose:
+
+> Explain why an employee's payroll changed.
+
+Example:
+
+```text
+Previous Net    RM6,180
+Current Net     RM7,112
+Difference      +RM932
+
+Overtime        +RM820
+Allowance       +RM250
+EPF             -RM103
+PCB             -RM35
+```
+
+Use existing chart/list components when useful.
+
+Do not over-visualize simple financial explanations.
+
+---
+
+# 25. Exceptions
+
+Treat payroll exceptions as first-class domain records.
+
+Create:
+
+```text
+ExceptionBadge
+ExceptionList
+ExceptionInspector
+ExceptionSummary
+```
+
+Severity:
+
+```text
+BLOCKER
+ERROR
+WARNING
+INFO
+```
+
+Lifecycle:
+
+```text
+OPEN
+ACKNOWLEDGED
+RESOLVED
+```
+
+Use the existing AdminCN Badge component.
+
+Do not create new badge primitives.
+
+---
+
+# 26. Exception Inspector
+
+Use:
+
+```text
+Sheet
+```
+
+or the existing right inspector panel.
+
+Display:
+
+```text
+Exception title
+Severity
+Employee/run
+Financial impact
+Previous value
+Current value
+Source
+Rule
+Owner
+Status
+Resolution actions
+Audit history
+```
+
+Example:
+
+```text
+EPF classification changed
+
+WARNING
+
+Impact
+RM228
+
+Previous
+Category A
+
+Current
+Category B
+
+Source
+Employment Profile
+
+Changed by
+HR Admin
+```
+
+---
+
+# 27. Payroll Readiness
+
+Use existing:
+
+```text
+Progress
+Statistics
+Status
+```
+
+components.
+
+Create domain composition:
+
+```text
+PayrollReadiness
+```
+
+Example:
+
+```text
+Payroll readiness 91%
+
+Inputs          100%
+Calculation     100%
+Exceptions       82%
+Approval          0%
+Payments          0%
+```
+
+Readiness should be actionable.
+
+Clicking an area should navigate/filter to the relevant work where practical.
+
+---
+
+# 28. Reconciliation
+
+Use the AdminCN **Finance dashboard** as the primary visual donor.
+
+Create:
+
+```text
+PayrollReconciliation
+```
+
+Show:
+
+```text
+Current
+Previous
+Variance
+```
+
+for:
+
+```text
+Employee Count
+Gross
+Net
+Employee Statutory
+Employer Statutory
+Other Deductions
+Employer Cost
+```
+
+Example:
+
+```text
+                     CURRENT      PREVIOUS       Δ
+
+Employees                218           214      +4
+Gross               623,910       606,814    +2.8%
+Net                 481,244       470,993    +2.1%
+Employer Cost       709,481       689,305    +2.9%
+```
+
+Reuse AdminCN tables, statistics and chart blocks.
+
+---
+
+# 29. Reconciliation Drill-Down
+
+Allow breakdown by:
+
+```text
+Employee
+Department
+Entity
+Location
+Cost Centre
+Pay Component
+```
+
+Clicking a reconciliation value should filter or open the supporting records.
+
+Avoid disconnected dashboard metrics.
+
+---
+
+# 30. Gross-to-Net
+
+Create:
+
+```text
+GrossToNet
+```
+
+Keep it visually simple.
+
+Example:
+
+```text
+Total Employer Cost     RM709,481
+
+Employer Contributions   RM85,571
+
+Gross Pay               RM623,910
+
+Employee Statutory      -RM81,438
+Tax                     -RM35,881
+Other Deductions        -RM25,347
+
+Net Pay                 RM481,244
+```
+
+Prefer structured rows over decorative graphics.
+
+---
+
+# 31. Charts
+
+Use AdminCN/Recharts implementation.
+
+Approved payroll charts:
+
+```text
+Line Chart
+Bar Chart
+Horizontal Bar Chart
+Stacked Bar Chart
+```
+
+Recommended uses:
+
+```text
+Payroll Trend
+Current vs Previous
+Variance Contribution
+Cost by Department
+Cost by Entity
+Cost by Component
+```
+
+Avoid unnecessary:
+
+```text
+pie charts
+donuts
+radial gauges
+rainbow palettes
+3D effects
+```
+
+Do not build a custom chart system.
+
+---
+
+# 32. Approval
+
+Create:
+
+```text
+PayrollApprovalDialog
+```
+
+Use AdminCN/Shadcn:
+
+```text
+Dialog
+AlertDialog
+```
+
+The dialog must show:
+
+```text
+Employee Count
+Gross
+Net
+Employer Cost
+Calculation Version
+Open Exceptions
+Warnings
+Changes Since Review
+Prepared By
+Reviewed By
+```
+
+Example:
+
+```text
+Approve September 2026 Payroll?
+
+218 employees
+RM623,910 gross
+RM481,244 net
+RM709,481 employer cost
+
+Calculation #8
+
+0 blockers
+2 acknowledged warnings
+
+[Cancel]      [Approve Payroll]
+```
+
+Do not approve payroll through a context-free button.
+
+---
+
+# 33. Payments
+
+Route:
+
+```text
+/payroll/payments
+```
+
+Use AdminCN **Payments dashboard** as the main donor.
+
+Adapt its concepts:
+
+```text
+Balance
+→ Funding Availability
+
+Transactions
+→ Payroll Settlements
+
+Payment Status
+→ Employee Payment Status
+
+Payment Method
+→ Funding/Bank Account
+```
+
+Create only the payroll-specific compositions needed.
+
+---
+
+# 34. Payment Components
+
+Create:
+
+```text
+PaymentReadiness
+SettlementTable
+SettlementInspector
+SettlementStatus
+FundingSummary
+```
+
+Use existing AdminCN:
+
+```text
+Table
+Badge
+Progress
+Dialog
+Sheet
+Dropdown
+```
+
+for implementation.
+
+---
+
+# 35. Settlement States
+
+Use one canonical payroll vocabulary:
+
+```text
+READY
+RELEASED
+PROCESSING
+PAID
+RETURNED
+FAILED
+ACTION_REQUIRED
+```
+
+Use the normal AdminCN Badge styling with semantic variants.
+
+Do not create visually unrelated payment statuses.
+
+---
+
+# 36. Import Workflow
+
+Use the Shadcn Studio File Upload block.
+
+Create:
+
+```text
+PayrollImport
+```
+
+Flow:
+
+```text
+Upload
+→ Validate
+→ Review
+→ Import
+```
+
+Never automatically commit payroll data when the user drops a file.
+
+Validation must show:
+
+```text
+Total Records
+Valid
+Warnings
+Errors
+Rejected
+```
+
+Support the formats required by the backend, such as:
+
+```text
+CSV
+XLSX
+```
+
+---
+
+# 37. Settings
+
+Route:
+
+```text
+/payroll/settings
+```
+
+Use the AdminCN **Account Settings** and **Form Layout** patterns.
+
+Sections:
+
+```text
+General
+Pay Groups
+Schedules
+Components
+Statutory
+Banking
+Accounting
+Approvals
+Notifications
+Access
+```
+
+Do not build a custom settings layout.
+
+---
+
+# 38. Forms
+
+Use the existing AdminCN forms stack:
+
+```text
+React Hook Form
+Zod
+shadcn Form
+AdminCN field layouts
+```
+
+Do not introduce another forms framework.
+
+Use for:
+
+```text
+Pay Groups
+Pay Schedules
+Payroll Components
+Banking
+Statutory Configuration
+Accounting Mapping
+Approval Rules
+```
+
+---
+
+# 39. Global Command
+
+Use the existing Shadcn Studio Command component.
+
+Implement:
+
+```text
+Ctrl+K / Cmd+K
+```
+
+for:
+
+```text
+Navigation
+Employee Search
+Payroll Run Search
+Actions
+Reports
+Recent Items
+```
+
+Example:
+
+```text
+Lim Jia Wei
+September 2026 MY-West
+Open Payroll Exceptions
+Import Payroll Inputs
+Export Payroll Register
+```
+
+Keep command execution deterministic.
+
+---
+
+# 40. Interaction Grammar
+
+Use existing Shadcn components consistently.
+
+```text
+Tooltip
+→ explanation
+
+Popover
+→ lightweight selection/filter
+
+DropdownMenu
+→ secondary actions
+
+Sheet
+→ contextual side work
+
+Drawer
+→ mobile contextual work
+
+Dialog
+→ contained decision
+
+AlertDialog
+→ consequential confirmation
+
+Page
+→ different operational context
+```
+
+Do not invent additional overlay patterns.
+
+---
+
+# 41. Cards
+
+Use AdminCN Cards where the template already uses them effectively.
+
+However, do not increase card usage unnecessarily.
+
+Prefer:
+
+```text
+table
+separator
+section
+toolbar
+split panel
+metric row
+```
+
+when they communicate structure more clearly.
+
+Do not create:
+
+```text
+Card
+  └── Card
+       └── Card
+```
+
+---
+
+# 42. Visual Style
+
+Remain within the AdminCN design system.
+
+Do not introduce payroll-specific:
+
+```text
+colors
+radii
+shadows
+typography
+spacing scales
+```
+
+unless necessary for semantic status.
+
+Payroll-specific styling should be limited primarily to semantic states such as:
+
+```text
+error
+warning
+success
+pending
+selected
+```
+
+using existing theme conventions.
+
+---
+
+# 43. Financial Number UX
+
+Use the existing typography system.
+
+Add only behavior required for numeric clarity:
+
+```text
+tabular numerals
+consistent decimals
+currency formatting
+right alignment in tables
+stable widths
+```
+
+Do not introduce a separate payroll typography system.
+
+---
+
+# 44. Loading States
+
+Use existing:
+
+```text
+Skeleton
+```
+
+components.
+
+Never show:
+
+```text
+RM0.00
+```
+
+as a temporary loading value.
+
+A financial value that is still loading must visibly appear as loading.
+
+---
+
+# 45. Empty States
+
+Use existing AdminCN/Shadcn Studio Empty State patterns.
+
+Examples:
+
+```text
+No exceptions found.
+
+No employees match these filters.
+
+No payroll runs yet.
+
+No returned payments.
+```
+
+Keep language operational and concise.
+
+---
+
+# 46. Errors
+
+Errors must communicate consequence.
+
+Bad:
+
+```text
+Something went wrong.
+```
+
+Preferred:
+
+```text
+Payroll cannot be approved.
+
+2 employees still have unresolved blocking exceptions.
+
+Review exceptions →
+```
+
+Use existing:
+
+```text
+Alert
+Toast
+Banner
+Dialog
+```
+
+depending on scope.
+
+---
+
+# 47. Toast Rules
+
+Use Sonner for transient confirmation:
+
+```text
+Input saved
+Employee recalculated
+Export created
+Filter saved
+```
+
+Do not use toast as the only surface for critical payroll problems.
+
+Critical conditions must remain visible until resolved.
+
+---
+
+# 48. Accessibility
+
+Retain the accessibility behavior provided by:
+
+```text
+shadcn/ui
+Radix
+AdminCN
+```
+
+Do not break it through custom implementations.
+
+Ensure:
+
+```text
+keyboard operation
+visible focus
+correct labels
+focus return
+semantic tables
+non-color status cues
+accessible dialogs
+accessible sheets
+accessible drawers
+200% zoom support
+reduced-motion compatibility
+```
+
+---
+
+# 49. Desktop First
+
+Payroll administration is primarily desktop software.
+
+Optimize first for:
+
+```text
+1440px
+1600px
+1920px
+```
+
+Then ensure proper support for laptops.
+
+Do not make desktop UX worse in pursuit of artificial mobile parity.
+
+---
+
+# 50. Responsive Scope
+
+## Desktop
+
+Full payroll operations.
+
+## Tablet
+
+Review, inspect, approve and light editing.
+
+## Mobile Admin
+
+Prioritize:
+
+```text
+Payroll status
+Alerts
+Approvals
+Employee lookup
+Payment status
+```
+
+Do not attempt to reproduce the entire desktop payroll table on a narrow screen.
+
+---
+
+# 51. Domain Components
+
+Create payroll components only where a real payroll concept exists.
+
+Recommended:
+
+```text
+payroll/
+│
+├── components/
+│   ├── payroll-run-header.tsx
+│   ├── payroll-stage-bar.tsx
+│   ├── payroll-readiness.tsx
+│   ├── payroll-metric-row.tsx
+│   │
+│   ├── payroll-run-table.tsx
+│   ├── payroll-table-toolbar.tsx
+│   ├── payroll-bulk-actions.tsx
+│   │
+│   ├── payroll-employee-inspector.tsx
+│   ├── pay-breakdown.tsx
+│   ├── pay-variance.tsx
+│   ├── payroll-source-trace.tsx
+│   │
+│   ├── exception-list.tsx
+│   ├── exception-inspector.tsx
+│   ├── exception-summary.tsx
+│   │
+│   ├── payroll-reconciliation.tsx
+│   ├── gross-to-net.tsx
+│   │
+│   ├── payroll-approval-dialog.tsx
+│   │
+│   ├── payment-readiness.tsx
+│   ├── settlement-table.tsx
+│   ├── settlement-inspector.tsx
+│   │
+│   ├── payroll-import.tsx
+│   └── payroll-audit-timeline.tsx
+│
+├── hooks/
+├── lib/
+├── types/
+└── routes/
+```
+
+Adjust this to match the existing repository architecture.
+
+Do not force this exact folder structure if the codebase already has an established feature structure.
+
+Follow the repository first.
+
+---
+
+# 52. Do Not Over-Abstract
+
+Avoid creating:
+
+```text
+payroll-run-header.types.ts
+payroll-run-header.constants.ts
+payroll-run-header.styles.ts
+payroll-run-header.utils.ts
+payroll-run-header.context.ts
+```
+
+for a simple component.
+
+Keep files together until complexity justifies extraction.
+
+The goal is maintainability, not maximum file count.
+
+---
+
+# 53. Codebase Consistency Rule
+
+Before implementing Payroll:
+
+1. Inspect how AdminCN is currently integrated.
+2. Inspect how routes are structured.
+3. Inspect how tables are implemented.
+4. Inspect how forms are implemented.
+5. Inspect how data fetching is implemented.
+6. Inspect how dialogs/sheets are structured.
+7. Follow those conventions.
+
+Do not impose a new frontend architecture from this document where the repository already has a good convention.
+
+---
+
+# 54. Shadcn Studio Usage Rule
+
+Because a Pro license is available, use Shadcn Studio aggressively to accelerate implementation.
+
+But use it intelligently.
+
+For every new surface:
+
+```text
+1. Search AdminCN.
+2. Search Shadcn Studio Pro.
+3. Choose the closest block.
+4. Import/adapt it.
+5. Replace demo semantics with payroll semantics.
+6. Connect real application state.
+7. Remove unnecessary decorative content.
+8. Preserve the existing design system.
+```
+
+Do not redesign a stable block merely to make it look unique.
+
+---
+
+# 55. Template Donor Matrix
+
+Use this mapping:
+
+| Payroll Requirement | Primary Donor       |
+| ------------------- | ------------------- |
+| Application shell   | AdminCN Default     |
+| Sidebar             | AdminCN Sidebar     |
+| Header              | AdminCN Header      |
+| Payroll overview    | Finance + Logistics |
+| Payroll metrics     | Statistics blocks   |
+| Payroll table       | DataTable           |
+| Employee inspector  | Resizable + Sheet   |
+| Filters             | Popover + Command   |
+| Employee selector   | Combobox            |
+| Status              | Badge               |
+| Readiness           | Progress            |
+| Variance            | Finance charts      |
+| Approval            | Dashboard Dialog    |
+| Payment center      | Payments dashboard  |
+| Payroll run queue   | Orders dashboard    |
+| Import              | File Upload         |
+| Settings            | Account Settings    |
+| Configuration forms | Form Layout         |
+| Audit               | Timeline            |
+| Loading             | Skeleton            |
+| Empty states        | Empty State         |
+
+This is the preferred implementation map.
+
+---
+
+# 56. Avoid These Patterns
+
+Do not introduce:
+
+```text
+a second design system
+a second token system
+a second theme architecture
+custom replacements for stable shadcn primitives
+unnecessary wrapper components
+new table infrastructure
+new form infrastructure
+new chart infrastructure
+new dialog infrastructure
+new navigation infrastructure
+```
+
+Also avoid:
+
+```text
+card soup
+rainbow dashboards
+giant hero metrics
+pie-chart overload
+page navigation for trivial inspection
+modal-driven entire workflows
+duplicate filter systems
+duplicate status vocabularies
+decorative gradients
+one-off shadows
+arbitrary radius changes
+```
+
+---
+
+# 57. Product Principles
+
+Optimize for:
+
+```text
+clarity
+speed
+density
+context preservation
+exception resolution
+financial traceability
+approval confidence
+reconciliation
+auditability
+```
+
+Not for:
+
+```text
+visual novelty
+maximum animation
+maximum dashboard widgets
+maximum customization
+```
+
+---
+
+# 58. Payroll Questions the UI Must Answer
+
+Every major screen should help answer:
+
+```text
+What needs attention?
+
+What changed?
+
+Why did it change?
+
+Who is affected?
+
+How much is affected?
+
+Can payroll proceed?
+
+What is blocking payroll?
+
+What remains before payday?
+
+Who approved the payroll?
+
+Which calculation was approved?
+
+Was everyone paid?
+
+Which payments failed?
+
+Where did this value come from?
+```
+
+If a widget does not support one of these operational goals, question whether it belongs.
+
+---
+
+# 59. Implementation Sequence
+
+## Phase 1 — Adopt AdminCN
+
+Verify and stabilize:
+
+```text
+Application Shell
+Sidebar
+Header
+Theme
+Routing
+Existing UI primitives
+```
+
+Do not modify these unnecessarily.
+
+---
+
+## Phase 2 — Payroll Route
+
+Create:
+
+```text
+/payroll/runs/[runId]
+```
+
+with:
+
+```text
+PayrollRunHeader
+PayrollStageBar
+Metric Row
+Main DataTable
+```
+
+---
+
+## Phase 3 — Table Operations
+
+Add:
+
+```text
+Search
+Filters
+Column Controls
+Row Selection
+Bulk Actions
+Statuses
+Exceptions
+Variance
+```
+
+---
+
+## Phase 4 — Inspector
+
+Add:
+
+```text
+Resizable Panel
+PayrollEmployeeInspector
+Pay Breakdown
+Pay Variance
+Source Trace
+```
+
+---
+
+## Phase 5 — Exceptions
+
+Add:
+
+```text
+Exception Summary
+Exception List
+Exception Inspector
+Resolve/Acknowledge Actions
+```
+
+---
+
+## Phase 6 — Reconciliation
+
+Mine AdminCN Finance.
+
+Build:
+
+```text
+Payroll Reconciliation
+Current vs Previous
+Variance Breakdown
+Gross-to-Net
+```
+
+---
+
+## Phase 7 — Approval
+
+Build:
+
+```text
+PayrollApprovalDialog
+```
+
+using existing Dialog/AlertDialog patterns.
+
+---
+
+## Phase 8 — Payments
+
+Mine AdminCN Payments.
+
+Build:
+
+```text
+Funding Summary
+Payment Readiness
+Settlement Table
+Settlement Inspector
+```
+
+---
+
+## Phase 9 — Dashboard
+
+Build `/payroll` only after the run workspace is mature.
+
+Reuse completed domain components.
+
+---
+
+## Phase 10 — Settings and Import
+
+Use:
+
+```text
+Account Settings
+Form Layout
+File Upload
+```
+
+---
+
+## Phase 11 — Polish
+
+Complete:
+
+```text
+Loading
+Empty
+Error
+Keyboard
+Responsive
+Accessibility
+Focus behavior
+Density
+```
+
+---
+
+# 60. First Screen to Perfect
+
+Prioritize:
+
+```text
+/payroll/runs/[runId]
+```
+
+Before broadening the module.
+
+It must provide:
+
+```text
+Run Context
+Lifecycle
+Metrics
+Employee Table
+Filters
+Exceptions
+Employee Inspector
+Pay Breakdown
+Variance
+Source Trace
+```
+
+Most payroll processing should be possible without leaving this screen.
+
+---
+
+# 61. Definition of Done
+
+A frontend feature is not complete because:
+
+```text
+it renders
+the endpoint works
+the button works
+```
+
+It is complete when:
+
+```text
+the user understands the current state
+
+important exceptions are obvious
+
+the user can inspect the reason
+
+the user can act without losing context
+
+financial numbers are consistent
+
+loading states are safe
+
+errors explain consequences
+
+statuses are consistent
+
+keyboard and focus behavior work
+
+the screen matches AdminCN conventions
+
+no unnecessary new UI abstraction was introduced
+```
+
+---
+
+# 62. Final Architectural Command
+
+**Adopt Shadcn Studio AdminCN Pro as the Payroll frontend foundation.**
+
+Do not rebuild or replace its stable design system.
+
+Do not introduce ADL into this scope.
+
+Do not initiate a frontend restructuring solely for visual-system purity.
+
+Use the existing AdminCN:
+
+```text
+theme
+tokens
+layout
+components
+tables
+forms
+charts
+dialogs
+navigation
+responsive behavior
+```
+
+as the default.
+
+Create new code only for **payroll-specific product meaning and behavior**.
+
+The governing rule is:
+
+> **Use AdminCN for the interface system.
+> Use Shadcn Studio Pro for accelerated composition.
+> Use payroll domain components for payroll semantics.
+> Do not create another design-system layer.**
+
+The target is a payroll frontend that feels like a **native, mature extension of AdminCN**, not a separate application inserted inside it.
+
+Build for:
+
+```text
+consistency over reinvention
+reuse over abstraction
+domain clarity over framework purity
+operational density over decoration
+context preservation over route proliferation
+financial confidence over novelty
+```
+
+The implementation should make maximum practical use of the Pro template and blocks while keeping the codebase simple, scalable and easy to maintain.
+
+This version should be much safer for Claude Code: **AdminCN is the baseline, not a donor that must be translated through another system**, so you avoid the restructuring cascade entirely.

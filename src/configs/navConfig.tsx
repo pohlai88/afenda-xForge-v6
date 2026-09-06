@@ -68,14 +68,26 @@ export const navItems: NavItem[] = [
         href: '/dashboard/logistics'
       },
       {
-        icon: 'Banknote',
-        label: 'Payroll',
-        href: '/dashboard/payroll'
-      },
-      {
         icon: 'ShoppingCart',
         label: 'eCommerce',
         href: '/dashboard/ecommerce'
+      }
+    ]
+  },
+  {
+    groupLabel: 'Payroll',
+    items: [
+      {
+        icon: 'Banknote',
+        label: 'Payroll',
+        childItems: [
+          { label: 'Overview', href: '/payroll' },
+          { label: 'Runs', href: '/payroll/runs', activePath: '/payroll/runs' },
+          { label: 'Payments', href: '/payroll/payments' },
+          { label: 'Compliance', href: '/payroll/compliance' },
+          { label: 'Reports', href: '/payroll/reports' },
+          { label: 'Settings', href: '/payroll/settings', activePath: '/payroll/settings' }
+        ]
       }
     ]
   },

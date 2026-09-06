@@ -1,29 +1,23 @@
+// Next Imports
+import Link from 'next/link'
+
 // Third-party Imports
-import { AlertTriangleIcon, CalendarClockIcon, UsersIcon } from 'lucide-react'
+import { AlertTriangleIcon, ArrowRightIcon, CalendarClockIcon, UsersIcon } from 'lucide-react'
 
 // Type Imports
-import type { PayRun, PayRunStatus } from '@/types/payroll/pay-run-types'
+import type { PayRun } from '@/types/payroll/pay-run-types'
+import { PAYROLL_STAGES } from '@/types/payroll/run-workspace-types'
 
 // Component Imports
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
-import { PAY_RUN_STATUS_LABELS, PAY_RUN_STATUS_STYLES, RUN_STAGES, stageIndexFor } from '@/utils/payroll-metrics'
-
-/**
- * Shorter labels used throughout this card.
- *
- * The badge sits directly above the progress track, so both have to say the same word for the
- * same status — 'Pending approval' in one and 'Approval' in the other reads as two different
- * things. The track is the tighter of the two, so its wording wins for the whole card.
- * Everything else comes from the shared map.
- */
-const CARD_LABELS: Partial<Record<string, string>> = { pending_approval: 'Approval' }
-
-const cardLabel = (status: PayRunStatus) => CARD_LABELS[status] ?? PAY_RUN_STATUS_LABELS[status]
+import { PAY_RUN_STATUS_LABELS, PAY_RUN_STATUS_STYLES } from '@/utils/payroll-metrics'
+import { PAYROLL_STAGE_LABELS, stageIndexForStatus } from '@/utils/payroll-workspace'
 
 type Props = {
   run: PayRun
@@ -38,7 +32,8 @@ type Props = {
 }
 
 const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props) => {
-  const currentStage = stageIndexFor(run)
+  // The same six stages the run workspace draws, so the two never disagree on where a run is.
+  const currentStage = stageIndexForStatus(run.status)
   const overdue = daysToCutoff !== null && daysToCutoff < 0
 
   return (
@@ -46,7 +41,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
       <CardHeader>
         <CardTitle className='flex items-center gap-2 text-lg font-semibold'>
           {run.reference}
-          <Badge className={PAY_RUN_STATUS_STYLES[run.status]}>{cardLabel(run.status)}</Badge>
+          <Badge className={PAY_RUN_STATUS_STYLES[run.status]}>{PAY_RUN_STATUS_LABELS[run.status]}</Badge>
         </CardTitle>
         <CardDescription>
           {run.periodStart} – {run.periodEnd} · pays {run.payDate}
@@ -63,7 +58,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
         {/* Stage track. A run that was cancelled or failed is not partway along this path, so
             it is rendered as a plain status above rather than a position on the track. */}
         <div className='flex items-center'>
-          {RUN_STAGES.map((stage, index) => {
+          {PAYROLL_STAGES.map((stage, index) => {
             const done = index < currentStage
             const active = index === currentStage
 
@@ -84,10 +79,10 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
                       active ? 'text-foreground font-medium' : 'text-muted-foreground'
                     )}
                   >
-                    {cardLabel(stage)}
+                    {PAYROLL_STAGE_LABELS[stage]}
                   </span>
                 </div>
-                {index < RUN_STAGES.length - 1 && (
+                {index < PAYROLL_STAGES.length - 1 && (
                   <span className={cn('mx-2 mb-6 h-0.5 flex-1', done ? 'bg-primary' : 'bg-muted-foreground/20')} />
                 )}
               </div>
@@ -162,6 +157,11 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             </div>
           ))}
         </div>
+
+        <Button variant='outline' className='w-fit' render={<Link href={`/payroll/runs/${run.id}`} />} nativeButton={false}>
+          Open run workspace
+          <ArrowRightIcon />
+        </Button>
       </CardContent>
     </Card>
   )

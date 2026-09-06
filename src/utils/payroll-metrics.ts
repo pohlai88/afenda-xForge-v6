@@ -7,7 +7,14 @@
 // Type Imports
 import type { Money } from '@/types/common/primitive-types'
 import type { Department, Employee } from '@/types/hrm/employee-types'
-import type { PayRun, PayRunStatus, PayRunException, Payslip } from '@/types/payroll/pay-run-types'
+import type {
+  PayRun,
+  PayRunException,
+  PayRunExceptionSeverity,
+  PayRunExceptionStatus,
+  PayRunStatus,
+  Payslip
+} from '@/types/payroll/pay-run-types'
 
 const sum = (values: Money[], currency: Money['currency']): Money => ({
   amount: values.reduce((total, v) => total + v.amount, 0),
@@ -144,31 +151,78 @@ export const formatChange = (change: number | null): string =>
 
 export type ExceptionCounts = {
   blocking: number
+  error: number
   warning: number
   info: number
+
+  /** Everything not yet resolved, acknowledged or not. */
   open: number
+
+  /** Acknowledged but not resolved — the approver is signing off over these. */
+  acknowledged: number
 }
+
+/**
+ * Status is read off the timestamps, never stored alongside them. Two fields for one fact
+ * is how a record ends up 'open' with a resolvedAt.
+ */
+export const exceptionStatusOf = (exception: PayRunException): PayRunExceptionStatus =>
+  exception.resolvedAt ? 'resolved' : exception.acknowledgedAt ? 'acknowledged' : 'open'
 
 export const countExceptions = (exceptions: PayRunException[]): ExceptionCounts => {
   const open = exceptions.filter(e => !e.resolvedAt)
 
   return {
     blocking: open.filter(e => e.severity === 'blocking').length,
+    error: open.filter(e => e.severity === 'error').length,
     warning: open.filter(e => e.severity === 'warning').length,
     info: open.filter(e => e.severity === 'info').length,
-    open: open.length
+    open: open.length,
+    acknowledged: open.filter(e => e.acknowledgedAt).length
   }
 }
 
 /**
- * Ordered stages a run passes through, with the current one marked.
+ * Severity -> label, badge colour and sort order, decided once.
  *
- * The terminal exits (cancelled, failed) are not stages — a run that took one is not partway
- * along this path, so callers should branch on those before rendering a progress track.
+ * The dashboard's exception queue and the run workspace's exception list both render severity;
+ * when the queue owned its own map the two would have drifted the first time a severity was added.
+ * Blocking and error share the destructive tone because both stop the approver; the icon and the
+ * word tell them apart, not the colour.
  */
-export const RUN_STAGES = ['draft', 'calculated', 'pending_approval', 'approved', 'paid'] as const
+export const EXCEPTION_SEVERITY_LABELS: Record<PayRunExceptionSeverity, string> = {
+  blocking: 'Blocker',
+  error: 'Error',
+  warning: 'Warning',
+  info: 'Info'
+}
 
-export type RunStage = (typeof RUN_STAGES)[number]
+export const EXCEPTION_SEVERITY_STYLES: Record<PayRunExceptionSeverity, string> = {
+  blocking: 'bg-destructive/10 text-destructive',
+  error: 'bg-destructive/10 text-destructive',
+  warning: 'bg-warning/15 text-warning',
+  info: 'bg-info/10 text-info'
+}
+
+/** Blocking first: an exception list is a to-do, and the things that stop the run belong on top. */
+export const EXCEPTION_SEVERITY_ORDER: Record<PayRunExceptionSeverity, number> = {
+  blocking: 0,
+  error: 1,
+  warning: 2,
+  info: 3
+}
+
+export const EXCEPTION_STATUS_LABELS: Record<PayRunExceptionStatus, string> = {
+  open: 'Open',
+  acknowledged: 'Acknowledged',
+  resolved: 'Resolved'
+}
+
+export const EXCEPTION_STATUS_STYLES: Record<PayRunExceptionStatus, string> = {
+  open: 'bg-muted text-foreground',
+  acknowledged: 'bg-info/10 text-info',
+  resolved: 'bg-success/15 text-success'
+}
 
 /**
  * Display labels for every run status, including the terminal ones that are not stages.
@@ -205,16 +259,6 @@ export const PAY_RUN_STATUS_STYLES: Record<PayRunStatus, string> = {
   closed: 'bg-muted text-muted-foreground',
   cancelled: 'bg-destructive/10 text-destructive',
   failed: 'bg-destructive/10 text-destructive'
-}
-
-export const stageIndexFor = (run: PayRun): number => {
-  // 'calculating' is a transient state of the same step; 'closed' is past the end.
-  if (run.status === 'calculating') return RUN_STAGES.indexOf('draft')
-  if (run.status === 'closed') return RUN_STAGES.length - 1
-
-  const index = RUN_STAGES.indexOf(run.status as RunStage)
-
-  return index === -1 ? 0 : index
 }
 
 /**

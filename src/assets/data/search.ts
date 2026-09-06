@@ -10,6 +10,7 @@ import {
   ConstructionIcon,
   ContactIcon,
   CreditCardIcon,
+  FileTextIcon,
   HouseIcon,
   LockIcon,
   LogInIcon,
@@ -82,8 +83,45 @@ export const searchData: SearchData[] = [
       },
       {
         icon: BanknoteIcon,
-        name: 'Payroll Dashboard',
-        href: '/dashboard/payroll'
+        name: 'Payroll Overview',
+        href: '/payroll',
+        tags: ['payroll', 'salary', 'pay run']
+      },
+      {
+        icon: BanknoteIcon,
+        name: 'Payroll Runs',
+        href: '/payroll/runs',
+        tags: ['payroll', 'pay run', 'register']
+      },
+      {
+        icon: BanknoteIcon,
+        name: 'Current Payroll Run',
+        href: '/payroll/runs/run-2026-09',
+        tags: ['payroll', 'approve', 'exceptions', 'workspace']
+      },
+      {
+        icon: CreditCardIcon,
+        name: 'Payroll Payments',
+        href: '/payroll/payments',
+        tags: ['payroll', 'settlement', 'funding', 'bank', 'returned', 'failed']
+      },
+      {
+        icon: ShieldCheckIcon,
+        name: 'Payroll Compliance',
+        href: '/payroll/compliance',
+        tags: ['payroll', 'compliance', 'cpf', 'iras', 'filing', 'statutory', 'due']
+      },
+      {
+        icon: FileTextIcon,
+        name: 'Payroll Reports',
+        href: '/payroll/reports',
+        tags: ['payroll', 'report', 'register', 'export', 'gross to net', 'bank file']
+      },
+      {
+        icon: UserCogIcon,
+        name: 'Payroll Settings',
+        href: '/payroll/settings',
+        tags: ['payroll', 'pay group', 'schedule', 'statutory', 'cpf', 'banking', 'approvals']
       },
       {
         icon: ShoppingCartIcon,

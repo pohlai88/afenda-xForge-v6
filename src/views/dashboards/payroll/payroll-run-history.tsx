@@ -45,13 +45,25 @@ const RIGHT_ALIGNED = new Set(['employeeCount', 'gross', 'net', 'employerCost'])
  * Sorting the formatted string would order 'S$9,120.00' above 'S$84,300.00', which is the
  * kind of bug that looks like a display glitch and is actually wrong data.
  */
-const columns: ColumnDef<PayRun>[] = [
+/**
+ * Where a run row leads. A name rather than a function because this is a client component and
+ * server pages cannot hand it a callback; the dashboard re-scopes itself, the runs page opens
+ * the workspace.
+ */
+export type RunLinkTarget = 'dashboard' | 'workspace'
+
+const HREF_FOR: Record<RunLinkTarget, (run: PayRun) => string> = {
+  dashboard: run => `/payroll?run=${encodeURIComponent(run.reference)}`,
+  workspace: run => `/payroll/runs/${run.id}`
+}
+
+const buildColumns = (hrefFor: (run: PayRun) => string): ColumnDef<PayRun>[] => [
   {
     header: 'Run',
     accessorKey: 'reference',
     cell: ({ row }) => (
       <Link
-        href={`/dashboard/payroll?run=${encodeURIComponent(row.original.reference)}`}
+        href={hrefFor(row.original)}
         scroll={false}
         className='font-medium underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none'
       >
@@ -114,16 +126,29 @@ type Props = {
 
   /** Reference of the run the dashboard is currently showing, highlighted in the table. */
   selectedReference?: string
+  title?: string
+
+  linkTo?: RunLinkTarget
+  pageSize?: number
   className?: string
 }
 
-const PayrollRunHistory = ({ runs, selectedReference, className }: Props) => {
+const PayrollRunHistory = ({
+  runs,
+  selectedReference,
+  title = 'Run history',
+  linkTo = 'dashboard',
+  pageSize = 5,
+  className
+}: Props) => {
   const router = useRouter()
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 5 })
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize })
 
   const data = useMemo(() => runs, [runs])
+  const hrefFor = HREF_FOR[linkTo]
+  const columns = useMemo(() => buildColumns(hrefFor), [hrefFor])
 
   // Same opt-out the other datatables in this repo carry: useReactTable returns functions the
   // React Compiler cannot memoize, so it declines to compile the component rather than risk
@@ -147,7 +172,7 @@ const PayrollRunHistory = ({ runs, selectedReference, className }: Props) => {
   return (
     <Card className={cn('gap-0 py-0', className)}>
       <CardHeader className='py-6'>
-        <CardTitle className='text-lg font-semibold'>Run history</CardTitle>
+        <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
         <CardDescription>
           {table.getFilteredRowModel().rows.length} of {runs.length} runs
         </CardDescription>
@@ -232,11 +257,7 @@ const PayrollRunHistory = ({ runs, selectedReference, className }: Props) => {
 
                       // Mouse convenience only. The reference cell holds the real link, so
                       // keyboard and assistive-tech users never depend on this handler.
-                      onClick={() =>
-                        router.push(`/dashboard/payroll?run=${encodeURIComponent(row.original.reference)}`, {
-                          scroll: false
-                        })
-                      }
+                      onClick={() => router.push(hrefFor(row.original), { scroll: false })}
                     >
                       {row.getVisibleCells().map(cell => (
                         <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
@@ -257,7 +278,7 @@ const PayrollRunHistory = ({ runs, selectedReference, className }: Props) => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[5, 10, 25].map(size => (
+                {[...new Set([5, 10, 25, pageSize])].sort((a, b) => a - b).map(size => (
                   <SelectItem key={size} value={String(size)}>
                     {size}
                   </SelectItem>

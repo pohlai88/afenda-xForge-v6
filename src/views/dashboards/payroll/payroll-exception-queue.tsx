@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { CheckCircle2Icon } from 'lucide-react'
 
 // Type Imports
-import type { PayRunException, PayRunExceptionSeverity } from '@/types/payroll/pay-run-types'
+import type { PayRunException } from '@/types/payroll/pay-run-types'
 
 // Component Imports
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -15,6 +15,11 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 // Util Imports
 import { cn } from '@/lib/utils'
+import {
+  EXCEPTION_SEVERITY_LABELS,
+  EXCEPTION_SEVERITY_ORDER,
+  EXCEPTION_SEVERITY_STYLES
+} from '@/utils/payroll-metrics'
 
 /** An exception plus the human name and face of whatever it is about, resolved by the caller. */
 export type ExceptionRow = PayRunException & { subject?: string; avatar?: string }
@@ -28,21 +33,6 @@ const initials = (name?: string) =>
     .join('')
     .toUpperCase() ?? '—'
 
-const SEVERITY_STYLES: Record<PayRunExceptionSeverity, string> = {
-  blocking: 'bg-destructive/10 text-destructive',
-  warning: 'bg-warning/15 text-warning',
-  info: 'bg-muted text-muted-foreground'
-}
-
-const SEVERITY_LABELS: Record<PayRunExceptionSeverity, string> = {
-  blocking: 'Blocking',
-  warning: 'Warning',
-  info: 'Info'
-}
-
-// Blocking first: this list is a to-do, and the things that stop the run belong at the top.
-const SEVERITY_ORDER: Record<PayRunExceptionSeverity, number> = { blocking: 0, warning: 1, info: 2 }
-
 type Props = {
   exceptions: ExceptionRow[]
 
@@ -51,15 +41,18 @@ type Props = {
 
   /** Reference of the run currently shown, so "Clear filter" can drop `dept` and keep `run`. */
   runReference: string
+
+  /** Id of the run, for the link into the workspace where exceptions are actually worked. */
+  runId: string
   className?: string
 }
 
-const PayrollExceptionQueue = ({ exceptions, departmentFilter, runReference, className }: Props) => {
+const PayrollExceptionQueue = ({ exceptions, departmentFilter, runReference, runId, className }: Props) => {
   const open = [...exceptions]
     .filter(exception => !exception.resolvedAt)
-    .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
+    .sort((a, b) => EXCEPTION_SEVERITY_ORDER[a.severity] - EXCEPTION_SEVERITY_ORDER[b.severity])
 
-  const clearFilterHref = `/dashboard/payroll?run=${encodeURIComponent(runReference)}`
+  const clearFilterHref = `/payroll?run=${encodeURIComponent(runReference)}`
 
   return (
     <Card className={className}>
@@ -74,6 +67,12 @@ const PayrollExceptionQueue = ({ exceptions, departmentFilter, runReference, cla
           >
             {open.length} open
           </Badge>
+          <Link
+            href={`/payroll/runs/${runId}?view=exceptions`}
+            className='text-muted-foreground text-xs underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none'
+          >
+            Work exceptions
+          </Link>
           {departmentFilter && (
             <Link
               href={clearFilterHref}
@@ -116,8 +115,8 @@ const PayrollExceptionQueue = ({ exceptions, departmentFilter, runReference, cla
                   <div className='flex min-w-0 flex-1 flex-col gap-1'>
                     <div className='flex items-center justify-between gap-2'>
                       <span className='truncate text-sm font-medium'>{exception.subject ?? 'Run-wide'}</span>
-                      <Badge className={cn('shrink-0 text-xs', SEVERITY_STYLES[exception.severity])}>
-                        {SEVERITY_LABELS[exception.severity]}
+                      <Badge className={cn('shrink-0 text-xs', EXCEPTION_SEVERITY_STYLES[exception.severity])}>
+                        {EXCEPTION_SEVERITY_LABELS[exception.severity]}
                       </Badge>
                     </div>
                     <p className='text-muted-foreground text-sm'>{exception.message}</p>

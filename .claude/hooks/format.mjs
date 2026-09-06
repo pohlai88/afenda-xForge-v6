@@ -15,26 +15,32 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative } from "node:path";
 
 let input = "";
+
 for await (const chunk of process.stdin) {
   input += chunk;
 }
 
 let filePath;
+
 try {
   const payload = JSON.parse(input);
+
   filePath = payload.tool_response?.filePath ?? payload.tool_input?.file_path;
 } catch {
   process.exit(0);
 }
+
 if (typeof filePath !== "string") {
   process.exit(0);
 }
 
 const rel = relative(process.cwd(), filePath).replaceAll("\\", "/");
 const outsideRepo = rel.startsWith("..") || isAbsolute(rel);
+
 // _archive/ is dead template material (eslint ignores it too); the rest is
 // generated or tooling state.
 const skipped = /^(\.claude|\.next|_archive|node_modules)\//.test(rel);
+
 if (outsideRepo || skipped) {
   process.exit(0);
 }
@@ -42,6 +48,7 @@ if (outsideRepo || skipped) {
 function prettierEntry() {
   try {
     const req = createRequire(`${process.cwd()}/package.json`);
+
     return `${dirname(req.resolve("prettier/package.json"))}/bin/prettier.cjs`;
   } catch {
     return null;
@@ -49,6 +56,7 @@ function prettierEntry() {
 }
 
 const entry = prettierEntry();
+
 if (!entry) {
   process.exit(0);
 }
