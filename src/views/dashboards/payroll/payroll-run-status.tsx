@@ -13,10 +13,17 @@ import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
 import { PAY_RUN_STATUS_LABELS, RUN_STAGES, stageIndexFor } from '@/utils/payroll-metrics'
 
-/** The progress track abbreviates one label; everything else comes from the shared map. */
-const STAGE_TRACK_LABELS: Partial<Record<string, string>> = { pending_approval: 'Approval' }
+/**
+ * Shorter labels used throughout this card.
+ *
+ * The badge sits directly above the progress track, so both have to say the same word for the
+ * same status — 'Pending approval' in one and 'Approval' in the other reads as two different
+ * things. The track is the tighter of the two, so its wording wins for the whole card.
+ * Everything else comes from the shared map.
+ */
+const CARD_LABELS: Partial<Record<string, string>> = { pending_approval: 'Approval' }
 
-const stageLabel = (status: PayRunStatus) => STAGE_TRACK_LABELS[status] ?? PAY_RUN_STATUS_LABELS[status]
+const cardLabel = (status: PayRunStatus) => CARD_LABELS[status] ?? PAY_RUN_STATUS_LABELS[status]
 
 type Props = {
   run: PayRun
@@ -42,7 +49,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
           <Badge
             className={cn(blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary')}
           >
-            {PAY_RUN_STATUS_LABELS[run.status]}
+            {cardLabel(run.status)}
           </Badge>
         </CardTitle>
         <CardDescription>
@@ -79,7 +86,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
                       active ? 'text-foreground font-medium' : 'text-muted-foreground'
                     )}
                   >
-                    {stageLabel(stage)}
+                    {cardLabel(stage)}
                   </span>
                 </div>
                 {index < RUN_STAGES.length - 1 && (
