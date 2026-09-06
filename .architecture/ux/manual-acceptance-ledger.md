@@ -34,9 +34,19 @@ button, the filing name button — never against the row, which is deliberately 
 | 2   | Payroll Run Queue | `⋮` by pointer and by keyboard     | Same commands as right-click, in the same order, Properties last; Escape restores focus to the button        |
 | 3   | Payroll Register  | `Shift+F10` on an employee name    | As row 1                                                                                                     |
 | 4   | Payroll Register  | `⋮` by pointer and by keyboard     | As row 2                                                                                                     |
-| 5   | Filings           | `Shift+F10` on a filing name       | As row 1                                                                                                     |
-| 6   | Filings           | `⋮` by pointer and by keyboard     | As row 2, with `Open filing` as the only command                                                             |
-| 7   | All three         | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
+| 5   | Filings           | `Shift+F10` on a filing name       | As row 1. Filings renders no `⋮` — `Open filing` is the whole vocabulary, so right-click is the only menu    |
+| 6   | Payments          | `Shift+F10` on an employee name    | As row 1                                                                                                     |
+| 7   | Payments          | `⋮` by pointer and by keyboard     | As row 2. On a payment with no bank reference the menu holds `Open payment` alone — see the note below       |
+| 8   | All four          | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
+
+### Note on row 7 — a menu that can hold one item
+
+The overflow column is decided once for the whole table, deliberately, so it cannot appear and
+disappear as someone pages or filters. On Payments the column is earned by the 163 released and
+paid rows that have a bank reference to copy; the 33 rows that do not yet have one still show a `⋮`
+whose menu holds only `Open payment`. That is the cost of a column that stays put, and it is the
+first table where a row's menu can be degenerate — worth a person's judgement rather than a silent
+assumption that it is fine.
 
 ## What has been observed
 
