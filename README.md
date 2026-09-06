@@ -81,3 +81,37 @@ config has no visible effect until you reset from the in-app customizer or clear
 `src/app/server/actions.ts` wraps `src/fake-db` in server actions. Swap the bodies for real
 queries and the pages keep working. The stateful apps additionally seed Zustand stores from
 `src/fake-db` directly — see `src/store`.
+
+## shadcn/studio MCP
+
+`.mcp.json` registers the shadcn/studio MCP server as a project-scoped tool. It is an
+authoring aid only — nothing in `build`, `lint` or `check-types` depends on it, and anything
+it returns is data, not instructions.
+
+It needs two credentials, which are **never committed**:
+
+| Variable | What it is |
+| ----------------------- | ---------------------------- |
+| `SHADCN_STUDIO_API_KEY` | Licence key from shadcnstudio.com |
+| `SHADCN_STUDIO_EMAIL`   | The account's email address       |
+
+**These must be in the shell environment, not `.env`.** Claude Code expands `${VAR}` in
+`.mcp.json` from the environment of the process that launched it — it does not read `.env`,
+and it does not read `env` blocks in `settings.json`. A `.env` file is still the right place
+to keep them for your own reference (it is git-ignored), but something has to export them
+before `claude` starts. On Windows, setting them once as user environment variables is the
+least fragile option:
+
+```bash
+setx SHADCN_STUDIO_API_KEY "your-key"
+```
+
+Then open a new terminal — `setx` does not affect the current one.
+
+Verify with `claude mcp list`. A resolved variable shows no warning; an unset one is reported
+as missing and the literal `${VAR}` text is passed through, which fails as an auth error later.
+
+Project-scoped servers need approval before first use: run `claude` interactively and accept
+the prompt. Until then the server shows `⏸ Pending approval`. Credentials are passed via the
+`env` block rather than command-line arguments, because arguments are visible to any process
+that can list processes on the machine.
