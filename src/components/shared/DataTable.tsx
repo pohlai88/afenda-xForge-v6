@@ -110,11 +110,36 @@ const DataTable = <TRow,>({
   const capabilities = deriveTableCapabilities(definition)
   const rows = table.getRowModel().rows
   const leafColumns = table.getVisibleLeafColumns()
-  const columnCount = leafColumns.length + (capabilities.select ? 1 : 0) + (capabilities.rowCommands ? 1 : 0)
 
   // Only an active table offers commands. Inactive rows still render, so a hidden tab keeps its
   // scroll position and layout, but they are inert.
   const interactive = active && capabilities.rowCommands && definition.getObject && definition.getCommands
+
+  /*
+   * Whether the overflow column is worth a column of the table's width.
+   *
+   * A menu whose only item is the command a click already runs offers nothing: the row activates,
+   * the identity control activates, and the menu repeats them. That is chrome under
+   * `capability_without_chrome`, so a table whose whole command vocabulary is its own activation
+   * renders no overflow column at all. Right-click still works — it costs no space, and everything
+   * in it remains reachable without a pointer through the row's identity control.
+   *
+   * Asked of every row rather than the page, so the column cannot appear and disappear as someone
+   * pages or filters. `some` stops at the first row that earns it, which is every table that has a
+   * real menu.
+   */
+  const offersMenu =
+    capabilities.rowCommands &&
+    (definition.onOpenProperties !== undefined ||
+      table
+        .getCoreRowModel()
+        .rows.some(row =>
+          definition.getCommands!(row.original).some(
+            command => command.id !== definition.getDefaultCommandId?.(row.original)
+          )
+        ))
+
+  const columnCount = leafColumns.length + (capabilities.select ? 1 : 0) + (offersMenu ? 1 : 0)
 
   // Alignment is read from meaning, not from a per-table list of column ids. Money, counts and
   // percentages are the figures a reader scans down, so the engine right-aligns them everywhere
@@ -345,7 +370,7 @@ const DataTable = <TRow,>({
                     </TableHead>
                   )
                 })}
-                {capabilities.rowCommands ? (
+                {offersMenu ? (
                   <TableHead style={{ width: COMMANDS_COLUMN_WIDTH }}>
                     <span className='sr-only'>Commands</span>
                   </TableHead>
@@ -412,7 +437,7 @@ const DataTable = <TRow,>({
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
-                    {capabilities.rowCommands ? (
+                    {offersMenu ? (
                       <TableCell className={cn(bodyCellClass, 'w-12')}>
                         {interactive ? (
                           <ObjectCommandsButton

@@ -273,7 +273,7 @@ const FilingsTable = ({ rows, selectedId, onOpen, className }: Props) => {
         </TableCell>
         <TableCell />
         <TableCell className='text-right font-medium tabular-nums'>{formatMoney(total)}</TableCell>
-        <TableCell colSpan={3} />
+        <TableCell colSpan={2} />
       </TableRow>
     </TableFooter>
   )
