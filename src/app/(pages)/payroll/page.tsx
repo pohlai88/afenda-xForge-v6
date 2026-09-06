@@ -7,6 +7,7 @@ import ConsolidateBy from '@/views/payroll/group/consolidate-by'
 import EntityControlMatrix from '@/views/payroll/group/entity-control-matrix'
 import GroupHero from '@/views/payroll/group/group-hero'
 import GroupMovement from '@/views/payroll/group/group-movement'
+import GroupPaymentExposure, { type EntityExposure } from '@/views/payroll/group/group-payment-exposure'
 import GroupReadiness from '@/views/payroll/group/group-readiness'
 import GroupSelectors from '@/views/payroll/group/group-selectors'
 
@@ -19,7 +20,9 @@ import {
   getPayRuns,
   getPayrollGroup,
   getPayrollSettings,
-  getPayslipsForRun
+  getPayslipsForRun,
+  getFundingAccounts,
+  getSettlements
 } from '@/app/server/actions'
 
 // Util Imports
@@ -62,7 +65,8 @@ type Props = {
 }
 
 const GroupPayrollPage = async ({ searchParams }: Props) => {
-  const [params, group, entities, runs, employees, departments, rates, settings] = await Promise.all([
+  const [params, group, entities, runs, employees, departments, rates, settings, accounts, settlements] =
+    await Promise.all([
     searchParams,
     getPayrollGroup(),
     getLegalEntities(),
@@ -70,7 +74,9 @@ const GroupPayrollPage = async ({ searchParams }: Props) => {
     getEmployees(),
     getDepartments(),
     getFxRates(),
-    getPayrollSettings()
+    getPayrollSettings(),
+    getFundingAccounts(),
+    getSettlements()
   ])
 
   // Every period any company has calculated, newest last. The selector offers these and nothing
@@ -128,6 +134,34 @@ const GroupPayrollPage = async ({ searchParams }: Props) => {
 
   const breakdown = consolidateBy(consolidation, query.by, { employees, departments, payslipsByRun })
 
+  // Can each company pay its own people? Deliberately per company and never converted: a
+  // balance in Singapore cannot cover a shortfall in Vietnam, so there is no honest group
+  // "available" figure to state.
+  const exposures: EntityExposure[] = consolidation.entities
+    .filter(row => row.run)
+    .map(row => {
+      const account =
+        accounts.find(item => item.entityId === row.entity.id && item.isDefault) ??
+        accounts.find(item => item.entityId === row.entity.id)
+
+      const outstanding = settlements
+        .filter(item => item.payRunId === row.run!.id && item.status !== 'paid' && !item.retryOfId)
+        .reduce((total, item) => total + item.amount.amount, 0)
+
+      const required = { amount: outstanding, currency: row.entity.currency }
+      const available = account?.balance ?? { amount: 0, currency: row.entity.currency }
+
+      return {
+        entity: row.entity,
+        required,
+        available,
+        headroom: { amount: available.amount - required.amount, currency: row.entity.currency },
+        releasable: row.state === 'ready' || row.state === 'paid' || row.state === 'closed',
+        accountName: account ? `${account.bankName} ····${account.accountLast4}` : undefined,
+        href: `/payroll/payments?entity=${row.entity.id}`
+      }
+    })
+
   const comparisonLabel = consolidation.previous ? periodLabel(consolidation.previous.period) : 'the previous period'
 
   // Freshness is two facts about the data, never the render clock: a clock would report when the
@@ -165,6 +199,8 @@ const GroupPayrollPage = async ({ searchParams }: Props) => {
           returnTo={groupHref(query, defaults)}
           className='col-span-full'
         />
+
+        <GroupPaymentExposure consolidation={consolidation} exposures={exposures} className='col-span-full' />
 
         <GroupMovement consolidation={consolidation} className='col-span-full' />
 
