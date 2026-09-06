@@ -7,6 +7,7 @@ import type { ReactNode } from 'react'
 // Component Imports
 import { SidebarInset } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
+import Breadcrumbs from '@/components/layout/Breadcrumbs'
 import Footer from '@/components/layout/Footer'
 import Header from '@/components/layout/Header'
 import Sidebar from '@/components/layout/Sidebar'
@@ -27,6 +28,13 @@ const PagesLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
       </Suspense>
       <SidebarInset className='bg-muted flex flex-1 flex-col'>
         <Header />
+        <div
+          className={cn('mx-auto w-full px-4 pt-4 sm:px-6', settings.layout === 'compact' ? 'max-w-360' : undefined)}
+        >
+          <Suspense>
+            <Breadcrumbs />
+          </Suspense>
+        </div>
         <main
           className={cn(
             'mx-auto size-full flex-1 px-4 py-6 sm:px-6',

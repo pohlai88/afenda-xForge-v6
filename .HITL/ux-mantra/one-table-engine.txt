@@ -1,0 +1,1055 @@
+# Afenda Progressive UX Upgrade — Phase 02
+
+## ONE TABLE ENGINE
+
+The only normative UX authority is:
+
+`.architecture/ux/afenda-ui-ux-doctrine.yaml`
+
+Read it before implementation.
+
+The primary doctrine for this phase is:
+
+```text
+D13 — table_engine
+```
+
+Also enforce:
+
+```text
+D03 — context_menu
+D05 — preserve_context
+D06 — CRUD-SAP
+D07 — capability_without_chrome
+D09 — business_objects
+D14 — domain_truth
+D15 — keyboard
+D16 — task_adaptation
+D20 — layout_grammar
+```
+
+Do not use superseded prose as authority.
+
+---
+
+# 1. Objective
+
+Build Afenda's single canonical **business table interaction engine**.
+
+This is NOT a generic styling wrapper around `<Table>`.
+
+It is the application-level authority for how business data tables operate.
+
+The existing shadcn/Base UI `Table` remains the visual primitive.
+
+TanStack Table remains the computational table foundation unless repository inspection reveals a concrete reason otherwise.
+
+No second table library.
+
+---
+
+# 2. Doctrine invariant
+
+Afenda has:
+
+```text
+ONE interaction engine
+```
+
+Domain differences belong in:
+
+```text
+dataset
+schema
+columns
+relationships
+permissions
+commands
+filters
+aggregation rules
+```
+
+The engine MUST NOT contain domain branches such as:
+
+```text
+if payroll ...
+if employee ...
+if supplier ...
+```
+
+---
+
+# 3. Discovery before implementation
+
+Inventory production table implementations.
+
+For each report:
+
+```text
+route
+component
+dataset
+TanStack usage
+sorting
+filtering
+selection
+pagination
+pinning
+context commands
+bulk actions
+export
+empty/loading
+client/server state
+```
+
+Classify:
+
+```text
+PRODUCT TABLE
+TEMPLATE/DEMO TABLE
+SPECIALIZED NON-TABLE SURFACE
+```
+
+Do not migrate template/demo surfaces merely because they contain `<Table>`.
+
+Identify reusable implementations before writing the engine.
+
+---
+
+# 4. Reuse Phase 01 contracts
+
+The engine MUST consume the existing:
+
+```text
+ObjectContext
+ObjectCommand
+CRUD-SAP family
+context-menu composition
+Properties
+```
+
+Do not create:
+
+```text
+RowContext
+TableEntity
+RecordContext
+TableCommand
+```
+
+as parallel concepts if the existing contracts already satisfy the requirement.
+
+Rows representing business objects resolve to the canonical `ObjectContext`.
+
+Domain commands remain domain owned.
+
+---
+
+# 5. Dataset definition
+
+Create the smallest typed table-definition contract necessary to describe:
+
+```text
+stable table id
+stable row id
+columns
+ObjectContext resolver
+commands resolver
+filters
+selection capability
+bulk actions
+empty-state semantics
+table capabilities
+```
+
+Rows/data themselves remain supplied separately.
+
+Do not place business records inside global configuration.
+
+Do not create an enterprise entity registry.
+
+---
+
+# 6. Column semantics
+
+Columns MUST explicitly declare meaningful capabilities.
+
+Do not infer business meaning from JavaScript type alone.
+
+At minimum investigate a small semantic vocabulary such as:
+
+```text
+identity
+identifier
+text
+money
+quantity
+percentage
+date
+datetime
+status
+boolean
+relation
+```
+
+The final vocabulary must come from actual repository needs.
+
+Sorting/filtering/grouping/aggregation are enabled only when semantically valid.
+
+Examples:
+
+```text
+employeeNumber
+→ identifier
+→ sortable
+→ text filter
+→ NOT aggregatable
+
+grossPay
+→ money
+→ sortable
+→ numeric filter
+→ sum MAY be meaningful
+
+department
+→ relation
+→ filterable
+→ grouping MAY be meaningful
+```
+
+No invalid aggregation may be offered.
+
+---
+
+# 7. Capability rule
+
+A control renders only when the dataset definition supports a meaningful operation.
+
+Examples:
+
+```text
+no filters
+→ no Filters control
+
+no bulk actions
+→ no selection column
+
+no hideable columns
+→ no Columns menu
+
+no export
+→ no Export action
+
+no row commands
+→ no context command affordance
+```
+
+Do not render disabled placeholder capability.
+
+---
+
+# 8. Contextual commands
+
+Object rows with commands use the same domain command descriptors for:
+
+```text
+right-click
+Shift+F10
+⋮ / touch equivalent
+```
+
+No duplicated command arrays.
+
+Properties remains last.
+
+CRUD-SAP ordering remains canonical.
+
+The table engine renders commands but does not decide domain permissions or business actions.
+
+---
+
+# 9. Active table scope
+
+This is a critical Phase 02 invariant discovered from the Payroll workspace.
+
+The same workspace may keep multiple table instances mounted while only one is visible.
+
+Therefore:
+
+> A mounted but inactive table MUST NOT participate in keyboard navigation, focus, selection targeting, context-menu targeting, shortcut resolution, or active-object publication.
+
+Every table instance owns its own interaction scope.
+
+Do NOT perform document-global row discovery.
+
+Do NOT infer active status from viewport width or global selectors.
+
+Prefer explicit active/inactive input from the workspace owner.
+
+Record how this works in the engine contract.
+
+---
+
+# 10. Keyboard model
+
+Do not turn all tables into ARIA grids in this phase.
+
+Preserve semantic HTML table behavior unless a real editable-grid requirement exists.
+
+Do not make every `<tr>` tabbable.
+
+Use the row's canonical object identity control as the Phase 02 keyboard object target where appropriate.
+
+Canonical commands:
+
+```text
+Enter
+→ Open
+
+Shift+F10
+→ Context menu
+
+Alt+Enter
+→ Properties
+
+Escape
+→ close contextual surface / restore focus
+```
+
+Sorting headers and selection controls remain normally keyboard accessible.
+
+Do NOT implement global ArrowUp/ArrowDown row navigation without a separately validated accessible model.
+
+---
+
+# 11. Selection
+
+Selection is conditional.
+
+Enable row selection only where meaningful selected-object actions exist.
+
+Do not show checkboxes merely because TanStack supports selection.
+
+Bulk actions are supplied by the domain and permission checked.
+
+Do not invent generic Delete/Edit actions.
+
+---
+
+# 12. Empty-state truth
+
+Distinguish at minimum:
+
+```text
+dataset empty
+```
+
+from:
+
+```text
+filters produce no matches
+```
+
+The engine must never communicate:
+
+```text
+No records exist
+```
+
+when records merely do not match current filters.
+
+The domain supplies truthful language/actions where needed.
+
+---
+
+# 13. Toolbar grammar
+
+Establish one canonical toolbar composition.
+
+Conceptually:
+
+```text
+Search
+Filters
+<active contextual controls>
+spacer
+View / Columns
+Utilities
+```
+
+Only meaningful controls render.
+
+When selection becomes active, show the appropriate selection/bulk-action state without adding permanent clutter.
+
+Use existing shadcn/Base UI primitives.
+
+---
+
+# 14. State ownership
+
+The engine must support controlled table state where needed.
+
+Do not force all tables into local component state.
+
+Allow the caller to own/persist appropriate state such as:
+
+```text
+sorting
+filters
+pagination
+column visibility
+selection
+```
+
+when URL state, server state, or user memory requires it.
+
+Do not implement the full favourites/saved-view system in this phase.
+
+---
+
+# 15. Client/server operation
+
+The engine must support existing TanStack manual/controlled capabilities.
+
+Do not assume sorting, filtering or pagination are always client-side.
+
+Preserve explicit control over:
+
+```text
+manual sorting
+manual filtering
+manual pagination
+```
+
+Do not introduce a vague universal data-fetching layer.
+
+---
+
+# 16. Pagination / virtualization
+
+Support the concept of:
+
+```text
+pagination OR virtualization
+```
+
+according to actual dataset requirements.
+
+Do not install a virtualization dependency during this phase unless a pilot dataset proves it necessary.
+
+Payroll does not currently justify virtualization.
+
+---
+
+# 17. Pinning and resizing
+
+Support column pinning and column sizing centrally.
+
+Reuse the already-proven Payroll pinning behavior.
+
+Schema decides which columns are initially pinned.
+
+Do not automatically pin columns in every dataset.
+
+Column resizing must honor meaningful minimum/preferred/maximum widths where needed.
+
+---
+
+# 18. Density
+
+Support table density as engine state:
+
+```text
+comfortable
+compact
+```
+
+Do not add a density selector merely because the capability exists.
+
+Expose the selector only in the later user-preferences work if justified.
+
+---
+
+# 19. Responsive behavior
+
+Use available table/container width, not browser width alone.
+
+Horizontal table overflow belongs inside the table surface.
+
+The page body must not horizontally overflow because of the table.
+
+Responsive compression MUST NOT change table interaction semantics.
+
+Do not convert the table to an unrelated card/list system automatically.
+
+If a task requires a fundamentally different compact surface, that is a separate task-adaptive view, not a responsive mutation of table semantics.
+
+---
+
+# 20. Shadcn Studio
+
+Search Studio only after identifying specific table UX needs.
+
+Review at minimum the previously useful patterns:
+
+```text
+data-table-07 — pinning
+data-table-02 — density
+data-table-06 / 09 — expansion reference
+data-table-12 — export reference
+```
+
+Use:
+
+```text
+ADOPT
+ADAPT
+REFERENCE
+REJECT
+```
+
+through the compatibility gate.
+
+Do not install a full Studio data table merely to replace the interaction engine being built.
+
+No new primitive system.
+
+---
+
+# 21. Pilot migrations
+
+Migrate exactly two production tables first:
+
+## Pilot A
+
+Payroll Run Queue
+
+Use to prove:
+
+```text
+ObjectContext
+commands
+Properties
+sorting
+pagination
+status
+context menu
+keyboard
+```
+
+## Pilot B
+
+Payroll Employee Table
+
+Use to prove:
+
+```text
+dense columns
+filters
+selection
+bulk actions
+pinning
+horizontal scrolling
+ObjectContext
+commands
+hidden-kept-mounted inactive table scope
+```
+
+Do not migrate the rest of Afenda yet.
+
+---
+
+# 22. Migration discipline
+
+Initial pilot migration should be behavior-preserving.
+
+Do not mix:
+
+```text
+engine migration
++
+domain redesign
++
+new features
+```
+
+unless the old behavior violates the doctrine.
+
+Take before/after screenshots.
+
+Preserve domain calculations and permissions exactly.
+
+---
+
+# 23. Required QA
+
+Validate:
+
+```text
+1440
+1280
+1024
+390
+```
+
+For both pilot tables.
+
+Test:
+
+```text
+sorting
+filtering
+pagination
+column visibility
+pinning
+selection
+bulk actions
+right-click
+Shift+F10
+⋮ parity
+Properties
+focus restoration
+inactive hidden table isolation
+empty dataset
+filtered empty
+loading
+horizontal overflow
+```
+
+Explicitly test that the hidden kept-mounted Employee table does NOT participate in keyboard or contextual interaction.
+
+---
+
+# 24. Accessibility
+
+Verify:
+
+```text
+semantic table markup
+sortable-header semantics
+accessible filter names
+selection labels
+context-menu keyboard invocation
+Properties shortcut
+Escape
+focus restoration
+touch/overflow alternative
+no colour-only meaning
+```
+
+Do not introduce `role="grid"` without documented reason.
+
+---
+
+# 25. No new dependency by default
+
+Expected:
+
+```text
+NO NEW DEPENDENCY
+```
+
+If a dependency is proposed:
+
+stop and explain why the existing TanStack + Base UI/shadcn stack cannot satisfy the requirement.
+
+---
+
+# 26. Architecture test
+
+At the end verify:
+
+```text
+Can a new domain table be created by supplying:
+dataset
+schema
+columns
+ObjectContext
+commands
+permissions
+filters
+
+without modifying the table engine?
+```
+
+If NO:
+
+the abstraction is incomplete or contains domain leakage.
+
+If YES:
+
+the engine boundary is probably correct.
+
+---
+
+# 27. Report
+
+Return:
+
+## Engine architecture
+
+Final layers and file locations.
+
+## Table-definition contract
+
+Final TypeScript API and justification.
+
+## Column semantics
+
+Final vocabulary and capability rules.
+
+## Object integration
+
+ObjectContext / CRUD-SAP / Properties.
+
+## Active-scope model
+
+How hidden mounted tables are prevented from participating.
+
+## Keyboard model
+
+What is supported and deliberately deferred.
+
+## Pilot A
+
+Before → after.
+
+## Pilot B
+
+Before → after.
+
+## Studio research
+
+ADOPT / ADAPT / REFERENCE / REJECT.
+
+## Visual QA
+
+1440 / 1280 / 1024 / 390.
+
+## Accessibility
+
+## Dependencies
+
+## Existing tables not migrated
+
+Classify product vs template/demo.
+
+## Next recommendation
+
+Return exactly one:
+
+```text
+ONE TABLE ENGINE — READY FOR PROGRESSIVE MIGRATION
+```
+
+or
+
+```text
+ONE TABLE ENGINE — FIX FOUNDATION FIRST
+```
+
+Do not begin mass migration automatically.
+
+---
+
+# 28. Contextual menu focus ownership (added after Phase 01 closure)
+
+> **Contextual menu focus handoff SHOULD be lifecycle-driven by the mounted menu content rather
+> than frame polling. The trigger owns invocation detection; the mounted menu owns initial focus;
+> the table engine owns object focus scope and restoration target.**
+
+```text
+Object focus anchor
+        ↓
+ContextMenu Trigger      detects Shift+F10 / ContextMenu key
+        ↓
+Popup mounts
+        ↓
+Popup content            moves focus into the menu
+        ↓
+Escape / close
+        ↓
+Table instance           restores original object focus
+```
+
+Phase 01 shipped a frame-polling approximation in `ObjectCommands.tsx` `onOpenChange`: a bounded
+`requestAnimationFrame` retry, because the popup mounts into a portal after the callback runs and
+Base UI's `Menu.Popup` exposes `finalFocus` but no `initialFocus`. It is keyboard-only and does not
+touch the pointer path. Replace it here — the content owning its own initial focus is the correct
+structure, and this is the phase where the engine owns focus scope and the restoration target.
+
+---
+
+# PROGRESS LOG — session 1
+
+## §3 Discovery (complete)
+
+44 files import the `Table` primitive; 12 use TanStack. Classification:
+
+| Class | Files | Note |
+| --- | --- | --- |
+| PRODUCT (TanStack) | `payroll/runs/run-queue-table`, `payroll/run/payroll-run-table` (+ instance in `payroll-run-workspace`), `payroll/compliance/filings-table`, `payroll/payments/settlement-table`, `payroll/group/entity-control-matrix`, `dashboards/payroll/payroll-run-history` | 6 — the engine's real audience |
+| PRODUCT (static) | `payroll/settings/*` (8), `payroll/group/*`, `payroll/reports/*`, `payroll/run/{payroll-reconciliation,payroll-source-trace,payroll-import,payroll-employee-drilldown}`, inspectors | display/config lists, not object tables |
+| TEMPLATE/DEMO | `views/datatables/*` (5), `views/apps/*`, `views/pages/*`, `dashboards/widgets/*` | AdminCN scaffolding — do not migrate |
+
+Capability matrix across the six product tables:
+
+| Table | sort | filter | page | select | pin | col-vis | export | ctx menu |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| run-queue | ✓ | ✓ | ✓ | – | – | – | ✓ | ✓ (Phase 01) |
+| employee register | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ (Phase 01) |
+| filings | ✓ | ✓ | – | – | – | – | – | – |
+| settlements | ✓ | ✓ | ✓ | – | – | – | – | – |
+| entity control matrix | ✓ | – | – | ✓ | – | – | – | – |
+| run history | ✓ | ✓ | ✓ | – | – | – | – | – |
+
+The two pilots are the only tables using every capability, which is why the brief picked them.
+
+## Built
+
+- `src/types/common/table-types.ts` — the §5 definition contract and §6 semantic vocabulary.
+  Ten semantics drawn from columns this repo actually has. `COLUMN_SEMANTICS` fixes what each
+  permits; a column narrows, never widens. Only `money` and `quantity` aggregate, so no surface can
+  offer to total a percentage. `deriveTableCapabilities` implements §7: a control exists because the
+  definition earns it.
+- `src/components/shared/DataTable.tsx` — the engine. Zero domain branches.
+
+## Two boundary decisions
+
+Both were resolved to *remove* domain code rather than add an escape hatch, because a
+`rowProps`/`className` hook is exactly the leak §26 tests for.
+
+- **Row emphasis** is `getRowState → 'default' | 'emphasis'`, a domain statement, not a class name.
+  The engine decides what emphasis looks like, so it means the same thing in every table.
+- **Row click** is owned by the engine and resolves to the object's first `read` command. Both
+  pilots hand-roll this today (`router.push(hrefFor(row))`, `onSelectEmployee(id)`); after migration
+  neither needs to. The control guard moves into the engine with it, so no table can reintroduce the
+  bug where clicking ⋮ navigated the row out from under the menu.
+
+Aggregation is deliberately NOT auto-derived yet: the run queue's footer prints "—" when rows span
+currencies, and a generic sum would silently reintroduce cross-currency totalling that an earlier
+commit removed. `footer` stays caller-supplied until aggregation can carry currency truth.
+
+## Not started
+
+Pilot A and B migrations, toolbar grammar (§13), selection (§11), QA (§23), screenshots.
+`active` scope (§9) is implemented in the engine but unproven until Pilot B uses it.
+
+## Gate note
+
+`pnpm lint` currently fails on `.HITL/measure.js` — an untracked browser-console script, not app
+source, that eslint picks up because `.HITL/` is not excluded the way `_archive/` is.
+`pnpm exec eslint src` is clean. Not touched: it is not mine and the exclusion is a config call.
+
+---
+
+# Datatable feature extraction (/iui + /rui)
+
+Source: the catalogue's entire `Datatable` category — both `datatable-component` and
+`-component-2`. Read both rather than the one the MCP suggests sampling, since the ask was the
+whole feature set.
+
+| Feature | Catalogue | This repo | Verdict |
+| --- | --- | --- | --- |
+| Sorting (+ `enableSortingRemoval`) | ✓ | ✓ all 6 product tables | have it |
+| Column + global filtering | ✓ | ✓ incl. custom `inSet` / `hasOpenException` | have it |
+| Pagination | ✓ (+ ellipsis, `usePagination`) | ✓ hand-rolled controls | have it |
+| Column hiding | ✓ | ✓ employee register | have it |
+| Row selection (select-all, indeterminate) | ✓ | ✓ with real bulk actions | have it |
+| CSV export | ✓ | ✓ two exporters | have it |
+| Row → detail Sheet | ✓ | ✓ four inspectors | have it |
+| **Faceted options + counts** | ✓ both blocks | models registered, **never read** | **GAP — adopted** |
+| Faceted min/max (numeric range) | ✓ | ✗ | available, not adopted |
+| Column pinning | ✗ | ✓ employee register | we are ahead |
+| Row context menu + Properties | ✗ | ✓ Phase 01 | we are ahead |
+| `aria-sort` | **0 occurrences** | ✓ shared `ariaSortFor` | we are ahead |
+| Honest empty state (echoes the query) | ✗ | ✓ | we are ahead |
+| Currency-aware footer (refuses to total) | ✗ | ✓ | we are ahead |
+
+In neither, so not omissions: column resize, reorder, virtualization, grouping/aggregation, row
+expansion, drag-and-drop, density toggle, saved views, multi-sort UI.
+
+## Adopted: faceted options and counts
+
+`payroll-table-toolbar.tsx` has a component named `FacetFilter` that was faceted in name only. Its
+options came from the static vocabularies — every payroll status, every payment status, every
+department in the company — while `getFacetedRowModel` and `getFacetedUniqueValues` were registered
+on the table and their results discarded.
+
+That is a `domain_truth` (D14) problem, not a cosmetic one: offering "Blocked" when no employee on
+the run is blocked implies a blocked employee sitting behind the filter. Options now come from
+values rows actually carry, with counts, and a facet with nothing behind it disappears.
+
+Applied to Status, Payment, Department and Location. **Not** to Exceptions: that column's accessor
+is `openBlockers * 100 + openWarnings`, a derived number, so its facet keys can never equal its
+option values — counting it would have silently emptied the filter. Hence `faceted` is opt-in per
+facet rather than global. Both the five-trigger and collapsed single-Popover paths read the same
+derivation, so they cannot disagree.
+
+## Engine implication
+
+The Phase 02 contract already encodes exactly which columns this is valid for. `filter: 'set'` —
+`status` and `relation` — means the column's own values *are* the filter values, which is the
+precondition for trustworthy facet counts. `money`/`quantity`/`percentage` filter numerically and a
+derived accessor cannot be faceted at all. When the toolbar moves into the engine, `faceted` should
+be derived from the semantic rather than hand-set, and the hand-set flags here removed.
+
+Faceted min/max stays unadopted: no product table offers a numeric range filter today, and adding
+one because TanStack supports it is the chrome §7 forbids.
+
+---
+
+# Engine upgraded to the full feature envelope
+
+Benchmark: the Studio DataTable catalogue. Foundation: TanStack 8.21.3 (unchanged). UI: existing
+Base UI/shadcn primitives. Object grammar: ObjectContext + CRUD-SAP + Properties, untouched.
+No second table system. Zero `radix` in `package.json`.
+
+## The gating model — support is not chrome
+
+`deriveTableCapabilities` runs three gates in order, and it is the only place chrome is decided:
+
+```
+meaningful   does the data make it possible?   columns, selection, export, mode
+     ↓
+permitted    may this user do it?              TablePermissions; omitted = permitted
+     ↓
+asked        does the task call for it?        definition.task narrows without removing ability
+```
+
+A capability that fails any gate renders nothing — not a disabled control. Permissions gate chrome
+only, never truth: a user who may not export still sees every row they are entitled to.
+
+## First-class, implemented
+
+| Capability | How it is gated |
+| --- | --- |
+| Sorting | any column semantic that sorts; `aria-sort` on every sortable header |
+| Filtering (column + faceted multi-select) | any column whose semantic filters |
+| Global search | only columns whose semantic is `searchable` — money and dates are excluded, since free-texting a currency is nonsense |
+| Pagination | caller-owned state; suppressed for `infinite` mode |
+| Selection | present only when `selection.bulkActions` exists |
+| Bulk operations | actions resolved *per selection*, so a domain can withhold one these rows do not qualify for |
+| Row actions | `getCommands`; context menu + ⋮ + Properties from Phase 01 |
+| Column visibility | only columns marked `hideable` |
+| Export | `onExport`; exports the filtered set, not the page |
+| Loading | skeleton rows holding table height, `aria-busy` |
+| Empty state | domain's own words; offers Clear only when a filter caused it |
+| Responsive | horizontal scroll with sticky pinned columns |
+| Accessibility | `aria-sort`, sr-only `<caption>`, labelled select-all and per-row checkboxes naming the object |
+
+## Architecturally supported, deliberately unrendered
+
+`TableDataMode` (`client` / `manual` / `infinite` / `virtual`), `TableGrouping`, `TableExpansion`,
+and `aggregate` all exist in the contract and are reported by `deriveTableCapabilities`. None
+renders anything: no Afenda dataset requires them, and building them now would be the chrome §7
+forbids. The seam means the first dataset that needs one extends the engine rather than inventing a
+second table.
+
+Aggregation stays unrendered for a stronger reason than "not needed": the run queue's footer prints
+"—" across mixed currencies, and a generic `sum` over money columns would silently restore the
+cross-currency totalling commit 649b505 removed. `footer` remains caller-supplied until aggregation
+can carry currency truth.
+
+## Faceting is now derived, not declared
+
+`isFacetable` = the column's semantic filters as a `set` — that is exactly the condition under
+which a column's own values are also its filter values, so TanStack's counts line up. A derived
+accessor (payroll's `openBlockers * 100 + openWarnings`) is not `set` and is never faceted, which
+is the bug the hand-set flag in `payroll-table-toolbar.tsx` had to dodge manually. When the pilots
+migrate, those flags disappear.
+
+## §26 architecture test
+
+> Can a new domain table be created by supplying dataset, columns, ObjectContext, commands,
+> permissions and filters — without modifying the engine?
+
+Checked by grep: no domain vocabulary appears in `DataTable.tsx`, `DataTableToolbar.tsx` or
+`table-types.ts`. **YES.**
+
+Gates: `check-types` pass, `eslint src` clean, `build` compiles, dependencies unchanged.
+Pilots still unmigrated — the engine is ready for them, nothing consumes it yet.
+
+---
+
+# Contract frozen + Pilot A migrated
+
+## The two invariants (contract now frozen; no capabilities added)
+
+1. **Export truth respects data-source ownership.** `onExport(rows, scope)` where
+   `scope: 'all' | 'loaded'`, derived by `exportScopeOf(mode)`. In `client` mode the engine holds
+   every row, so a filtered export is genuinely `all`. Under `manual`/`infinite`/`virtual` the
+   source holds the rest, so the same call is `loaded` and the domain decides whether to export
+   what is loaded or fetch the remainder. Without it an export produces a partial file that looks
+   complete — the worst possible failure for a payroll register.
+2. **`TablePermissions` is presentation gating, not authorization.** Stated as an INVARIANT on the
+   type: hiding a control is not enforcement, anything reachable from the client is reachable
+   without the control, and the domain and server stay responsible for refusing. `false` means
+   "do not offer", never "cannot happen".
+
+## Did Pilot A require engine modification? YES — two, both mechanics, neither a domain branch
+
+1. **Sortable header rendering.** Sorting is declared first-class but the engine only emitted
+   `aria-sort`; the run queue rendered its own toggle with chevrons and Enter/Space handling. The
+   engine now owns it, driven by `capabilities.sort` and labelled from the declared column label
+   (`aria-label="Sort by Run"`).
+2. **Numeric alignment from semantics.** The view carried `RIGHT_ALIGNED = new Set([...column ids])`.
+   The engine derives it from `money | quantity | percentage`, so alignment is decided by meaning
+   once instead of by a per-table list. That set is deleted.
+
+Both are engine-owned mechanics read from the contract. No `rowProps`, `className`, `renderRow`
+hatch was added, and grep confirms no payroll vocabulary in the engine files.
+
+## Ownership before → after
+
+| Concern | Before (in the view) | After |
+| --- | --- | --- |
+| `<Table>` markup, header/body/rows | view | **engine** |
+| Sort toggle, chevrons, keyboard | view | **engine** |
+| `aria-sort` | view (`ariaSortFor`) | **engine** |
+| Numeric alignment | view (`RIGHT_ALIGNED`) | **engine**, from semantics |
+| Row click → open | view (`router.push(hrefFor)`) | **engine**, first `read` command |
+| Control-click guard | view | **engine** |
+| Row emphasis | view (`data-state` on lifecycle) | **engine**, via `getRowState` |
+| Context menu wiring | view | **engine** |
+| ⋮ commands column | view (a column def) | **engine** |
+| Empty state markup | view | **engine** |
+| Cell padding | view | **engine** |
+| Caption / a11y name | absent | **engine** |
+| Lifecycle & company filters, counts | view | view (domain scope) |
+| Search + Export controls | view | view (bespoke card chrome) |
+| Pagination controls | view | view — engine gates `paginate` but renders no controls |
+| Totals footer + currency honesty | view | view, passed as `definition.footer` |
+| Properties sheet | view | view |
+| Columns, commands, ObjectContext | view | view (domain semantics) |
+
+Net: **-135 / +89 lines** in `run-queue-table.tsx`.
+
+## Bug found by migrating
+
+Moving the empty message from lazily-rendered JSX into an eagerly-built definition object exposed
+`RUN_LIFECYCLE_LABELS['all']` → `undefined.toLowerCase()`, crashing the page on every render. The
+original only evaluated inside the empty branch, so the same latent bug would have fired the first
+time a filter-free queue came back empty. Now guarded, with an honest 'No runs yet.' for that case.
+
+## Verification
+
+| Check | Result |
+| --- | --- |
+| Default activation (`active` defaults true) | PASS — 12 interactive rows |
+| Sorting | PASS — `aria-sort` none→ascending via the engine control |
+| Pagination | PASS — page advanced, first row changed |
+| Row emphasis | PASS — open runs carry `data-state="selected"` |
+| Right-click | PASS — correct object, CRUD-SAP order, Properties last |
+| Row click → default command | PASS — navigated to the run |
+| Rows non-tabbable | PASS — no `tabindex` on any row |
+| Empty truth | PASS — crash fixed; message states what is true |
+| Responsive overflow | PASS — `overflow-x: auto` |
+| Loading | NOT VERIFIED — no loading state on this route to trigger |
+| Shift+F10 | NOT VERIFIED — harness key delivery died again |
+| ⋮ parity | NOT VERIFIED by observation; identical by construction (one `ObjectCommandItems` over the same descriptors) |
+| Properties | NOT VERIFIED post-migration; wiring unchanged and observed working pre-migration |
+| types / lint / build | PASS |
+| Dependencies | unchanged |
+
+Stopped before the Employee table, as instructed.

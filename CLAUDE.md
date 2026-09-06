@@ -7,6 +7,29 @@
 - **Not a monorepo.** `pnpm-workspace.yaml` declares `packages: ["."]` — a single Next.js app. The file's presence suggests workspaces that don't exist.
 - **`_archive/` is dead template scaffolding**, kept from the AdminCN baseline (`f79c8c3`) and already excluded in `eslint.config.mjs`. Don't edit it, fix its lint, or treat it as reference for how this app works.
 
+## UX doctrine
+
+`.architecture/ux/afenda-ui-ux-doctrine.yaml` is the product's normative UX
+doctrine. When frontend implementation presents multiple valid UX choices,
+resolve them against it.
+
+- `MUST` / `MUST_NOT` are binding.
+- `SHOULD` requires a documented reason to override.
+- `MAY` is optional.
+
+It outranks any single registry item. Do not create a domain-local interaction
+pattern that contradicts a global doctrine merely because a Shadcn Studio block
+implements it differently — that is a `REFERENCE` case, not a licence.
+
+The doctrine's `decision_rules` section resolves the recurring choices directly:
+navigate vs. drill down vs. drawer vs. workspace group, what earns a persistent
+control vs. a context menu vs. an overflow, and when a new page is justified at
+all. `ux_acceptance` is the per-surface checklist; `anti_patterns` is the
+`MUST_NOT` list. Read the relevant section before designing a surface, not after.
+
+The YAML is the only authority. Prose drafts of it under `.HITL/` are
+superseded — don't resolve a UX question against them.
+
 ## Shadcn Studio frontend authority
 
 Frontend work is standardised on the Shadcn Studio Admin Template that this app is
@@ -63,7 +86,9 @@ Useful UX, incompatible implementation?           → REFERENCE — rebuild it h
 
 `.claude/commands/{cui,iui,rui,ftc}.md` are the four Studio workflows and carry
 the detail. The `xforge-design-system` skill holds the tokens and quality floor;
-load it before writing UI.
+load it before writing UI. The gate above is restated as
+`implementation_policy` in the UX doctrine — the two agree, and the doctrine
+decides the interaction question that the gate does not.
 
 ## Verifying a change
 

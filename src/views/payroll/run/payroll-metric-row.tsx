@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 // Util Imports
 import { cn } from '@/lib/utils'
@@ -18,6 +19,14 @@ export type PayrollMetric = {
 
   /** Makes the metric a control — used to jump to the exceptions view from the open count. */
   onClick?: () => void
+
+  /**
+   * How this figure was arrived at, revealed in place rather than by navigating away.
+   *
+   * Only for a metric the breakdown genuinely explains. Net has one — it is the end of the
+   * gross-to-net bridge — while gross is where that bridge starts and decomposes into nothing.
+   */
+  breakdown?: ReactNode
 }
 
 type Props = {
@@ -63,12 +72,34 @@ const PayrollMetricRow = ({ metrics, className }: Props) => (
           </>
         )
 
+        if (metric.breakdown) {
+          return (
+            <div key={metric.key} className='bg-card flex flex-col'>
+              <Popover>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant='ghost'
+                      className='h-auto flex-1 flex-col items-start justify-start gap-0 rounded-none px-4 py-3 text-left font-normal whitespace-normal'
+                    />
+                  }
+                >
+                  {body}
+                </PopoverTrigger>
+                <PopoverContent align='start' className='w-64'>
+                  {metric.breakdown}
+                </PopoverContent>
+              </Popover>
+            </div>
+          )
+        }
+
         return metric.onClick ? (
           <div key={metric.key} className='bg-card flex flex-col'>
             <Button
               variant='ghost'
               onClick={metric.onClick}
-              className='h-auto flex-1 flex-col items-start justify-start rounded-none px-4 py-3 text-left font-normal whitespace-normal'
+              className='h-auto flex-1 flex-col items-start justify-start gap-0 rounded-none px-4 py-3 text-left font-normal whitespace-normal'
             >
               {body}
             </Button>

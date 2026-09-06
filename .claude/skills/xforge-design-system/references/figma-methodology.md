@@ -37,25 +37,27 @@ screen built before its tokens will hardcode values, and those hardcodes are wha
 
 Searched twice — once in discovery, and again immediately before creating each component.
 
-**Reuse** when all hold:
-- the property API matches the need (same variant axes, compatible types)
-- the token binding model is compatible
-- naming conventions match
-- it is actually editable
+It is a ladder, not a yes/no. Take the first rung that holds and stop:
 
-**Rebuild** when any hold:
-- API incompatibility (different property names, wrong variant model)
-- token model incompatible (hardcoded values, different schema)
-- ownership — you cannot modify it
+1. **Reuse** — the property API matches the need (same variant axes, compatible types), the token
+   binding model is compatible, naming matches, and it is actually editable. Use it as is.
+2. **Compose** — no single existing thing fits, but two or three of them together do. Assemble them;
+   touch none of them.
+3. **Wrap** — it looks and behaves right but the API is wrong for this caller. Nest it and expose a
+   clean API on the wrapper. Wrapping is still reuse: one implementation, one place to fix a bug.
+4. **Create** — nothing above holds. Build it, and build it from the same tokens.
 
-**Wrap** when it looks right but the API is wrong: nest it inside a new component and expose a clean
-API on the wrapper.
+**Rebuild — replacing something that already exists — is not a rung on that ladder.** It is
+justified only when the existing thing is incompatible in semantics, behaviour, or token model:
+different meaning, wrong interaction, or hardcoded values that cannot be re-bound. "The props are
+named awkwardly" is a wrap. "I cannot edit it" is a wrap. Rebuilding for either is how a system ends
+up with two of everything.
 
-**Priority order:** local existing → subscribed library → available-but-unsubscribed library →
-create new.
+**Search order at each rung:** local existing → subscribed library → available-but-unsubscribed
+library → create new.
 
-This maps directly onto the code side: existing `ui/` primitive → compose primitives → wrap a
-primitive → write something new.
+This is the same ladder as the reuse table in the main skill, which is the authority for code. Read
+this section as the reasoning behind that table, not as a second rule.
 
 ## 3. Rules worth stealing verbatim
 
@@ -97,8 +99,12 @@ Left out on purpose:
   0–1 colour ranges, page-context resets.
 - The phase-checklist communication contract (`Phase N Checklist`, task IDs `P0.a`). It suits a
   20–100-call Figma build; it is overhead for a code change.
-- Variant-matrix rules (cap at 30 combinations, `INSTANCE_SWAP` for icons). React props have no
-  variant explosion problem.
+- Variant-matrix mechanics (cap at 30 combinations, `INSTANCE_SWAP` for icons). Figma's 30-variant
+  cap is a tool limit and does not transfer. The *problem* it exists to contain does: React props
+  still combine into invalid and untested states, and `cva` variant axes multiply the same way a
+  Figma matrix does. A `size` × `variant` × `tone` × `loading` component has a combinatorial surface
+  whether or not a tool counts it for you. Make illegal combinations unrepresentable in the prop
+  types, or compose instead of adding a fourth axis.
 - Code Connect template syntax — only relevant if this repo later maps components to a Figma
   library. `figma-code-connect` is the reference if that day comes.
 
@@ -147,7 +153,7 @@ strength of its description mentioning "Tailwind v4 + Base UI"; checking `packag
 `prototyper-ui` is not installed.
 
 **`react-aria-components`** — installed at 1.19.0 but imported in **zero** files. The real primitive
-layer is Base UI (25 files in `src/components/ui`). Worth noting separately as a dead dependency
+layer is Base UI (27 of the 53 files in `src/components/ui`, verified 2026-09-06). Worth noting separately as a dead dependency
 that could be removed.
 
 ## Taken from `ui-ux-pro-max` (afenda-xForge-v5)
@@ -175,7 +181,9 @@ data-dense product the chart rules matter more than that ranking suggests.
 
 **Audit findings when this rule set was run against the payroll dashboard:**
 
-- `aria-sort` missing on every sortable table in the repo, including the one written this session.
+- `aria-sort` missing on every sortable table in the repo, including the one written this
+  session. **Closed 2026-09-06:** all 11 sortable tables now use the shared `ariaSortFor`
+  helper. Left here as the worked example of an audit finding, not as an open item.
   Fixed in `payroll-run-history.tsx`; the five in `src/views/datatables` remain.
 - The cost-and-headcount chart plots two series with no legend.
 - Neither payroll chart carries a text alternative. The gross-to-net bridge is mitigated — the run

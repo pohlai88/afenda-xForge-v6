@@ -39,7 +39,9 @@ const outsideRepo = rel.startsWith("..") || isAbsolute(rel);
 
 // _archive/ is dead template material (eslint ignores it too); the rest is
 // generated or tooling state.
-const skipped = /^(\.claude|\.next|_archive|node_modules)\//.test(rel);
+// .HITL holds human-authored notes and briefs written for the agent to read. Reformatting
+// someone's prose because they saved it is not this hook's job.
+const skipped = /^(\.claude|\.next|\.HITL|_archive|node_modules)\//.test(rel);
 
 if (outsideRepo || skipped) {
   process.exit(0);

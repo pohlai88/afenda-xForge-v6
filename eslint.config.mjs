@@ -21,7 +21,11 @@ const eslintConfig = defineConfig([
     '**/*.css',
 
     // Archived layout variants from the original template bundle - not part of the app.
-    '_archive/**'
+    '_archive/**',
+
+    // Human-authored notes and briefs handed to the agent. Not application source: nothing
+    // here is imported, built, or shipped, and linting it only produces findings nobody acts on.
+    '.HITL/**'
   ]),
   {
     plugins: {

@@ -31,15 +31,9 @@ import { savePayGroup } from '@/app/server/actions'
 
 // Util Imports
 import { cn } from '@/lib/utils'
+import { PAY_FREQUENCY_LABELS } from '@/utils/payroll-workspace'
 
 const FREQUENCIES = ['weekly', 'biweekly', 'semi_monthly', 'monthly'] as const
-
-const FREQUENCY_LABELS: Record<(typeof FREQUENCIES)[number], string> = {
-  weekly: 'Weekly',
-  biweekly: 'Every two weeks',
-  semi_monthly: 'Twice a month',
-  monthly: 'Monthly'
-}
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -146,7 +140,7 @@ const PayGroupSettings = ({ payGroups: initial, entities }: Props) => {
                     </span>
                   </span>
                 </TableCell>
-                <TableCell className='py-2'>{FREQUENCY_LABELS[group.frequency]}</TableCell>
+                <TableCell className='py-2'>{PAY_FREQUENCY_LABELS[group.frequency]}</TableCell>
                 <TableCell className='text-muted-foreground py-2 whitespace-normal'>{group.paydayRule}</TableCell>
                 <TableCell className='py-2 text-right tabular-nums'>
                   {group.cutoffDaysBeforePayday} days before
@@ -258,7 +252,7 @@ const PayGroupSettings = ({ payGroups: initial, entities }: Props) => {
                         <SelectContent>
                           {FREQUENCIES.map(frequency => (
                             <SelectItem key={frequency} value={frequency}>
-                              {FREQUENCY_LABELS[frequency]}
+                              {PAY_FREQUENCY_LABELS[frequency]}
                             </SelectItem>
                           ))}
                         </SelectContent>

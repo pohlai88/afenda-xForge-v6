@@ -8,7 +8,7 @@
 
 // Type Imports
 import type { Money } from '@/types/common/primitive-types'
-import type { Department, Employee, WorkLocation } from '@/types/hrm/employee-types'
+import type { Department, Employee, PayFrequency, WorkLocation } from '@/types/hrm/employee-types'
 import type { PayRun, PayRunException, PayRunStatus, Payslip } from '@/types/payroll/pay-run-types'
 import type {
   AuditEvent,
@@ -71,6 +71,17 @@ export const stageIndexForStatus = (status: PayRunStatus): number => {
 
 /** True once a run has moved past the point where inputs may still change. */
 export const isLocked = (status: PayRunStatus) => status === 'approved' || status === 'paid' || status === 'closed'
+
+/**
+ * How often a pay group is paid, in the words people use for it. 'biweekly' and 'semi_monthly'
+ * are the pair everyone confuses, so both are spelled out rather than title-cased.
+ */
+export const PAY_FREQUENCY_LABELS: Record<PayFrequency, string> = {
+  weekly: 'Weekly',
+  biweekly: 'Every two weeks',
+  semi_monthly: 'Twice a month',
+  monthly: 'Monthly'
+}
 
 /* -------------------------------------------------------------------------------------------- */
 /* Per-employee status vocabularies                                                             */

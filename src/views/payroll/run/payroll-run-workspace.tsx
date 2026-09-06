@@ -45,30 +45,34 @@ import type { ApprovalReason } from '@/utils/payroll-approval'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import CalculationStaleBanner from './calculation-stale-banner'
 import ExceptionInspector from './exception-inspector'
+import GrossToNetBreakdown from './gross-to-net-breakdown'
 import ExceptionList, { type ExceptionListItem } from './exception-list'
 import ExceptionSummary from './exception-summary'
 import InputReadinessSheet from './input-readiness-sheet'
 import PayrollApprovalDialog from './payroll-approval-dialog'
 import PayrollAuditTimeline from './payroll-audit-timeline'
-import PayrollBulkActions from './payroll-bulk-actions'
 import PayrollEmployeeDrilldown, { type PayHistoryPoint } from './payroll-employee-drilldown'
 import PayrollMetricRow, { type PayrollMetric } from './payroll-metric-row'
 import PayrollReconciliation from './payroll-reconciliation'
 import PayrollReviewDialog from './payroll-review-dialog'
 import PayrollRunHeader from './payroll-run-header'
-import PayrollRunTable, { PINNED_COLUMNS, buildPayrollColumns } from './payroll-run-table'
+import PayrollRunTable, { buildPayrollColumns } from './payroll-run-table'
+import PublishObjectContext from '@/components/layout/PublishObjectContext'
+import { ObjectContextMenu } from '@/components/shared/ObjectCommands'
+import PropertiesSheet from '@/components/shared/PropertiesSheet'
+import {
+  employeeObject,
+  employeeProperties,
+  payRunCommands,
+  payRunObject,
+  payRunProperties
+} from '@/views/payroll/payroll-objects'
 import PayrollStageBar from './payroll-stage-bar'
 import PayrollImport, { type ImportRow } from './payroll-import'
-import PayrollTableToolbar from './payroll-table-toolbar'
 
 // Action Imports
 import {
@@ -177,6 +181,8 @@ const PayrollRunWorkspace = ({
   const [reviewOpen, setReviewOpen] = useState(false)
   const [readinessOpen, setReadinessOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [propertiesEmployee, setPropertiesEmployee] = useState<PayrollRunRow | null>(null)
+  const [runPropertiesOpen, setRunPropertiesOpen] = useState(false)
 
   // Table state.
   const [sorting, setSorting] = useState<SortingState>([])
@@ -186,6 +192,8 @@ const PayrollRunWorkspace = ({
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 })
   const [globalFilter, setGlobalFilter] = useState('')
 
+  // No `onViewExceptions`: the exceptions tab is not filtered to one person, so a command
+  // promising that employee's exceptions would land somewhere that shows everyone's.
   const columns = useMemo(() => buildPayrollColumns(id => setEmployeeId(id)), [setEmployeeId])
 
   // Same opt-out the other datatables in this repo carry: useReactTable returns functions the
@@ -196,9 +204,6 @@ const PayrollRunWorkspace = ({
     data: rows,
     columns,
     state: { sorting, columnFilters, columnVisibility, rowSelection, pagination, globalFilter },
-
-    // Identity stays put while the money columns scroll. Uncontrolled: nothing offers to unpin it.
-    initialState: { columnPinning: { left: PINNED_COLUMNS } },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -213,9 +218,12 @@ const PayrollRunWorkspace = ({
 
       if (!needle) return true
 
-      const { name, employeeNumber, positionTitle, departmentName } = row.original
+      // Only what the identity column shows. Department is a `relation` with its own filter and
+      // its own counts; matching it as loose text here would quietly answer a structured question
+      // with a substring, and one department whose name contains another's would prove it.
+      const { name, employeeNumber, positionTitle } = row.original
 
-      return [name, employeeNumber, positionTitle, departmentName].some(field => field.toLowerCase().includes(needle))
+      return [name, employeeNumber, positionTitle].some(field => field.toLowerCase().includes(needle))
     },
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -276,16 +284,6 @@ const PayrollRunWorkspace = ({
           ? 'approve'
           : null
 
-  const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id])
-  const selectedRows = rows.filter(row => selectedIds.includes(row.employeeId))
-  const filteredRows = table.getFilteredRowModel().rows
-
-  const acknowledgeableCount = selectedRows.reduce(
-    (total, row) =>
-      total + row.exceptions.filter(e => e.severity === 'warning' && !e.resolvedAt && !e.acknowledgedAt).length,
-    0
-  )
-
   const netDelta = previousRun ? run.totals.netPay.amount - previousRun.totals.netPay.amount : null
 
   const metrics: PayrollMetric[] = [
@@ -307,7 +305,8 @@ const PayrollRunWorkspace = ({
       key: 'net',
       label: 'Net',
       value: formatMoney(run.totals.netPay),
-      detail: formatChange(changeVsPrevious(run.totals.netPay, previousRun?.totals.netPay))
+      detail: formatChange(changeVsPrevious(run.totals.netPay, previousRun?.totals.netPay)),
+      breakdown: <GrossToNetBreakdown totals={run.totals} />
     },
     {
       key: 'employer-cost',
@@ -448,9 +447,9 @@ const PayrollRunWorkspace = ({
     )
   }
 
-  const handleAcknowledgeSelectedWarnings = () => {
+  const handleAcknowledgeSelectedWarnings = (employeeIds: string[]) => {
     const now = new Date().toISOString()
-    const ids = new Set(selectedIds)
+    const ids = new Set(employeeIds)
 
     commit(
       () =>
@@ -463,7 +462,7 @@ const PayrollRunWorkspace = ({
           ),
           updatedAt: now
         })),
-      () => acknowledgeWarnings(run.id, selectedIds),
+      () => acknowledgeWarnings(run.id, employeeIds),
       ({ run: updated, count }) => {
         setRun(updated)
         toast.success(`${count} ${count === 1 ? 'warning' : 'warnings'} acknowledged`)
@@ -635,119 +634,108 @@ const PayrollRunWorkspace = ({
     />
   )
 
+  const handleSearchChange = (value: string) => {
+    setGlobalFilter(value)
+    setPagination(p => ({ ...p, pageIndex: 0 }))
+  }
+
   // The panel is an @container, not a viewport consumer: with the sidebar expanded a 1280px screen
-  // leaves it around 1000px, and the toolbar has to compress on what it actually has.
+  // leaves it around 1000px, and the table's controls have to compress on what they actually have.
+  //
+  // `active` is declared, never sensed. The tab panel stays mounted when the user moves to
+  // Exceptions, and a mounted register that still answered right-clicks and commands would be
+  // acting on rows nobody can see.
   const employeesView = drilldown ?? (
     <div className='bg-card @container flex flex-col overflow-hidden rounded-lg border'>
-      <PayrollTableToolbar
+      <PayrollRunTable
         table={table}
+        active={view === 'employees'}
         search={globalFilter}
-        onSearchChange={value => {
-          setGlobalFilter(value)
-          setPagination(p => ({ ...p, pageIndex: 0 }))
-        }}
+        onSearchChange={handleSearchChange}
         departments={departments.map(d => ({ value: d.id, label: d.name }))}
         locations={locations.map(l => ({ value: l.id, label: l.name }))}
-        onExport={() => handleExport()}
+        onSelectEmployee={setEmployeeId}
+        onOpenProperties={setPropertiesEmployee}
+        onExport={handleExport}
+        onRecalculate={mayProcess ? handleRecalculate : undefined}
+        onAcknowledgeWarnings={mayReview ? handleAcknowledgeSelectedWarnings : undefined}
+        locked={locked}
       />
-
-      {selectedIds.length > 0 && (
-        <PayrollBulkActions
-          selectedCount={selectedIds.length}
-          filteredCount={filteredRows.length}
-          acknowledgeableCount={acknowledgeableCount}
-          locked={locked}
-          onRecalculate={mayProcess ? () => handleRecalculate(selectedIds) : undefined}
-          onAcknowledgeWarnings={mayReview ? handleAcknowledgeSelectedWarnings : undefined}
-          onExportSelected={() => handleExport(selectedRows)}
-          onSelectAllFiltered={() =>
-            setRowSelection(Object.fromEntries(filteredRows.map(row => [row.original.employeeId, true])))
-          }
-          onClearSelection={() => setRowSelection({})}
-        />
-      )}
-
-      <div className='flex h-[min(70dvh,56rem)] min-h-0 min-h-[28rem] flex-col'>
-        <PayrollRunTable
-          table={table}
-          selectedEmployeeId={employeeId}
-          onSelectEmployee={setEmployeeId}
-          emptyMessage={globalFilter ? `No employees match “${globalFilter}”.` : 'No employees match these filters.'}
-          onClearFilters={() => {
-            table.resetColumnFilters()
-            setGlobalFilter('')
-          }}
-        />
-      </div>
     </div>
   )
 
   return (
     <div className='flex flex-col gap-4'>
-      <PayrollRunHeader
-        run={run}
-        entity={entity}
-        daysToPayday={daysToPayday}
-        actions={
-          <>
-            {mayProcess && primaryAction !== 'recalculate' && (
-              <Button variant='outline' onClick={() => handleRecalculate()}>
-                <RefreshCwIcon />
-                Recalculate
-              </Button>
-            )}
-            {mayProcess && (
-              <Button variant='outline' onClick={() => setImportOpen(true)}>
-                <UploadIcon />
-                Import inputs
-              </Button>
-            )}
-            {needsReview && mayReview && primaryAction !== 'review' && (
-              <Button variant='outline' onClick={() => setReviewOpen(true)}>
-                <ClipboardCheckIcon />
-                Mark as reviewed
-              </Button>
-            )}
-            {awaitingApproval && mayApprove && primaryAction !== 'approve' && (
-              <Button variant='outline' onClick={() => setApprovalOpen(true)}>
-                <CheckIcon />
-                Approve payroll
-              </Button>
-            )}
+      <ObjectContextMenu
+        object={payRunObject(run)}
+        commands={payRunCommands(run, true)}
+        onOpenProperties={() => setRunPropertiesOpen(true)}
+      >
+        <PayrollRunHeader
+          run={run}
+          entity={entity}
+          daysToPayday={daysToPayday}
+          actions={
+            <>
+              {mayProcess && primaryAction !== 'recalculate' && (
+                <Button variant='outline' onClick={() => handleRecalculate()}>
+                  <RefreshCwIcon />
+                  Recalculate
+                </Button>
+              )}
+              {mayProcess && (
+                <Button variant='outline' onClick={() => setImportOpen(true)}>
+                  <UploadIcon />
+                  Import inputs
+                </Button>
+              )}
+              {needsReview && mayReview && primaryAction !== 'review' && (
+                <Button variant='outline' onClick={() => setReviewOpen(true)}>
+                  <ClipboardCheckIcon />
+                  Mark as reviewed
+                </Button>
+              )}
+              {awaitingApproval && mayApprove && primaryAction !== 'approve' && (
+                <Button variant='outline' onClick={() => setApprovalOpen(true)}>
+                  <CheckIcon />
+                  Approve payroll
+                </Button>
+              )}
 
-            {primaryAction === 'recalculate' && (
-              <Button onClick={() => handleRecalculate()}>
-                <RefreshCwIcon />
-                Recalculate
-              </Button>
-            )}
-            {primaryAction === 'review' && (
-              <Button onClick={() => setReviewOpen(true)}>
-                <ClipboardCheckIcon />
-                Mark as reviewed
-              </Button>
-            )}
-            {primaryAction === 'approve' && (
-              <Button onClick={() => setApprovalOpen(true)}>
-                <CheckIcon />
-                Approve payroll
-              </Button>
-            )}
+              {primaryAction === 'recalculate' && (
+                <Button onClick={() => handleRecalculate()}>
+                  <RefreshCwIcon />
+                  Recalculate
+                </Button>
+              )}
+              {primaryAction === 'review' && (
+                <Button onClick={() => setReviewOpen(true)}>
+                  <ClipboardCheckIcon />
+                  Mark as reviewed
+                </Button>
+              )}
+              {primaryAction === 'approve' && (
+                <Button onClick={() => setApprovalOpen(true)}>
+                  <CheckIcon />
+                  Approve payroll
+                </Button>
+              )}
 
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant='ghost' size='icon' aria-label='More run actions' />}>
-                <MoreHorizontalIcon />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align='end'>
-                <DropdownMenuItem onClick={() => handleExport()}>
-                  <DownloadIcon />
-                  Export register
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        }
-      />
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant='ghost' size='icon' aria-label='More run actions' />}>
+                  <MoreHorizontalIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align='end'>
+                  <DropdownMenuItem onClick={() => handleExport()}>
+                    <DownloadIcon />
+                    Export register
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          }
+        />
+      </ObjectContextMenu>
 
       <PayrollStageBar
         status={run.status}
@@ -885,6 +873,27 @@ const PayrollRunWorkspace = ({
         onApprove={handleApprove}
         onResolve={resolveApprovalReason}
       />
+
+      <PropertiesSheet
+        object={payRunObject(run)}
+        typeLabel='Pay run'
+        sections={payRunProperties(run, nameOf, entity?.name)}
+        open={runPropertiesOpen}
+        onOpenChange={setRunPropertiesOpen}
+      />
+
+      <PropertiesSheet
+        object={propertiesEmployee ? employeeObject(propertiesEmployee) : null}
+        typeLabel='Employee'
+        sections={propertiesEmployee ? employeeProperties(propertiesEmployee) : []}
+        open={propertiesEmployee !== null}
+        onOpenChange={open => {
+          if (!open) setPropertiesEmployee(null)
+        }}
+      />
+
+      {/* Names the breadcrumb leaf 'PR-SG-2026-09' instead of the id in the URL. */}
+      <PublishObjectContext {...payRunObject(run)} />
     </div>
   )
 }

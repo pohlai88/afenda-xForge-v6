@@ -1,5 +1,18 @@
 // Third-party Imports
-import type { Column } from '@tanstack/react-table'
+import type { Column, FilterFn } from '@tanstack/react-table'
+
+/**
+ * Multi-select on a scalar column: keep the row when its value is one of the chosen ones.
+ *
+ * The mechanic behind every `set` filter, shared rather than redefined per table — the engine
+ * renders the multi-select, and this is the predicate that pairs with it. A column whose stored
+ * value is not what the options say needs its own predicate instead; that is a domain fact, and a
+ * `signal` column is the case it exists for.
+ */
+export const inSet =
+  <TRow>(): FilterFn<TRow> =>
+  (row, columnId, filterValue: string[]) =>
+    !filterValue || filterValue.length === 0 || filterValue.includes(String(row.getValue(columnId)))
 
 /**
  * The `aria-sort` value for a table header cell.

@@ -5,17 +5,12 @@ import { useMemo, useState } from 'react'
 
 // Third-party Imports
 import type { ColumnDef, SortingState } from '@tanstack/react-table'
-import {
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable
-} from '@tanstack/react-table'
-import { ArrowRightIcon, ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from 'lucide-react'
+import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from '@tanstack/react-table'
+import { SearchIcon, XIcon } from 'lucide-react'
 
 // Type Imports
 import type { FilingRow } from '@/types/payroll/compliance-types'
+import type { TableColumn, TableDefinition } from '@/types/common/table-types'
 
 // Component Imports
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -23,8 +18,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TableCell, TableFooter, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import DataTable from '@/components/shared/DataTable'
+import { filingCommands, filingObject } from '@/views/payroll/payroll-objects'
 import FilingStatusBadge from './filing-status-badge'
 
 // Util Imports
@@ -40,11 +37,30 @@ import {
   type FilingBucket
 } from '@/utils/payroll-compliance'
 import { formatDate, formatPeriod, initials } from '@/utils/payroll-workspace'
-import { ariaSortFor } from '@/utils/table-utils'
 
 const BUCKETS: FilingBucket[] = ['action', 'awaiting', 'accepted']
 
-const RIGHT_ALIGNED = new Set(['employeeCount', 'amount'])
+/**
+ * What each column means.
+ *
+ * `status` is a `signal` rather than a `status`: the accessor is `FILING_STATUS_ORDER`, a rank
+ * that puts a rejection above a acceptance because a rejection is what needs working. The stored
+ * value is therefore an order and not the status itself, which is exactly the case the semantic
+ * exists to describe — it sorts by that rank, it is never summed, and any filter over it would
+ * have to come from the domain's vocabulary rather than from the column's own values.
+ *
+ * `submitter` is a `relation` — a pointer to the person who filed it — so it never becomes free
+ * text a search can rummage through.
+ */
+const FILING_COLUMNS: TableColumn[] = [
+  { id: 'kind', label: 'Filing', semantic: 'identity', isAnchor: true },
+  { id: 'period', label: 'Period', semantic: 'date' },
+  { id: 'dueDate', label: 'Due', semantic: 'date' },
+  { id: 'employeeCount', label: 'Employees', semantic: 'quantity' },
+  { id: 'amount', label: 'Amount', semantic: 'money' },
+  { id: 'submitter', label: 'Submitted by', semantic: 'relation' },
+  { id: 'status', label: 'Status', semantic: 'signal' }
+]
 
 const buildColumns = (onOpen: (id: string) => void): ColumnDef<FilingRow>[] => [
   {
@@ -148,27 +164,10 @@ const buildColumns = (onOpen: (id: string) => void): ColumnDef<FilingRow>[] => [
     header: 'Status',
     accessorFn: row => FILING_STATUS_ORDER[row.status],
     cell: ({ row }) => <FilingStatusBadge status={row.original.status} />
-  },
-  {
-    id: 'open',
-    header: () => <span className='sr-only'>Open</span>,
-    enableSorting: false,
-    cell: ({ row }) => (
-      <Button
-        variant='ghost'
-        size='icon-sm'
-        className='text-muted-foreground'
-        onClick={() => onOpen(row.original.id)}
-        aria-label={`Open ${FILING_KIND_LABELS[row.original.kind]} for ${formatPeriod(row.original.periodStart, row.original.periodEnd)}`}
-      >
-        <ArrowRightIcon />
-      </Button>
-    )
   }
 ]
 
 type Props = {
-
   /** Soonest due first, as `buildFilingRows` returns them. */
   rows: FilingRow[]
   selectedId: string | null
@@ -179,6 +178,9 @@ type Props = {
 /**
  * Every filing, with what each one needs. The chips above the table group the five statuses into
  * the three questions a person asks: what do I have to do, what am I waiting on, what is done.
+ *
+ * Those chips stay here rather than becoming an engine filter, because "needs action" is a
+ * judgement `bucketOf` makes about a lifecycle, not a value any column holds.
  */
 const FilingsTable = ({ rows, selectedId, onOpen, className }: Props) => {
   const [bucket, setBucket] = useState<FilingBucket | 'all'>('all')
@@ -209,6 +211,7 @@ const FilingsTable = ({ rows, selectedId, onOpen, className }: Props) => {
     data,
     columns,
     state: { sorting, globalFilter },
+    getRowId: row => row.id,
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     enableSortingRemoval: false,
@@ -234,7 +237,6 @@ const FilingsTable = ({ rows, selectedId, onOpen, className }: Props) => {
   })
 
   const filteredRows = table.getFilteredRowModel().rows.map(row => row.original)
-  const visibleRows = table.getRowModel().rows
   const filtered = bucket !== 'all' || globalFilter.length > 0
 
   const total = {
@@ -245,6 +247,61 @@ const FilingsTable = ({ rows, selectedId, onOpen, className }: Props) => {
   const resetFilters = () => {
     setBucket('all')
     setGlobalFilter('')
+  }
+
+  // Built eagerly for the definition, so every branch has to hold on its own — including a
+  // company with no filings at all, which the old chain reported as "No filings accepted yet"
+  // because `accepted` was its fallback rather than a case it had tested for.
+  const emptyMessage =
+    rows.length === 0
+      ? 'No filings are due for this company.'
+      : globalFilter
+        ? `No filings match “${globalFilter}”.`
+        : bucket === 'action'
+          ? 'Nothing needs action.'
+          : bucket === 'awaiting'
+            ? 'Nothing is awaiting a response.'
+            : bucket === 'accepted'
+              ? 'No filings accepted yet.'
+              : 'No filings match.'
+
+  const footer = (
+    <TableFooter>
+      <TableRow>
+        <TableCell colSpan={3} className='pl-6 font-medium'>
+          {filteredRows.length} filings
+        </TableCell>
+        <TableCell />
+        <TableCell className='text-right font-medium tabular-nums'>{formatMoney(total)}</TableCell>
+        <TableCell colSpan={3} />
+      </TableRow>
+    </TableFooter>
+  )
+
+  const definition: TableDefinition<FilingRow> = {
+    id: 'payroll-filings',
+    getRowId: row => row.id,
+    columns: FILING_COLUMNS,
+    mode: 'client',
+    noun: { one: 'filing', many: 'filings' },
+    getObject: filingObject,
+    getCommands: row => filingCommands(row, { onOpen }),
+
+    // Named, not inferred: opening the filing is what a row means, wherever it sits in the menu.
+    getDefaultCommandId: () => 'open',
+
+    // The filing the inspector is currently showing, so the row it came from stays findable
+    // behind the sheet. The engine decides what that emphasis looks like.
+    getRowState: row => (row.id === selectedId ? 'emphasis' : 'default'),
+
+    // Sorting and per-row commands are the whole of this surface's job. It is a full list read
+    // top to bottom, so it asks for no pagination even though the engine can page.
+    task: ['sort', 'rowCommands'],
+    emptyState: {
+      message: emptyMessage,
+      onClear: filtered ? resetFilters : undefined
+    },
+    footer: filteredRows.length > 1 ? footer : undefined
   }
 
   return (
@@ -305,111 +362,7 @@ const FilingsTable = ({ rows, selectedId, onOpen, className }: Props) => {
       </div>
 
       <CardContent className='px-0 pb-0'>
-        <div className='overflow-x-auto'>
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(header => {
-                    const alignRight = RIGHT_ALIGNED.has(header.column.id)
-                    const sorted = header.column.getIsSorted()
-
-                    return (
-                      <TableHead
-                        key={header.id}
-                        className={cn('first:pl-6 last:pr-6', alignRight && 'text-right')}
-                        aria-sort={ariaSortFor(header.column)}
-                      >
-                        {header.column.getCanSort() ? (
-                          <span
-                            role='button'
-                            tabIndex={0}
-                            className={cn(
-                              'flex cursor-pointer items-center gap-1 select-none',
-                              alignRight && 'justify-end'
-                            )}
-                            onClick={header.column.getToggleSortingHandler()}
-                            onKeyDown={event => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault()
-                                header.column.getToggleSortingHandler()?.(event)
-                              }
-                            }}
-                            aria-label={`Sort by ${String(header.column.columnDef.header)}`}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {sorted === 'asc' && (
-                              <ChevronUpIcon className='size-4 shrink-0 opacity-60' aria-hidden='true' />
-                            )}
-                            {sorted === 'desc' && (
-                              <ChevronDownIcon className='size-4 shrink-0 opacity-60' aria-hidden='true' />
-                            )}
-                          </span>
-                        ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
-                        )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-
-            <TableBody>
-              {visibleRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className='h-32 text-center'>
-                    <div className='text-muted-foreground flex flex-col items-center gap-2 text-sm'>
-                      <span>
-                        {globalFilter
-                          ? `No filings match “${globalFilter}”.`
-                          : bucket === 'action'
-                            ? 'Nothing needs action.'
-                            : bucket === 'awaiting'
-                              ? 'Nothing is awaiting a response.'
-                              : 'No filings accepted yet.'}
-                      </span>
-                      <Button variant='link' size='sm' onClick={resetFilters}>
-                        Show all filings
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                visibleRows.map(row => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.original.id === selectedId ? 'selected' : undefined}
-                    className='hover:bg-muted/50 cursor-pointer'
-
-                    // Mouse convenience only. The filing name is the real control, so keyboard
-                    // and assistive-tech users never depend on this handler.
-                    onClick={() => onOpen(row.original.id)}
-                  >
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id} className='first:pl-6 last:pr-6'>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-
-            {filteredRows.length > 1 && (
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={3} className='pl-6 font-medium'>
-                    {filteredRows.length} filings
-                  </TableCell>
-                  <TableCell />
-                  <TableCell className='text-right font-medium tabular-nums'>{formatMoney(total)}</TableCell>
-                  <TableCell colSpan={3} />
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
-        </div>
+        <DataTable definition={definition} table={table} caption='Every statutory filing' />
       </CardContent>
     </Card>
   )

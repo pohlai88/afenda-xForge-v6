@@ -44,6 +44,5 @@
   "exclude": [
     "node_modules",
     "_archive",
-    ".next"
-  ]
+    ".next", ".HITL"]
 }

@@ -5,32 +5,22 @@ import { useMemo, useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 // Third-party Imports
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table'
 import {
-  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import {
-  ArrowRightIcon,
-  ChevronDownIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-  DownloadIcon,
-  SearchIcon,
-  XIcon
-} from 'lucide-react'
+import { ArrowRightIcon, DownloadIcon, SearchIcon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 
 // Type Imports
 import type { PayRunQueueRow, RunLifecycle } from '@/types/payroll/run-queue-types'
+import type { TableColumn, TableDefinition } from '@/types/common/table-types'
 
 // Component Imports
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -40,9 +30,12 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { TableCell, TableFooter, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import DataTable from '@/components/shared/DataTable'
+import PropertiesSheet from '@/components/shared/PropertiesSheet'
 import { ExceptionBadge } from '@/views/payroll/run/exception-badge'
+import { payRunCommands, payRunObject, payRunQueueProperties } from '@/views/payroll/payroll-objects'
 
 // Util Imports
 import { cn } from '@/lib/utils'
@@ -50,14 +43,10 @@ import { formatMoney } from '@/utils/money'
 import { PAY_RUN_STATUS_LABELS, PAY_RUN_STATUS_STYLES } from '@/utils/payroll-metrics'
 import { RUN_LIFECYCLE_LABELS, exportRunQueueToCsv } from '@/utils/payroll-queue'
 import { formatDate, formatPeriod, formatSignedPercent, initials } from '@/utils/payroll-workspace'
-import { ariaSortFor } from '@/utils/table-utils'
 
 const LIFECYCLES: RunLifecycle[] = ['open', 'done', 'exited']
 
 const SEVERITIES = ['blocking', 'error', 'warning', 'info'] as const
-
-/** Numeric columns, right-aligned so digits line up under one another. */
-const RIGHT_ALIGNED = new Set(['employeeCount', 'gross', 'net', 'employerCost'])
 
 const hrefFor = (row: PayRunQueueRow) => `/payroll/runs/${row.id}`
 
@@ -251,8 +240,25 @@ const columns: ColumnDef<PayRunQueueRow>[] = [
   }
 ]
 
-type Props = {
+/**
+ * What each column means. The engine reads these to decide alignment, sorting, filter kind and
+ * whether a column's values can honestly drive a faceted count — none of which the table has to
+ * restate for itself.
+ */
+const RUN_QUEUE_COLUMNS: TableColumn[] = [
+  { id: 'reference', label: 'Run', semantic: 'identity', isAnchor: true },
+  { id: 'entity', label: 'Company', semantic: 'relation' },
+  { id: 'payDate', label: 'Payday', semantic: 'date' },
+  { id: 'employeeCount', label: 'Employees', semantic: 'quantity' },
+  { id: 'gross', label: 'Gross', semantic: 'money' },
+  { id: 'net', label: 'Net', semantic: 'money' },
+  { id: 'employerCost', label: 'Employer cost', semantic: 'money' },
+  { id: 'exceptions', label: 'Exceptions', semantic: 'quantity' },
+  { id: 'status', label: 'Status', semantic: 'status' },
+  { id: 'open', label: 'Open', semantic: 'text', capabilities: { sortable: false, filter: 'none', searchable: false } }
+]
 
+type Props = {
   /** Newest first, as `buildRunQueue` returns them. */
   rows: PayRunQueueRow[]
   pageSize?: number
@@ -265,12 +271,12 @@ type Props = {
  * many runs are behind it. Pagination appears only once there is a second page to go to.
  */
 const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
-  const router = useRouter()
   const [lifecycle, setLifecycle] = useState<RunLifecycle | 'all'>('all')
   const [entityFilter, setEntityFilter] = useState<string>('all')
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize })
+  const [propertiesRow, setPropertiesRow] = useState<PayRunQueueRow | null>(null)
 
   const countsByLifecycle = useMemo(
     () =>
@@ -282,7 +288,12 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
   )
 
   const data = useMemo(
-    () => (rows.filter(row => (lifecycle === 'all' || row.lifecycle === lifecycle) && (entityFilter === 'all' || row.entityId === entityFilter))),
+    () =>
+      rows.filter(
+        row =>
+          (lifecycle === 'all' || row.lifecycle === lifecycle) &&
+          (entityFilter === 'all' || row.entityId === entityFilter)
+      ),
     [rows, lifecycle, entityFilter]
   )
 
@@ -316,8 +327,6 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
   })
 
   const filteredRows = table.getFilteredRowModel().rows.map(row => row.original)
-  const pageRows = table.getRowModel().rows
-  const pageCount = table.getPageCount()
   const filtered = lifecycle !== 'all' || entityFilter !== 'all' || globalFilter.length > 0
 
   const totals = filteredRows.reduce(
@@ -345,6 +354,63 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
     setEntityFilter('all')
     setGlobalFilter('')
     setPagination(p => ({ ...p, pageIndex: 0 }))
+  }
+
+  // Built eagerly for the definition, so it must hold for every lifecycle — including 'all',
+  // which has no label. The old inline version only ran inside the empty branch and would have
+  // thrown the day a filter-free queue came back empty.
+  const emptyMessage = globalFilter
+    ? `No runs match “${globalFilter}”.`
+    : lifecycle === 'all'
+      ? 'No runs yet.'
+      : `No runs are ${RUN_LIFECYCLE_LABELS[lifecycle].toLowerCase()}.`
+
+  const footer = (
+    <TableFooter>
+      <TableRow>
+        <TableCell colSpan={3} className='pl-6 font-medium'>
+          {filteredRows.length} runs
+          {!currency && (
+            <span className='text-muted-foreground ml-2 font-normal'>
+              · {currencies.length} currencies · filter by company to total
+            </span>
+          )}
+        </TableCell>
+        <TableCell className='text-right tabular-nums'>{totals.employees}</TableCell>
+        <TableCell className='text-right tabular-nums'>
+          {currency ? formatMoney({ amount: totals.gross, currency }) : <NoTotal />}
+        </TableCell>
+        <TableCell className='text-right tabular-nums'>
+          {currency ? formatMoney({ amount: totals.net, currency }) : <NoTotal />}
+        </TableCell>
+        <TableCell className='text-right font-medium tabular-nums'>
+          {currency ? formatMoney({ amount: totals.employerCost, currency }) : <NoTotal />}
+        </TableCell>
+        <TableCell colSpan={4} />
+      </TableRow>
+    </TableFooter>
+  )
+
+  const definition: TableDefinition<PayRunQueueRow> = {
+    id: 'payroll-run-queue',
+    getRowId: row => row.id,
+    columns: RUN_QUEUE_COLUMNS,
+    mode: 'client',
+    getObject: payRunObject,
+    getCommands: row => payRunCommands(row),
+
+    // Named, not inferred: 'open' is the run's activation regardless of where it sits in the menu.
+    getDefaultCommandId: () => 'open',
+    onOpenProperties: setPropertiesRow,
+
+    // The run still needing work is the one worth finding first; the engine decides what
+    // emphasis looks like so it means the same thing in every table.
+    getRowState: row => (row.lifecycle === 'open' ? 'emphasis' : 'default'),
+    emptyState: {
+      message: emptyMessage,
+      onClear: filtered ? resetFilters : undefined
+    },
+    footer: filteredRows.length > 1 ? footer : undefined
   }
 
   const handleExport = () => {
@@ -452,154 +518,17 @@ const RunQueueTable = ({ rows, pageSize = 12, className }: Props) => {
       </div>
 
       <CardContent className='px-0 pb-0'>
-        <div className='overflow-x-auto'>
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(header => {
-                    const alignRight = RIGHT_ALIGNED.has(header.column.id)
-                    const sorted = header.column.getIsSorted()
+        <DataTable definition={definition} table={table} caption='Every payroll run' />
 
-                    return (
-                      <TableHead
-                        key={header.id}
-                        className={cn('first:pl-6 last:pr-6', alignRight && 'text-right')}
-                        aria-sort={ariaSortFor(header.column)}
-                      >
-                        {header.column.getCanSort() ? (
-                          <span
-                            role='button'
-                            tabIndex={0}
-                            className={cn(
-                              'flex cursor-pointer items-center gap-1 select-none',
-                              alignRight && 'justify-end'
-                            )}
-                            onClick={header.column.getToggleSortingHandler()}
-                            onKeyDown={event => {
-                              if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault()
-                                header.column.getToggleSortingHandler()?.(event)
-                              }
-                            }}
-                            aria-label={`Sort by ${String(header.column.columnDef.header)}`}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {sorted === 'asc' && (
-                              <ChevronUpIcon className='size-4 shrink-0 opacity-60' aria-hidden='true' />
-                            )}
-                            {sorted === 'desc' && (
-                              <ChevronDownIcon className='size-4 shrink-0 opacity-60' aria-hidden='true' />
-                            )}
-                          </span>
-                        ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
-                        )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-
-            <TableBody>
-              {pageRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className='h-32 text-center'>
-                    <div className='text-muted-foreground flex flex-col items-center gap-2 text-sm'>
-                      <span>
-                        {globalFilter
-                          ? `No runs match “${globalFilter}”.`
-                          : `No runs are ${RUN_LIFECYCLE_LABELS[lifecycle as RunLifecycle].toLowerCase()}.`}
-                      </span>
-                      <Button variant='link' size='sm' onClick={resetFilters}>
-                        Show all runs
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                pageRows.map(row => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.original.lifecycle === 'open' ? 'selected' : undefined}
-                    className='hover:bg-muted/50 cursor-pointer'
-
-                    // Mouse convenience only. The reference cell holds the real link, so
-                    // keyboard and assistive-tech users never depend on this handler.
-                    onClick={() => router.push(hrefFor(row.original))}
-                  >
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id} className='first:pl-6 last:pr-6'>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-
-            {filteredRows.length > 1 && (
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={3} className='pl-6 font-medium'>
-                    {filteredRows.length} runs
-                    {!currency && (
-                      <span className='text-muted-foreground ml-2 font-normal'>
-                        · {currencies.length} currencies · filter by company to total
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className='text-right tabular-nums'>{totals.employees}</TableCell>
-                  <TableCell className='text-right tabular-nums'>
-                    {currency ? formatMoney({ amount: totals.gross, currency }) : <NoTotal />}
-                  </TableCell>
-                  <TableCell className='text-right tabular-nums'>
-                    {currency ? formatMoney({ amount: totals.net, currency }) : <NoTotal />}
-                  </TableCell>
-                  <TableCell className='text-right font-medium tabular-nums'>
-                    {currency ? formatMoney({ amount: totals.employerCost, currency }) : <NoTotal />}
-                  </TableCell>
-                  <TableCell colSpan={3} />
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
-        </div>
-
-        {pageCount > 1 && (
-          <div className='flex flex-wrap items-center justify-between gap-3 border-t px-6 py-4'>
-            <span className='text-muted-foreground text-sm'>
-              Showing {pagination.pageIndex * pagination.pageSize + 1}–
-              {Math.min((pagination.pageIndex + 1) * pagination.pageSize, filteredRows.length)} of {filteredRows.length}
-            </span>
-            <div className='flex items-center gap-3'>
-              <span className='text-muted-foreground text-sm'>
-                Page {pagination.pageIndex + 1} of {pageCount}
-              </span>
-              <div className='flex items-center gap-1'>
-                <Button
-                  variant='outline'
-                  size='icon'
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  aria-label='Previous page'
-                >
-                  <ChevronLeftIcon className='size-4' />
-                </Button>
-                <Button
-                  variant='outline'
-                  size='icon'
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  aria-label='Next page'
-                >
-                  <ChevronRightIcon className='size-4' />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        <PropertiesSheet
+          object={propertiesRow ? payRunObject(propertiesRow) : null}
+          typeLabel='Pay run'
+          sections={propertiesRow ? payRunQueueProperties(propertiesRow) : []}
+          open={propertiesRow !== null}
+          onOpenChange={open => {
+            if (!open) setPropertiesRow(null)
+          }}
+        />
       </CardContent>
     </Card>
   )

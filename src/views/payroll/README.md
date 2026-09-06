@@ -9,7 +9,7 @@ no wrapper components, and no payroll-only layout.
 
 | Route                   | Status | What it is                                                                                   |
 | ----------------------- | ------ | -------------------------------------------------------------------------------------------- |
-| `/payroll`              | built  | Overview dashboard (the former `/dashboard/payroll`, which now redirects).                   |
+| `/payroll`              | built  | Group Payroll Control: every legal entity consolidated. The single-company dashboard moved to `/payroll/entities/[entityId]`. |
 | `/payroll/runs`         | built  | Run queue: the run that needs working, the year so far, every run. Rows open the workspace.  |
 | `/payroll/runs/[runId]` | built  | **The operations workspace.** Most of a payroll cycle happens here.                          |
 | `/payroll/payments`     | built  | Payment centre: funding vs obligation, readiness gates, batches, every settlement, re-issue. |
@@ -121,7 +121,14 @@ PayrollRunWorkspace (client)
 The drill-down's cards, left to right: Pay (headline net, tiles, PayBreakdown), Why it changed
 (PayVariance), Pay history; Exceptions, Inputs (PayrollInputs), Source trace, Activity. It replaced
 a resizable side panel: the panel was capped at the table's height and gave a payslip a third of
-the screen, which is not enough room to read one. The old list was: Overview (PayVariance), Pay (PayBreakdown), Inputs (PayrollInputs),
+the screen, which is not enough room to read one.
+
+That decision stands, and it is not contradicted by the Properties sheet added in UX Phase 01.
+The two answer different questions. Properties is the doctrine's read-oriented inspector — "what
+exactly is this object?" — and carries identity, state and payslip id only, so a narrow sheet is
+the right size for it. The drill-down is where the pay is actually read and worked, so it keeps
+the full width and remains the row's default action. If Properties ever starts showing pay
+components, it has become the panel this replaced and should be cut back. The old list was: Overview (PayVariance), Pay (PayBreakdown), Inputs (PayrollInputs),
 Exceptions, History, Audit (PayrollSourceTrace + timeline).
 
 ## Mutations
