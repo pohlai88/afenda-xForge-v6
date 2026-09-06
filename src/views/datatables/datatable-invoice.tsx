@@ -51,6 +51,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { usePagination } from '@/hooks/use-pagination'
 
 import { cn } from '@/lib/utils'
+import { ariaSortFor } from '@/utils/table-utils'
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -316,6 +317,7 @@ const InvoiceDatatable = ({ data }: { data: Item[] }) => {
                   return (
                     <TableHead
                       key={header.id}
+                      aria-sort={ariaSortFor(header.column)}
                       style={{ width: `${header.getSize()}px` }}
                       className='text-muted-foreground first:pl-4 last:px-4 last:text-center'
                     >

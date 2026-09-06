@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 // Util Imports
 import { cn } from '@/lib/utils'
+import { ariaSortFor } from '@/utils/table-utils'
 import { userTableColumns } from './user-table-columns'
 
 export interface UserTableProps {
@@ -106,6 +107,7 @@ export function UserTable({
             {headerGroup.headers.map(header => (
               <TableHead
                 key={header.id}
+                aria-sort={ariaSortFor(header.column)}
                 style={{ width: `${header.getSize()}px` }}
                 className='text-muted-foreground first:pl-4 last:px-4 last:text-center'
               >

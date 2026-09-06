@@ -34,6 +34,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
 import { PAY_RUN_STATUS_LABELS } from '@/utils/payroll-metrics'
+import { ariaSortFor } from '@/utils/table-utils'
 
 const STATUS_STYLES: Partial<Record<PayRunStatus, string>> = {
   pending_approval: 'bg-chart-5/15 text-chart-5',
@@ -188,19 +189,7 @@ const PayrollRunHistory = ({ runs, selectedReference, className }: Props) => {
                       <TableHead
                         key={header.id}
                         className={cn(alignRight && 'text-right')}
-
-                        // Screen readers announce sort state from aria-sort, not from the chevron.
-                        // Only the actively sorted column carries it; 'none' on every other sortable
-                        // column is noise.
-                        aria-sort={
-                          sorted === 'asc'
-                            ? 'ascending'
-                            : sorted === 'desc'
-                              ? 'descending'
-                              : header.column.getCanSort()
-                                ? 'none'
-                                : undefined
-                        }
+                        aria-sort={ariaSortFor(header.column)}
                       >
                         {header.column.getCanSort() ? (
                           <span
