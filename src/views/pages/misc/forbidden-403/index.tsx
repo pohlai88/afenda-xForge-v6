@@ -28,7 +28,7 @@ const Forbidden403 = () => {
             dotSize={1.9}
             gap={22}
             baseColor='var(--muted-foreground)'
-            activeColor='#10B981'
+            activeColor='var(--success)'
             radius={160}
             displacement={14}
             maxScale={4}
