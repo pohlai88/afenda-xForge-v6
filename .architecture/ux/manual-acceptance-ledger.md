@@ -50,11 +50,10 @@ rows with a bank reference to copy, and the rows that have no reference yet rend
 cell rather than a button whose menu would only repeat the click. Right-click still reaches them, so
 the manual pass should check one of each.
 
-## Observed 2026-09-07 — keyboard handoff fixed, one gate still open
+## Closed 2026-09-07 — keyboard command access verified end to end
 
-Key delivery worked for a long stretch, and settled most of this table on two surfaces:
-**Run history** (`/payroll/entities/ent-sg`, run reference link) and the **Run queue**
-(`/payroll/runs`, run reference link).
+Observed with working key delivery on two surfaces: **Run history**
+(`/payroll/entities/ent-sg`) and the **Run queue** (`/payroll/runs`), the queue twice.
 
 | Gate | Run history | Run queue |
 | --- | --- | --- |
@@ -62,51 +61,25 @@ Key delivery worked for a long stretch, and settled most of this table on two su
 | Focus lands on the first enabled command | PASS | PASS |
 | Arrows move through the items | PASS | PASS |
 | Escape closes | PASS | PASS |
-| Escape returns focus to the originating control | **FAIL after arrowing** | **FAIL after arrowing** |
+| Escape returns focus to the exact originating control | PASS | PASS |
 
-**The one open gate.** Escape restores focus correctly while focus is still on the item the
-handoff put there. Once the user has arrowed to a different item, the menu closes but focus is
-stranded on the unmounting popup item, and the `finalFocus` that names the originating control is
-not honoured. Reproduced on both surfaces, against a bundle verified to contain the fix.
+Right-click is unchanged: opens for the correct object with Properties last, focus stays on the
+document, nothing is highlighted, and the keyboard restoration does not run.
 
-**The `⋮` still does not open** from a synthetic pointer event — the trigger takes focus and stays
-`aria-expanded="false"`, the documented Base UI limitation. Rows 2, 4, 7 and 10 remain NOT VERIFIED.
+The `⋮` **opens by keyboard** — Enter on the focused trigger, `aria-expanded` true — and Escape
+returns focus to the trigger, Base UI's own behaviour. Observed, so rows 2, 4, 7 and 10 are now
+covered for the keyboard path. Opening it by *synthetic pointer event* still fails in this harness
+and remains the one thing construction evidence alone supports.
 
-### Why restoration fails — read from Base UI's source, 2026-09-07
+### What the fix had to work around, from the installed source
 
-`ContextMenu.Popup` is `MenuPopup`, and `MenuPopup` hands our `finalFocus` straight to floating-ui:
-
-```js
-returnFocus: finalFocus === undefined ? returnFocus : finalFocus,
-initialFocus: parent.type !== 'menu',
-```
-
-Two things follow, and they decide what a real fix looks like.
-
-**There is no `initialFocus` prop.** `MenuPopup` hardcodes it, so a menu cannot be told to open with
-a command focused. Confirmed by experiment as well as by reading: with our handoff disabled, a
-Shift+F10 open leaves focus on the originating link and never enters the menu. The handoff is
-therefore required — it is not duplicating something the primitive already does.
-
-**Restoration is floating-ui's `returnFocus`, and it is conditional.** The focus is applied in a
-`queueMicrotask` inside an unmount cleanup, guarded by `preventReturnFocusRef` and by whether focus
-is still inside the floating tree at unmount. Our `finalFocus` names the right element — the
-function form is supported, `typeof returnFocusValueOrFn === 'function'` — but the guard decides
-whether it is used, and from props alone we cannot make that deterministic.
-
-A hardened classification (only a `contextmenu` event may set the invocation; clear it on close) was
-written and reverted: it type-checked and linted, but it did not improve restoration and could not
-be shown better than what is committed, so it was not shipped on one run's evidence.
-
-**What would actually close this**: `initialFocus` exposed on `Menu.Popup`, upstream. Then the
-handoff and the restoration both become the primitive's own, and this file stops competing with it.
-
-**Also noted while reading**: `ContextMenu.LinkItem` exists. Commands carrying an `href` currently
-render as `<Item render={<Link/>}>`; `LinkItem` is the supported part for that and is worth
-adopting separately.
-
-**Right-click is unaffected** by the keyboard work: it opens for the correct object with the same
-commands and Properties last, focus stays on the document, and no item is highlighted.
+`onOpenChangeComplete(false)` is never emitted for a menu: `MenuPopup` has exactly one call site,
+guarded by `if (open)`. The popup also does not unmount on close — it stays in the document with
+`data-closed` — so there is no unmount cleanup either. Both were wired up and observed not to fire
+before the source was read. The close render is the boundary that exists, and it is what the fix
+uses. `finalFocus` is kept as Base UI's first attempt; it is handed to Floating UI's return-focus,
+which is conditional on where focus sits at close, which is why it worked only when Escape followed
+the open immediately.
 
 ## What has been observed
 

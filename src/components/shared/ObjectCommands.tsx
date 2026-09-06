@@ -2,7 +2,7 @@
 
 // React Imports
 import * as React from 'react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 
 // Next Imports
@@ -214,11 +214,66 @@ export const ObjectContextMenu = ({
   // Decided afresh on every opening, so a pointer open can never inherit a keyboard one.
   const invocation = useRef<KeyboardInvocation | null>(null)
 
+  /*
+   * Whether this closing is the one case that has to put focus back itself.
+   *
+   * Only Escape. Every other way out of the menu has a destination that owns focus already —
+   * choosing a command navigates or opens a sheet, clicking away moves focus where the click went,
+   * tabbing out is the user driving. Cancelling is the only exit that means "put me back where I
+   * was", and it is the only one this restores.
+   */
+  const restoreOnClose = useRef(false)
+
+  /*
+   * The menu's own open state, observed rather than controlled.
+   *
+   * It is deliberately not passed back to `ContextMenu` — Base UI keeps owning opening and closing,
+   * and taking that over stopped Escape closing the menu at all when it was tried. This exists only
+   * so that closing is a render, which is the one close-time boundary this version of Base UI
+   * actually offers: `onOpenChangeComplete` is never called with `false` for a menu (`MenuPopup`
+   * has a single call site, guarded by `if (open)`), and the popup does not unmount on close —
+   * it stays in the document carrying `data-closed` — so there is no unmount to hook either.
+   */
+  const [open, setOpen] = useState(false)
+
+  /*
+   * Put focus back where a cancelling keyboard user started.
+   *
+   * `finalFocus` below is the first attempt and is left alone; Base UI hands it to Floating UI's
+   * return-focus, which is conditional on where focus sits as the popup closes and so cannot be
+   * relied on. When it works this sees focus already on the target and does nothing. Both aim at
+   * the same control, so there is no argument between them either way.
+   */
+  useEffect(() => {
+    if (open) return
+
+    const target = restoreOnClose.current ? invocation.current?.target : null
+
+    invocation.current = null
+    restoreOnClose.current = false
+
+    if (!target?.isConnected || document.activeElement === target) return
+
+    target.focus({ preventScroll: true })
+  }, [open])
+
   return (
     <ContextMenu
-      onOpenChange={(open, details) => {
-        if (open) invocation.current = keyboardInvocationFrom(details.event)
+      onOpenChange={(next, details) => {
+        setOpen(next)
+
+        if (next) {
+          invocation.current = keyboardInvocationFrom(details.event)
+          restoreOnClose.current = false
+
+          return
+        }
+
+        // Read from the close reason Base UI reports, never from a key event seen elsewhere: this
+        // menu's own closing is the only thing that can say this menu was cancelled.
+        restoreOnClose.current = details.reason === 'escape-key' && invocation.current !== null
       }}
+
     >
       <ContextMenuTrigger render={render ?? <div className='contents' />}>{children}</ContextMenuTrigger>
       <ContextMenuContent
