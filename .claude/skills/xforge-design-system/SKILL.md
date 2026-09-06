@@ -12,6 +12,35 @@ Most design drift in this repo is not someone inventing a new look. It is someon
 something the system already provides, slightly differently. The rules below exist because that
 has already happened, at the counts shown.
 
+## Look at the app before changing it
+
+Reading code tells you what a page contains. It does not tell you what it looks like, and design
+quality is not visible in an import list. A payroll dashboard was once built here that passed every
+code check — distinct components, correct tokens, no repeated blocks — and still looked flat next to
+its neighbours, because nobody had opened them.
+
+Before building or judging a screen:
+
+1. `preview_start` with the `afenda-xforge` config in `.claude/launch.json`.
+2. **Screenshot two or three peer dashboards first**, not your own page. `/dashboard/ecommerce` and
+   `/dashboard/sales` are the richest. This is the baseline; without it "looks fine" means nothing.
+3. Screenshot the page you are changing, at the same viewport, and put them side by side.
+4. Only then write code.
+
+Measure what a screenshot cannot state precisely. These four caught real defects that code review
+missed entirely:
+
+- **Type scale of the largest number.** Every dashboard here leads with one dominant figure —
+  ecommerce sets it at 60px. A page whose largest text is 24px has no focal point.
+- **Faces and imagery.** Peers carry 12–25 avatars or images. A page listing people by name with no
+  avatar reads as a spreadsheet.
+- **Ink per card.** Sum leaf-element area over card area. Below ~0.2 the card is mostly air.
+  Charts score low legitimately, so read this alongside the screenshot rather than instead of it.
+- **Tinted elements.** Count backgrounds with actual hue. An all-grey page is a flat page.
+
+Screenshots verify; they do not design. Take the baseline **before** writing, not after — the whole
+failure above was using the camera only to confirm work already finished.
+
 ## Discovery first — before writing any UI
 
 Never start from a blank component. In order:
