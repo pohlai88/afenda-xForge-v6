@@ -3,7 +3,7 @@ import { BanknoteIcon, UsersIcon, WalletIcon } from 'lucide-react'
 
 // Component Imports
 import PayrollKpiStrip, { type KpiMetric } from '@/views/dashboards/payroll/payroll-kpi-strip'
-import PayrollOvertimeGauge from '@/views/dashboards/payroll/payroll-overtime-gauge'
+import PayrollOvertimeTrend, { type OvertimePoint } from '@/views/dashboards/payroll/payroll-overtime-trend'
 import PayrollByDepartment, { type DepartmentRow } from '@/views/dashboards/payroll/payroll-by-department'
 import PayrollCostTrend from '@/views/dashboards/payroll/payroll-cost-trend'
 import PayrollExceptionQueue, { type ExceptionRow } from '@/views/dashboards/payroll/payroll-exception-queue'
@@ -35,12 +35,16 @@ const TERMINAL_STATUSES = new Set(['paid', 'closed', 'cancelled', 'failed'])
 
 type Props = {
 
-  /** `?run=PR-2026-08` selects a past run. Absent or unrecognised falls back to the latest. */
-  searchParams: Promise<{ run?: string }>
+  /**
+   * `?run=PR-2026-08` selects a past run. Absent or unrecognised falls back to the latest.
+   * `?dept=eng` filters the exception queue to one department, set by clicking a department
+   * in the cost chart. Absent or unrecognised means no filter.
+   */
+  searchParams: Promise<{ run?: string; dept?: string }>
 }
 
 const PayrollDashboard = async ({ searchParams }: Props) => {
-  const [{ run: requestedReference }, runs, employees, departments] = await Promise.all([
+  const [{ run: requestedReference, dept: requestedDepartmentId }, runs, employees, departments] = await Promise.all([
     searchParams,
     getPayRuns(),
     getEmployees(),
@@ -60,7 +64,17 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
 
   // The comparison baseline is the run before the *selected* one, not before the latest.
   const previousRun = runs[currentIndex - 1]
-  const slips = await getPayslipsForRun(currentRun.id)
+
+  // An unrecognised department id is dropped rather than kept, the same way an unknown run
+  // reference falls back to the latest instead of filtering everything out silently.
+  const selectedDepartment = requestedDepartmentId
+    ? departments.find(department => department.id === requestedDepartmentId)
+    : undefined
+
+  const [slips, previousSlips] = await Promise.all([
+    getPayslipsForRun(currentRun.id),
+    previousRun ? getPayslipsForRun(previousRun.id) : Promise.resolve([])
+  ])
 
   const exceptionCounts = countExceptions(currentRun.exceptions)
 
@@ -75,23 +89,32 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
   const employeeById = new Map(employees.map(e => [e.id, e]))
   const departmentNames = new Map(departments.map(d => [d.id, d.name]))
 
-  const exceptionRows: ExceptionRow[] = currentRun.exceptions.map(exception => ({
-    ...exception,
-    subject: exception.employeeId
-      ? (() => {
-          const employee = employeeById.get(exception.employeeId)
+  const exceptionRows: ExceptionRow[] = currentRun.exceptions.map(exception => {
+    const employee = exception.employeeId ? employeeById.get(exception.employeeId) : undefined
 
-          return employee ? `${employee.firstName} ${employee.lastName}` : undefined
-        })()
-      : exception.departmentId
-        ? departmentNames.get(exception.departmentId)
-        : undefined,
-    avatar: exception.employeeId ? employeeById.get(exception.employeeId)?.avatar : undefined
-  }))
+    return {
+      ...exception,
+
+      // An exception about a person is filed under their department too, so clicking a
+      // department in the cost chart surfaces both its own budget-variance exceptions and the
+      // people-level ones underneath it.
+      departmentId: exception.departmentId ?? employee?.departmentId,
+      subject: exception.employeeId
+        ? employee
+          ? `${employee.firstName} ${employee.lastName}`
+          : undefined
+        : exception.departmentId
+          ? departmentNames.get(exception.departmentId)
+          : undefined,
+      avatar: employee?.avatar
+    }
+  })
+
+  const filteredExceptionRows = selectedDepartment
+    ? exceptionRows.filter(exception => exception.departmentId === selectedDepartment.id)
+    : exceptionRows
 
   const overtime = overtimeSummary(slips, currentRun.currency)
-  const previousSlips = previousRun ? await getPayslipsForRun(previousRun.id) : []
-  const previousOvertime = overtimeSummary(previousSlips, currentRun.currency)
 
   // Sparkline series, oldest first. Overtime has no equivalent: it is derived from payslips,
   // and fetching every run's payslips to draw one 80px line is not a trade worth making.
@@ -137,18 +160,51 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
     }
   ]
 
+  // Overtime for every run, not just this one. An earlier pass decided fetching all payslips to
+  // draw one 80px sparkline was not worth it; a chart that answers whether overtime is creeping
+  // is a different trade, and against the fake-db this is an array filter per run.
+  const overtimeByRun = await Promise.all(
+    historyToDate.map(async run => {
+      const runSlips = await getPayslipsForRun(run.id)
+      const summary = overtimeSummary(runSlips, run.currency)
+
+      return {
+        reference: run.reference.replace('PR-', ''),
+        share: summary.shareOfGross,
+        variance: summary.shareOfGross - OVERTIME_TARGET_SHARE,
+        hours: summary.hours
+      }
+    })
+  )
+
+  const overtimePoints: OvertimePoint[] = overtimeByRun
+
   const departmentHeads = new Map(departments.map(d => [d.id, d.headEmployeeId]))
 
-  const departmentRows: DepartmentRow[] = costByDepartment(
-    slips,
-    employees,
-    departments,
-    currentRun.currency
-  ).map(row => {
-    const head = employeeById.get(departmentHeads.get(row.departmentId) ?? '')
+  // Every department appears in this map even at zero cost, because `costByDepartment` maps
+  // over the full department list rather than only the ones with payslips this run — so a
+  // missing entry never has to be told apart from a department that genuinely cost nothing.
+  const previousDepartmentShares = previousRun
+    ? new Map(
+        costByDepartment(previousSlips, employees, departments, previousRun.currency).map(department => [
+          department.departmentId,
+          department.share
+        ])
+      )
+    : null
 
-    return { ...row, headName: head && `${head.firstName} ${head.lastName}`, headAvatar: head?.avatar }
-  })
+  const departmentRows: DepartmentRow[] = costByDepartment(slips, employees, departments, currentRun.currency).map(
+    row => {
+      const head = employeeById.get(departmentHeads.get(row.departmentId) ?? '')
+
+      return {
+        ...row,
+        headName: head && `${head.firstName} ${head.lastName}`,
+        headAvatar: head?.avatar,
+        shareDelta: previousDepartmentShares ? row.share - (previousDepartmentShares.get(row.departmentId) ?? 0) : null
+      }
+    }
+  )
 
   const costTrend = runs.map(run => ({
     reference: run.reference.replace('PR-', ''),
@@ -165,7 +221,12 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
         className='col-span-full lg:col-span-4'
       />
 
-      <PayrollExceptionQueue exceptions={exceptionRows} className='col-span-full lg:col-span-2' />
+      <PayrollExceptionQueue
+        exceptions={filteredExceptionRows}
+        departmentFilter={selectedDepartment && { id: selectedDepartment.id, name: selectedDepartment.name }}
+        runReference={currentRun.reference}
+        className='col-span-full lg:col-span-2'
+      />
 
       <PayrollKpiStrip
         metrics={metrics}
@@ -173,12 +234,11 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
         className='col-span-full lg:col-span-4'
       />
 
-      <PayrollOvertimeGauge
-        shareOfGross={overtime.shareOfGross}
-        threshold={OVERTIME_TARGET_SHARE}
-        hours={overtime.hours}
-        cost={formatMoney(overtime.cost)}
-        change={changeVsPrevious(overtime.cost, previousOvertime.cost)}
+      <PayrollOvertimeTrend
+        points={overtimePoints}
+        target={OVERTIME_TARGET_SHARE}
+        currentHours={overtime.hours}
+        currentCost={formatMoney(overtime.cost)}
         className='col-span-full lg:col-span-2'
       />
 
@@ -188,7 +248,12 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
         className='col-span-full lg:col-span-4'
       />
 
-      <PayrollByDepartment departments={departmentRows} className='col-span-full lg:col-span-2' />
+      <PayrollByDepartment
+        departments={departmentRows}
+        runReference={currentRun.reference}
+        selectedDepartmentId={selectedDepartment?.id}
+        className='col-span-full lg:col-span-2'
+      />
 
       <PayrollCostTrend points={costTrend} currencySymbol={CURRENCY_SYMBOL} className='col-span-full' />
 
