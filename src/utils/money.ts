@@ -59,5 +59,24 @@ export const formatMoneyCompact = (money: Money): string => {
 /** Major units as a plain number, for charts. Charts need magnitudes, not strings. */
 export const toMajorUnits = (money: Money): number => money.amount / 100
 
+/**
+ * 284464.95 -> 'S$284,464.95'. For values that have already been reduced to a major-unit number,
+ * which is what chart series carry.
+ *
+ * Exists so chart components can write a screen-reader summary without reaching for
+ * `toLocaleString`. Recharts tooltip formatters may use Intl safely because they only ever run on
+ * the client, but text rendered in a component's own body is server-rendered first, and that is
+ * where the ICU disagreement this file was written to avoid turns into a hydration mismatch.
+ */
+export const formatMajorUnits = (major: number, symbol: string): string => {
+  const negative = major < 0
+  const absolute = Math.abs(major)
+  const whole = Math.floor(absolute)
+  const cents = String(Math.round((absolute - whole) * 100)).padStart(2, '0')
+  const formatted = `${symbol}${groupDigits(String(whole))}.${cents}`
+
+  return negative ? `-${formatted}` : formatted
+}
+
 export const percentageOf = (part: Money, whole: Money): number =>
   whole.amount === 0 ? 0 : (part.amount / whole.amount) * 100

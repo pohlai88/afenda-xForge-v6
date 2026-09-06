@@ -5,7 +5,17 @@ import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 'recharts'
 
 // Component Imports
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+
+// Util Imports
+import { formatMajorUnits } from '@/utils/money'
+import {
+  type ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent
+} from '@/components/ui/chart'
 
 export type CostTrendPoint = {
   reference: string
@@ -41,7 +51,18 @@ const PayrollCostTrend = ({ points, currencySymbol, className }: Props) => {
         <CardDescription>Last six runs</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className='h-72 w-full'>
+        {/* The chart is a set of unlabelled paths to a screen reader, so it is hidden from the
+            accessibility tree and the same figures are stated in text beside it. */}
+        <p className='sr-only'>
+          Employer cost and headcount over the last {points.length} pay runs.{' '}
+          {points
+            .map(
+              point =>
+                `Run ${point.reference}: ${formatMajorUnits(point.cost, currencySymbol)} across ${point.employees} employees.`
+            )
+            .join(' ')}
+        </p>
+        <ChartContainer config={chartConfig} className='h-72 w-full' aria-hidden='true'>
           <ComposedChart data={points} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray='3 3' />
             <XAxis dataKey='reference' tickLine={false} axisLine={false} tickMargin={10} />
@@ -67,6 +88,7 @@ const PayrollCostTrend = ({ points, currencySymbol, className }: Props) => {
               strokeWidth={2}
               dot={{ r: 3 }}
             />
+            <ChartLegend content={<ChartLegendContent />} />
           </ComposedChart>
         </ChartContainer>
       </CardContent>

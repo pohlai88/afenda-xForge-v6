@@ -8,6 +8,9 @@ import type { BridgeStep } from '@/utils/payroll-metrics'
 
 // Component Imports
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
+// Util Imports
+import { formatMajorUnits } from '@/utils/money'
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
 const chartConfig = {
@@ -36,7 +39,15 @@ const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
         <CardDescription>Where this run&apos;s pay goes</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={chartConfig} className='h-72 w-full'>
+        {/* The waterfall is built from stacked bars with a transparent spacer, which carries no
+            meaning at all in the accessibility tree. Hide it and state the steps instead. */}
+        <p className='sr-only'>
+          How gross pay reduces to net for this run.{' '}
+          {steps
+            .map(step => `${step.label}: ${formatMajorUnits(step.value, currencySymbol)}.`)
+            .join(' ')}
+        </p>
+        <ChartContainer config={chartConfig} className='h-72 w-full' aria-hidden='true'>
           <BarChart data={steps} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
             <XAxis dataKey='label' tickLine={false} axisLine={false} tickMargin={10} />
             <ChartTooltip
