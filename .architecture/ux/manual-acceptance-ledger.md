@@ -37,7 +37,9 @@ button, the filing name button — never against the row, which is deliberately 
 | 5   | Filings           | `Shift+F10` on a filing name       | As row 1. Filings renders no `⋮` — `Open filing` is the whole vocabulary, so right-click is the only menu    |
 | 6   | Payments          | `Shift+F10` on an employee name    | As row 1                                                                                                     |
 | 7   | Payments          | `⋮` by pointer and by keyboard     | As row 2, on a payment that has one. A payment with no bank reference has no `⋮` — check right-click there   |
-| 8   | All four          | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
+| 8   | Group payroll     | `Shift+F10` on a company name      | As row 1. No `⋮` — `Open company` is the whole vocabulary, so right-click is the only menu                   |
+| 9   | Group payroll     | Selection by keyboard              | Space toggles a checkbox, the engine's bar and the truth strip below the table both update                   |
+| 10  | All five          | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
 
 ### Note on row 7 — a row without a trigger
 

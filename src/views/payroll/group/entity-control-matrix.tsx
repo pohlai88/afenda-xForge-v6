@@ -5,36 +5,34 @@ import { useCallback, useMemo, useState } from 'react'
 
 // Next Imports
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 // Third-party Imports
 import {
-  flexRender,
   getCoreRowModel,
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
   type SortingState
 } from '@tanstack/react-table'
-import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, ChevronsUpDownIcon, MinusIcon } from 'lucide-react'
+import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, MinusIcon, ScrollTextIcon } from 'lucide-react'
 
 // Type Imports
 import type { Consolidation, EntityPayrollState, EntityRow } from '@/types/payroll/group-types'
+import type { TableColumn, TableDefinition, TableFooterRow } from '@/types/common/table-types'
 
 // Component Imports
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardAction, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import DataTable from '@/components/shared/DataTable'
+import { entityPeriodCommands, entityPeriodObject } from '@/views/payroll/payroll-objects'
 import LineageDrawer from './lineage-drawer'
 
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
 import { ENTITY_STATE_LABELS, ENTITY_STATE_ORDER, ENTITY_STATE_STYLES, COUNTRY_LABELS } from '@/utils/payroll-group'
-import { ariaSortFor } from '@/utils/table-utils'
 
 type Props = {
   consolidation: Consolidation
@@ -50,8 +48,6 @@ type Props = {
   className?: string
 }
 
-const RIGHT_ALIGNED = new Set(['employees', 'employerCost', 'change'])
-
 const Dash = ({ label }: { label: string }) => (
   <>
     <span aria-hidden='true'>—</span>
@@ -59,27 +55,30 @@ const Dash = ({ label }: { label: string }) => (
   </>
 )
 
+/**
+ * What each column means.
+ *
+ * `coverage` and `state` are both `signal`, and for the same reason: each stores a rank rather than
+ * the word a person reads. Coverage sorts the companies missing from the total to one end; state
+ * sorts by how much attention it deserves, which is why `blocked` ranks above `closed`. Neither is
+ * a figure, so neither is right-aligned, and neither can be faceted — the ranks are not the option
+ * values.
+ *
+ * `change` is `money` even though the cell often shows a percentage instead. What is stored and
+ * sorted is the movement in the reporting currency; the percentage is how the domain chooses to
+ * say it when a comparison exists.
+ */
+const ENTITY_COLUMNS: TableColumn[] = [
+  { id: 'entity', label: 'Company', semantic: 'identity', isAnchor: true },
+  { id: 'coverage', label: 'In the total', semantic: 'signal' },
+  { id: 'employees', label: 'Employees', semantic: 'quantity' },
+  { id: 'employerCost', label: 'Employer cost', semantic: 'money' },
+  { id: 'change', label: 'Change', semantic: 'money' },
+  { id: 'state', label: 'State', semantic: 'signal' },
+  { id: 'open', label: 'Open', semantic: 'text', capabilities: { sortable: false, filter: 'none', searchable: false } }
+]
+
 const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRow>[] => [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllRowsSelected()}
-        indeterminate={table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()}
-        onCheckedChange={value => table.toggleAllRowsSelected(Boolean(value))}
-        aria-label='Select every company'
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={value => row.toggleSelected(Boolean(value))}
-        onClick={event => event.stopPropagation()}
-        aria-label={`Select ${row.original.entity.name}`}
-      />
-    ),
-    enableSorting: false
-  },
   {
     id: 'entity',
     header: 'Company',
@@ -88,7 +87,6 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
       <span className='flex flex-col'>
         <Link
           href={hrefFor(row.original.entity.id)}
-          onClick={event => event.stopPropagation()}
           className='font-medium underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none'
         >
           {row.original.entity.name}
@@ -121,12 +119,7 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
     id: 'employees',
     header: 'Employees',
     accessorFn: row => row.employees,
-    cell: ({ row }) =>
-      row.original.included ? (
-        <span className='tabular-nums'>{row.original.employees}</span>
-      ) : (
-        <Dash label='No calculation' />
-      )
+    cell: ({ row }) => (row.original.included ? row.original.employees : <Dash label='No calculation' />)
   },
   {
     id: 'employerCost',
@@ -135,10 +128,8 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
     cell: ({ row }) =>
       row.original.reporting && row.original.local ? (
         <span className='flex flex-col items-end'>
-          <span className='font-medium tabular-nums'>{formatMoney(row.original.reporting.employerCost)}</span>
-          <span className='text-muted-foreground text-xs tabular-nums'>
-            {formatMoney(row.original.local.employerCost)}
-          </span>
+          <span className='font-medium'>{formatMoney(row.original.reporting.employerCost)}</span>
+          <span className='text-muted-foreground text-xs'>{formatMoney(row.original.local.employerCost)}</span>
         </span>
       ) : (
         <Dash label='No calculation' />
@@ -153,17 +144,11 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
 
       if (!change) return <Dash label='No comparison' />
 
-      const rising = change.amount > 0
       const flat = change.amount === 0
-      const Icon = flat ? MinusIcon : rising ? ChevronUpIcon : ChevronDownIcon
+      const Icon = flat ? MinusIcon : change.amount > 0 ? ChevronUpIcon : ChevronDownIcon
 
       return (
-        <span
-          className={cn(
-            'flex items-center justify-end gap-1 tabular-nums',
-            'text-muted-foreground'
-          )}
-        >
+        <span className='text-muted-foreground flex items-center justify-end gap-1'>
           <Icon className='size-3.5' aria-hidden='true' />
           {row.original.changePercent === null ? formatMoney(change) : `${row.original.changePercent!.toFixed(1)}%`}
         </span>
@@ -186,6 +171,7 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
   {
     id: 'open',
     header: () => <span className='sr-only'>Open</span>,
+    enableSorting: false,
     cell: ({ row }) => (
       <Button
         variant='ghost'
@@ -193,12 +179,10 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
         render={<Link href={hrefFor(row.original.entity.id)} />}
         nativeButton={false}
         aria-label={`Open ${row.original.entity.name}`}
-        onClick={event => event.stopPropagation()}
       >
         <ChevronRightIcon />
       </Button>
-    ),
-    enableSorting: false
+    )
   }
 ]
 
@@ -207,11 +191,14 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
  *
  * Not a summary table under a dashboard — this is where someone answers which company, how much,
  * what changed, whether it is in the number and whether it can proceed, all at once. Hence the
- * density, the selection, and the two status columns: coverage and state are different questions
- * and a single column answering both would have to lie about one of them.
+ * selection, and the two status columns: coverage and state are different questions and a single
+ * column answering both would have to lie about one of them.
+ *
+ * The state chips stay here rather than becoming an engine filter. Their counts come from
+ * `coverage.byState`, which counts every company in the group; a faceted count over a `signal`
+ * column would have to be derived from a rank, which is the one thing the engine refuses to guess.
  */
 const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
-  const router = useRouter()
   const [sorting, setSorting] = useState<SortingState>([])
   const [stateFilter, setStateFilter] = useState<EntityPayrollState | 'all'>('all')
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
@@ -242,6 +229,7 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
     getRowId: row => row.entity.id,
+    enableRowSelection: true,
     enableSortingRemoval: false,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel()
@@ -270,6 +258,69 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
   }
 
   const visibleIncluded = rows.filter(row => row.original.included).length
+
+  const footer: TableFooterRow = {
+    label: (
+      <span className='font-medium'>
+        {visibleIncluded} of {rows.length} included
+        {visibleIncluded < rows.length && <span className='text-warning'> · incomplete</span>}
+      </span>
+    ),
+    cells: [
+      {
+        columnId: 'employees',
+
+        // Unique headcount is a group figure: one person on two payrolls is one person. It cannot
+        // be restated over a subset, so a filtered view says so rather than showing the sum.
+        content:
+          stateFilter === 'all' ? (
+            consolidation.headcount.unique
+          ) : (
+            <Dash label='Unique headcount is only meaningful across every company' />
+          )
+      },
+      { columnId: 'employerCost', content: <span className='font-semibold'>{formatMoney(visibleTotal)}</span> }
+    ]
+  }
+
+  const definition: TableDefinition<EntityRow> = {
+    id: 'payroll-group-entities',
+    getRowId: row => row.entity.id,
+    columns: ENTITY_COLUMNS,
+    mode: 'client',
+    noun: { one: 'company', many: 'companies' },
+    getObject: entityPeriodObject,
+    getCommands: row => entityPeriodCommands(row, hrefFor),
+
+    // Named, not inferred: opening the company is what a row means.
+    getDefaultCommandId: () => 'open',
+
+    // Selection exists because a subset of companies is a question someone asks of the total. The
+    // engine owns the checkbox, the count and clearing; explaining the subset is the one command.
+    selection: {
+      bulkActions: () => [
+        {
+          id: 'explain-selection',
+          label: 'Explain selection',
+          family: 'read',
+          icon: ScrollTextIcon,
+          onSelect: () => setDrawerOpen(true)
+        }
+      ]
+    },
+
+    // The whole group fits on one screen, so this table sorts, selects and commands and asks for
+    // no paging even though the engine can page.
+    task: ['sort', 'select', 'bulk', 'rowCommands'],
+    emptyState: {
+      message:
+        consolidation.entities.length === 0
+          ? 'This group has no companies.'
+          : `No company is ${ENTITY_STATE_LABELS[stateFilter as EntityPayrollState]?.toLowerCase() ?? 'in that state'} this period.`,
+      onClear: stateFilter === 'all' ? undefined : () => setStateFilter('all')
+    },
+    footer: rows.length > 1 ? footer : undefined
+  }
 
   return (
     <>
@@ -303,129 +354,19 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
           </CardAction>
         </CardHeader>
 
-        <div className='overflow-x-auto border-t'>
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(header => {
-                    const alignRight = RIGHT_ALIGNED.has(header.column.id)
-                    const canSort = header.column.getCanSort()
-
-                    return (
-                      <TableHead
-                        key={header.id}
-                        aria-sort={ariaSortFor(header.column)}
-                        className={cn('first:pl-6 last:pr-6', alignRight && 'text-right')}
-                      >
-                        {canSort ? (
-                          <span
-                            role='button'
-                            tabIndex={0}
-                            onClick={header.column.getToggleSortingHandler()}
-                            onKeyDown={event => {
-                              if (event.key !== 'Enter' && event.key !== ' ') return
-                              event.preventDefault()
-                              header.column.getToggleSortingHandler()?.(event)
-                            }}
-                            aria-label={`Sort by ${String(header.column.columnDef.header)}`}
-                            className={cn(
-                              'inline-flex cursor-pointer items-center gap-1 select-none',
-                              alignRight && 'flex-row-reverse'
-                            )}
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {header.column.getIsSorted() === 'asc' ? (
-                              <ChevronUpIcon className='size-3.5' />
-                            ) : header.column.getIsSorted() === 'desc' ? (
-                              <ChevronDownIcon className='size-3.5' />
-                            ) : (
-                              <ChevronsUpDownIcon className='size-3.5 opacity-40' />
-                            )}
-                          </span>
-                        ) : (
-                          flexRender(header.column.columnDef.header, header.getContext())
-                        )}
-                      </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-
-            <TableBody>
-              {rows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className='h-24 text-center'>
-                    <p className='text-muted-foreground text-sm'>
-                      No company is {ENTITY_STATE_LABELS[stateFilter as EntityPayrollState]?.toLowerCase()} this period.
-                    </p>
-                    <Button variant='link' size='sm' onClick={() => setStateFilter('all')}>
-                      Show every company
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                rows.map(row => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() ? 'selected' : undefined}
-                    className='hover:bg-muted/50 cursor-pointer'
-
-                    // Mouse convenience only. The company name holds the real link, so keyboard
-                    // and assistive-tech users never depend on this handler.
-                    onClick={() => router.push(hrefFor(row.original.entity.id))}
-                  >
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell
-                        key={cell.id}
-                        className={cn('py-3 first:pl-6 last:pr-6', RIGHT_ALIGNED.has(cell.column.id) && 'text-right')}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-
-            {rows.length > 1 && (
-              <TableFooter>
-                <TableRow>
-                  <TableCell className='pl-6' />
-                  <TableCell className='font-medium'>
-                    {visibleIncluded} of {rows.length} included
-                    {visibleIncluded < rows.length && <span className='text-warning'> · incomplete</span>}
-                  </TableCell>
-                  <TableCell />
-                  <TableCell className='text-right tabular-nums'>
-                    {stateFilter === 'all' ? (
-                      consolidation.headcount.unique
-                    ) : (
-                      <Dash label='Unique headcount is only meaningful across every company' />
-                    )}
-                  </TableCell>
-                  <TableCell className='text-right font-semibold tabular-nums'>{formatMoney(visibleTotal)}</TableCell>
-                  <TableCell />
-                  <TableCell className='pr-6' />
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
-        </div>
+        <CardContent className='border-t px-0 pb-0'>
+          <DataTable definition={definition} table={table} caption='Every company in the group, this period' />
+        </CardContent>
       </Card>
 
-      {/* The selection bar states the same truths as the headline, for the subset. Never a bare
-          count and a figure: a selection total obeys the page's rules too. */}
+      {/* What the selection is worth, which the engine's selection bar states the mechanics of but
+          cannot state the meaning of. Never a bare count and a figure: a selection total obeys the
+          page's rules about coverage and currency exactly as the headline does. */}
       {selectedRows.length > 0 && (
         <div
           role='status'
           className='bg-card sticky bottom-4 z-10 col-span-full flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border px-5 py-3 shadow-lg'
         >
-          <span className='text-sm font-medium'>
-            {selectedRows.length} {selectedRows.length === 1 ? 'company' : 'companies'} selected
-          </span>
-
           <span className='flex flex-col'>
             <span className='text-muted-foreground text-xs'>Employer cost</span>
             <span className='font-semibold tabular-nums'>{formatMoney(selectedTotal)}</span>
@@ -449,15 +390,6 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
               incomplete.
             </span>
           )}
-
-          <span className='ml-auto flex items-center gap-2'>
-            <Button variant='outline' size='sm' onClick={() => setDrawerOpen(true)}>
-              Explain selection
-            </Button>
-            <Button variant='ghost' size='sm' onClick={() => setRowSelection({})}>
-              Clear
-            </Button>
-          </span>
         </div>
       )}
 

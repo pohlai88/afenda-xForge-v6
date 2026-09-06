@@ -19,6 +19,7 @@ import type { PayRunQueueRow } from '@/types/payroll/run-queue-types'
 import type { PayrollRunRow } from '@/types/payroll/run-workspace-types'
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
 import type { PropertySection } from '@/components/shared/PropertiesSheet'
+import type { EntityRow } from '@/types/payroll/group-types'
 import type { SettlementRow } from '@/utils/payroll-payments'
 
 // Util Imports
@@ -371,3 +372,41 @@ export const settlementCommands = (
 
   return commands
 }
+
+// ---------------------------------------------------------------------------
+// A company's payroll for one period
+// ---------------------------------------------------------------------------
+
+/**
+ * The subject of a row on Group payroll: one legal entity's payroll standing for the period being
+ * consolidated. Not the company as a permanent thing — the label names the company because that
+ * is what a person calls the row, and the period is the page's, held once rather than repeated
+ * down every row.
+ */
+export const entityPeriodObject = (row: EntityRow): ObjectContext => ({
+  type: 'entity_payroll',
+  id: row.entity.id,
+  label: row.entity.name,
+  href: row.href
+})
+
+/**
+ * Opening the company is the only thing this surface does to one, so the list is one command long
+ * and the table renders no overflow column at all.
+ *
+ * Everything else a reader might want — why a figure is what it is, what moved, which calculation
+ * it came from — is a question about the consolidation rather than about a row, and the lineage
+ * drawer answers it with the working shown. A menu item cannot show working.
+ *
+ * `href` is resolved by the caller rather than read from `row.href`, because the group view a
+ * reader came from is part of where Open should return them to.
+ */
+export const entityPeriodCommands = (row: EntityRow, href: (entityId: string) => string): ObjectCommand[] => [
+  {
+    id: 'open',
+    label: 'Open company',
+    family: 'read',
+    icon: ExternalLinkIcon,
+    href: href(row.entity.id)
+  }
+]
