@@ -100,7 +100,7 @@ const ThemeCustomizer = () => {
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant='ghost' size='icon' />}>
+      <PopoverTrigger render={<Button variant='ghost' size='icon' aria-label='Customise theme' />}>
         <PaletteIcon />
       </PopoverTrigger>
 

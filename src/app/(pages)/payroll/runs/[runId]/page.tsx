@@ -12,6 +12,7 @@ import {
   getCurrentUser,
   getDepartments,
   getEmployees,
+  getLegalEntity,
   getLocations,
   getPayRun,
   getPayRuns,
@@ -60,7 +61,8 @@ const PayrollRunPage = async ({ params }: Props) => {
   const index = runs.findIndex(candidate => candidate.id === run.id)
   const previousRun = index > 0 ? runs[index - 1] : undefined
 
-  const [slips, previousSlips] = await Promise.all([
+  const [entity, slips, previousSlips] = await Promise.all([
+    getLegalEntity(run.entityId),
     getPayslipsForRun(run.id),
     previousRun ? getPayslipsForRun(previousRun.id) : Promise.resolve([])
   ])
@@ -99,6 +101,7 @@ const PayrollRunPage = async ({ params }: Props) => {
     <PayrollRunWorkspace
       key={`${run.id}-${run.calculationVersion}`}
       run={run}
+      entity={entity}
       previousRun={previousRun}
       rows={rows}
       previousSlips={previousSlips}

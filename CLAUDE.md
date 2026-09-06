@@ -7,6 +7,64 @@
 - **Not a monorepo.** `pnpm-workspace.yaml` declares `packages: ["."]` — a single Next.js app. The file's presence suggests workspaces that don't exist.
 - **`_archive/` is dead template scaffolding**, kept from the AdminCN baseline (`f79c8c3`) and already excluded in `eslint.config.mjs`. Don't edit it, fix its lint, or treat it as reference for how this app works.
 
+## Shadcn Studio frontend authority
+
+Frontend work is standardised on the Shadcn Studio Admin Template that this app is
+already built from. Search Studio before writing custom UI; don't hand-recreate
+something the registry already has.
+
+```
+Existing implementation in src/views    ← always look here first
+        ↓
+Shadcn Studio page   (@ss-pages)
+        ↓
+Shadcn Studio block  (@ss-blocks)
+        ↓
+Shadcn Studio component (@ss-components, @shadcn-studio)
+        ↓
+shadcn/ui primitive in src/components/ui
+        ↓
+custom composition in src/views/<area>/<name>.tsx
+```
+
+The order is **SEARCH → SELECT → COMPOSE → IMPLEMENT → VISUALLY VALIDATE → REFINE**.
+Never go straight from a requirement to custom JSX. Prefer composition over
+abstraction, an existing component variant over one-off styling, and semantic
+theme tokens over arbitrary colours. Preserve the template's visual language —
+no parallel design-system layer, no `AfendaButton`-style wrapper primitives, no
+second theme architecture.
+
+**Compatibility is decided per item, never assumed.** This app has zero
+`@radix-ui/*` packages and 25 of its 50 primitives on `@base-ui/react`, and a
+second primitive system must never be introduced. But `components.json` sets
+`style: base-vega`, so the registry serves Studio's **Base UI** variant
+(`src/registry/base/…`) — "Studio is Radix" was true of the default style and is
+not true here. Resolve the item first, then judge it:
+
+```
+Resolved Studio item — pnpm exec shadcn view <item>
+        ↓
+read dependencies, imports, styles
+        ↓
+@radix-ui in dependencies, or a Radix import?     → REJECT
+Base UI + semantic tokens only?                   → ADOPT eligible
+Base UI but palette utility classes?              → ADAPT — retokenise first
+Useful UX, incompatible implementation?           → REFERENCE — rebuild it here
+```
+
+- `pnpm exec shadcn view @ss-blocks/<name>` prints a registry item without
+  writing a file. Read before installing, every time.
+- `pnpm exec shadcn add ...` is safe for `src/components/ui` primitives, which
+  resolve to the base-vega (Base UI) variant. Anything else needs the gate above.
+- Blocks in particular carry palette utility classes (`text-green-600`,
+  `bg-sky-400/10`); `src/views` and `src/app` have zero. ADAPT means retokenising
+  those, not shipping them.
+- Never run `install-theme`. `globals.css` is the design system.
+
+`.claude/commands/{cui,iui,rui,ftc}.md` are the four Studio workflows and carry
+the detail. The `xforge-design-system` skill holds the tokens and quality floor;
+load it before writing UI.
+
 ## Verifying a change
 
 There is no test framework and no test files. To check work:
@@ -21,4 +79,4 @@ pnpm lint          # eslint
 
 A `PostToolUse` hook (`.claude/hooks/format.mjs`) runs Prettier on each file after it's written, so files change on disk right after an edit — that's expected, not a conflict. Don't hand-match the style; the hook applies it.
 
-ESLint is deliberately not in that hook: `eslint --fix` on one file costs ~4.9s here because `eslint.config.mjs` resolves imports through `tsconfig.json`. So `import/order` and `consistent-type-imports` are *not* auto-fixed on edit — run `pnpm lint:fix` before finishing a change that adds imports.
+ESLint is deliberately not in that hook: `eslint --fix` on one file costs ~4.9s here because `eslint.config.mjs` resolves imports through `tsconfig.json`. So `import/order` and `consistent-type-imports` are _not_ auto-fixed on edit — run `pnpm lint:fix` before finishing a change that adds imports.

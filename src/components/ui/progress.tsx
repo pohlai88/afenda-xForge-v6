@@ -4,6 +4,12 @@ import { Progress as ProgressPrimitive } from '@base-ui/react/progress'
 
 import { cn } from '@/lib/utils'
 
+/**
+ * Bare `<Progress value={n} />` renders its own track, which is how most of this app uses it.
+ * A caller that supplies its own `<ProgressTrack>` — to set a height, or to colour the indicator
+ * for a state — gets only that one: rendering the default track as well drew a second, unlabelled
+ * bar under the first, which read as a rendering fault rather than as a second measure.
+ */
 function Progress({ className, children, value, ...props }: ProgressPrimitive.Root.Props) {
   return (
     <ProgressPrimitive.Root
@@ -12,10 +18,11 @@ function Progress({ className, children, value, ...props }: ProgressPrimitive.Ro
       className={cn('flex flex-wrap gap-3', className)}
       {...props}
     >
-      {children}
-      <ProgressTrack>
-        <ProgressIndicator />
-      </ProgressTrack>
+      {children ?? (
+        <ProgressTrack>
+          <ProgressIndicator />
+        </ProgressTrack>
+      )}
     </ProgressPrimitive.Root>
   )
 }

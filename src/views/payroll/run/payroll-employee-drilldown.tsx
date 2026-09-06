@@ -198,8 +198,7 @@ const PayrollEmployeeDrilldown = ({
                 <span
                   className={cn(
                     'text-sm tabular-nums',
-                    row.variance && row.variance.amount > 0 && 'text-success',
-                    row.variance && row.variance.amount < 0 && 'text-destructive',
+                    'text-muted-foreground',
                     !row.variance && 'text-muted-foreground'
                   )}
                 >

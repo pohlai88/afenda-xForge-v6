@@ -32,7 +32,12 @@ const PayrollRunsPage = async () => {
         <p className='text-muted-foreground text-sm'>Every pay period, newest first. Open a run to work it.</p>
       </header>
 
-      <div className='grid grid-cols-6 gap-6'>
+      {/*
+        items-start, not the grid default of stretch: the focal run is three tiles and a stage rail,
+        the year column is a long list, and letting the short card inherit the tall one's height put
+        ~260px of empty card under the tiles. Each takes the height its own content needs.
+      */}
+      <div className='grid grid-cols-6 items-start gap-6'>
         <RunQueueFocus row={summary.focus} className='col-span-full lg:col-span-4' />
         <RunQueueYear summary={summary} className='col-span-full lg:col-span-2' />
         <RunQueueTable rows={rows} className='col-span-full' />

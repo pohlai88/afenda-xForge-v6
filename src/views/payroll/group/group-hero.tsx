@@ -47,9 +47,10 @@ const GroupHero = ({ consolidation, comparisonLabel, className }: Props) => {
   const rising = (change?.change.amount ?? 0) > 0
   const flat = (change?.change.amount ?? 0) === 0
 
-  // Cost rising is not good news, so the tone follows the direction against that polarity. The
-  // direction icon carries the same meaning, because colour alone never does.
-  const tone = !change || flat ? 'text-muted-foreground' : rising ? 'text-destructive' : 'text-success'
+  // Direction, not valence. A group costing more is not a failure and costing less is not a win —
+  // it may be a hiring month or a leaver month. The chevron and the sign carry the direction; red
+  // and green are kept for state (blocking, attention, ready) so they still mean something.
+  const tone = 'text-muted-foreground'
   const DirectionIcon = !change || flat ? MinusIcon : rising ? ChevronUpIcon : ChevronDownIcon
 
   const readyCount = coverage.byState.ready

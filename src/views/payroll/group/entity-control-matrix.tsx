@@ -161,7 +161,7 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
         <span
           className={cn(
             'flex items-center justify-end gap-1 tabular-nums',
-            flat ? 'text-muted-foreground' : rising ? 'text-destructive' : 'text-success'
+            'text-muted-foreground'
           )}
         >
           <Icon className='size-3.5' aria-hidden='true' />

@@ -48,10 +48,13 @@ const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
           {steps.map(step => `${step.label}: ${formatMajorUnits(step.value, currencySymbol)}.`).join(' ')}
         </p>
         <ChartContainer config={chartConfig} className='max-h-85 min-h-60 w-full' aria-hidden='true'>
-          <BarChart data={steps} margin={{ top: 20, right: 8, left: -8 }}>
+          <BarChart data={steps} margin={{ top: 20, right: 8, left: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray='4' stroke='var(--border)' />
             <XAxis dataKey='label' tickLine={false} axisLine={false} tickMargin={10} />
+            {/* width='auto' sizes to the widest tick: a negative left margin used to clip the
+                currency symbol off the widest labels, turning "S$340K" into "$340K". */}
             <YAxis
+              width='auto'
               tickLine={false}
               axisLine={false}
               tickMargin={8}

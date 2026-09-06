@@ -66,13 +66,12 @@ const PayVariance = ({ current, previous, previousReference, className }: Props)
         </div>
         <div className='flex flex-col'>
           <dt className='text-muted-foreground text-xs'>Difference</dt>
-          <dd
-            className={cn(
-              'font-semibold tabular-nums',
-              netDelta.amount > 0 && 'text-success',
-              netDelta.amount < 0 && 'text-destructive'
+          <dd className='font-semibold tabular-nums'>
+            {netDelta.amount !== 0 && (
+              <span aria-hidden='true' className='text-muted-foreground'>
+                {netDelta.amount > 0 ? '↑' : '↓'}{' '}
+              </span>
             )}
-          >
             {formatSignedMoney(netDelta)}
             <span className='text-muted-foreground ml-1 text-xs font-normal'>{formatSignedPercent(netPercent)}</span>
           </dd>
@@ -99,30 +98,14 @@ const PayVariance = ({ current, previous, previousReference, className }: Props)
                 <span className='truncate'>{line.label}</span>
                 <span className='text-muted-foreground text-right'>{formatMoney(line.previous)}</span>
                 <span className='text-right'>{formatMoney(line.current)}</span>
-                <span
-                  className={cn(
-                    'text-right font-medium',
-                    effect.amount > 0 && 'text-success',
-                    effect.amount < 0 && 'text-destructive'
-                  )}
-                >
-                  {formatSignedMoney(effect)}
-                </span>
+                <span className='text-right font-medium'>{formatSignedMoney(effect)}</span>
               </div>
             )
           })}
           <Separator />
           <div className='grid grid-cols-[1fr_auto] gap-x-4 py-1.5 font-semibold tabular-nums'>
             <span>Change in net pay</span>
-            <span
-              className={cn(
-                'text-right',
-                netDelta.amount > 0 && 'text-success',
-                netDelta.amount < 0 && 'text-destructive'
-              )}
-            >
-              {formatSignedMoney(netDelta)}
-            </span>
+            <span className='text-right'>{formatSignedMoney(netDelta)}</span>
           </div>
         </div>
       )}

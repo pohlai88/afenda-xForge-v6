@@ -17,8 +17,8 @@ not repeat the skill.
 **The MCP's styling directives do not apply here.** They target a different
 design system:
 
-- `text-primary-content`, `text-base-content/80` are DaisyUI classes. Studio
-  blocks are shadcn `new-york` on Radix; this repo is `base-vega` on Base UI.
+- `text-primary-content`, `text-base-content/80` are DaisyUI classes, and nothing
+  here uses them.
 - Palette colours (`text-green-600`, `bg-sky-500`) and raw hex are refused in
   `src/views` and `src/app` — the count there is currently zero, so any you add
   would be the only ones. Semantic tokens only; the skill holds the meaning-to-token
@@ -31,11 +31,15 @@ design system:
 
 **This repo's constraints, which override anything the MCP returns:**
 
-1. **Base UI only.** 25 of the primitives in `src/components/ui` are built on
-   `@base-ui/react`, and there are zero `@radix-ui/*` packages installed. Keep it
-   that way: never install a studio block, never add `radix-ui`, and never let a
-   `registryDependencies` list pull components in. `src/components/ui` tracks
-   upstream shadcn — add to it with the shadcn CLI, not by hand.
+1. **Base UI only, decided per item.** 25 of the primitives in `src/components/ui`
+   are built on `@base-ui/react`, and there are zero `@radix-ui/*` packages
+   installed. Keep it that way — but "Studio is Radix" is not a fact you may
+   assume. This repo is on `style: base-vega`, so the registry serves its Base UI
+   variant. Resolve the item and read it, then apply the gate in *Shadcn Studio
+   frontend authority* (`CLAUDE.md`): `radix-ui` in `dependencies` or a Radix
+   import is a REJECT, and never let a `registryDependencies` list pull one in.
+   `src/components/ui` tracks upstream shadcn — add to it with the shadcn CLI,
+   not by hand.
 2. **Descend the ladder before creating anything.** A primitive that fits is used
    directly. A primitive that nearly fits is wrapped in a view component, not
    forked. Two or three primitives that compose are composed in `src/views/...`.

@@ -60,7 +60,7 @@ const Delta = ({ current, previous }: { current: number; previous: number | null
   const percent = previous === 0 ? null : (delta / previous) * 100
 
   return (
-    <span className={cn('tabular-nums', delta > 0 && 'text-success', delta < 0 && 'text-destructive')}>
+    <span className='tabular-nums'>
       {delta > 0 ? '+' : ''}
       {delta}
       {percent !== null && <span className='text-muted-foreground ml-1 text-xs'>{formatSignedPercent(percent)}</span>}
@@ -158,7 +158,12 @@ const PayrollReconciliation = ({
                     {delta === null ? (
                       <span className='text-muted-foreground'>—</span>
                     ) : (
-                      <span className={cn(delta > 0 && 'text-success', delta < 0 && 'text-destructive')}>
+                      <span className='tabular-nums'>
+                        {delta !== 0 && (
+                          <span aria-hidden='true' className='text-muted-foreground'>
+                            {delta > 0 ? '↑' : '↓'}{' '}
+                          </span>
+                        )}
                         {formatSignedMoney({ amount: delta, currency: run.currency })}
                         <span className='text-muted-foreground ml-1 text-xs'>{formatSignedPercent(change)}</span>
                       </span>
@@ -215,7 +220,12 @@ const PayrollReconciliation = ({
                     {delta === null ? (
                       <span className='text-muted-foreground'>—</span>
                     ) : (
-                      <span className={cn(delta > 0 && 'text-success', delta < 0 && 'text-destructive')}>
+                      <span className='tabular-nums'>
+                        {delta !== 0 && (
+                          <span aria-hidden='true' className='text-muted-foreground'>
+                            {delta > 0 ? '↑' : '↓'}{' '}
+                          </span>
+                        )}
                         {formatSignedMoney({ amount: delta, currency: run.currency })}
                       </span>
                     )}
@@ -257,7 +267,7 @@ const PayrollReconciliation = ({
                 <span
                   className={cn(
                     'text-sm font-medium tabular-nums',
-                    row.variance!.amount > 0 ? 'text-success' : 'text-destructive'
+                    'text-muted-foreground'
                   )}
                 >
                   {formatSignedMoney(row.variance!)}

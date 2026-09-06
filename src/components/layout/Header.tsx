@@ -37,7 +37,7 @@ const Header = () => {
       <div className='flex items-center gap-1.5'>
         <ActivityDialog
           trigger={
-            <Button variant='ghost' size='icon'>
+            <Button variant='ghost' size='icon' aria-label='Activity'>
               <ActivityIcon />
             </Button>
           }
@@ -45,7 +45,7 @@ const Header = () => {
         />
         <NotificationDropdown
           trigger={
-            <Button variant='ghost' size='icon' className='relative'>
+            <Button variant='ghost' size='icon' className='relative' aria-label='Notifications'>
               <BellIcon />
               <span className='bg-destructive absolute top-[14%] right-[23%] size-2 rounded-full' />
             </Button>

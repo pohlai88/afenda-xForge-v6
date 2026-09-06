@@ -28,7 +28,14 @@ const ProfileDropdown = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant='ghost' size='icon' className='relative rounded-full hover:bg-transparent' />}
+        render={
+          <Button
+            variant='ghost'
+            size='icon'
+            className='relative rounded-full hover:bg-transparent'
+            aria-label='Account menu'
+          />
+        }
       >
         <Avatar>
           <AvatarImage src={STATIC_USER.imageUrl} alt={STATIC_USER.fullName} />

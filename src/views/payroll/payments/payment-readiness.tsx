@@ -9,7 +9,7 @@ import type { ReadinessCheck } from '@/utils/payroll-payments'
 
 // Component Imports
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress, ProgressIndicator, ProgressTrack } from '@/components/ui/progress'
+import { Progress, ProgressIndicator, ProgressLabel, ProgressTrack } from '@/components/ui/progress'
 
 // Util Imports
 import { cn } from '@/lib/utils'
@@ -28,9 +28,7 @@ const PaymentReadiness = ({ percent, checks, className }: Props) => (
   <Card className={className}>
     <CardHeader>
       <CardTitle className='text-lg font-semibold'>Payment readiness</CardTitle>
-      <CardDescription>
-        {checks.filter(c => c.done).length} of {checks.length} gates cleared
-      </CardDescription>
+      <CardDescription>Every gate has to clear before a payment file can be released.</CardDescription>
       <CardAction>
         <span
           className={cn('text-2xl font-semibold tabular-nums', percent === 100 ? 'text-success' : 'text-foreground')}
@@ -40,7 +38,10 @@ const PaymentReadiness = ({ percent, checks, className }: Props) => (
       </CardAction>
     </CardHeader>
     <CardContent className='flex flex-col gap-4'>
-      <Progress value={percent} aria-label={`Payment readiness ${percent}%`}>
+      <Progress value={percent} aria-label={`Payment readiness ${percent}%`} className='flex-col gap-1.5'>
+        <ProgressLabel className='text-muted-foreground w-full text-xs font-normal'>
+          {checks.filter(c => c.done).length} of {checks.length} gates cleared
+        </ProgressLabel>
         <ProgressTrack className='h-2'>
           <ProgressIndicator className={percent === 100 ? 'bg-success' : undefined} />
         </ProgressTrack>

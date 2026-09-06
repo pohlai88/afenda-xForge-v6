@@ -35,21 +35,28 @@ const TONE_STYLES: Record<NonNullable<PayrollMetric['tone']>, string> = {
 /**
  * One row of figures separated by rules. Not six cards: an approver reads these against each
  * other, and a row keeps them on one baseline where a grid of tiles would scatter them.
+ *
+ * A 1px gap over the border colour draws those rules whatever the column count, so the row can drop
+ * to three columns without a border rule per breakpoint. A container query, not the viewport: with
+ * the sidebar open a 1280px screen only leaves ~960px here.
+ *
+ * Six columns at `text-xl` need ~1050px, so at 960px the row wrapped to two — 196px of chrome, and
+ * the register started below the fold on a 1280x800 screen. At `text-lg` the same six fit in
+ * ~930px, which is what that width actually has; `text-xl` returns once there is room for it.
  */
 const PayrollMetricRow = ({ metrics, className }: Props) => (
-
-  // A 1px gap over the border colour draws the rules between cells whatever the column count, so
-  // the row can drop to three columns without a border rule per breakpoint. Six columns of
-  // tabular money need ~1050px of the row's own width — a container query, not the viewport,
-  // because with the sidebar open a 1280px screen only has ~1000px here, and forcing six
-  // columns made the whole page scroll sideways.
   <div className={cn('@container', className)}>
-    <dl className='bg-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border @xl:grid-cols-3 @min-[66rem]:grid-cols-6'>
+    <dl className='bg-border grid grid-cols-2 gap-px overflow-hidden rounded-lg border @xl:grid-cols-3 @min-[58rem]:grid-cols-6'>
       {metrics.map(metric => {
         const body = (
           <>
             <dt className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>{metric.label}</dt>
-            <dd className={cn('mt-1 text-xl font-semibold tabular-nums', TONE_STYLES[metric.tone ?? 'default'])}>
+            <dd
+              className={cn(
+                'mt-1 text-lg font-semibold tabular-nums @min-[66rem]:text-xl',
+                TONE_STYLES[metric.tone ?? 'default']
+              )}
+            >
               {metric.value}
             </dd>
             {metric.detail && <dd className='text-muted-foreground mt-0.5 text-xs tabular-nums'>{metric.detail}</dd>}

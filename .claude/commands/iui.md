@@ -23,8 +23,8 @@ Take layout ideas and interaction mechanics; leave styling behind.
 **The MCP's styling directives do not apply here.** They target a different
 design system:
 
-- `text-primary-content`, `text-base-content/80` are DaisyUI classes. Studio
-  blocks are shadcn `new-york` on Radix; this repo is `base-vega` on Base UI.
+- `text-primary-content`, `text-base-content/80` are DaisyUI classes, and nothing
+  here uses them.
 - Palette colours (`text-green-600`, `bg-sky-500`) and raw hex are refused in
   `src/views` and `src/app` — the count there is currently zero, so any you add
   would be the only ones. Semantic tokens only; the skill holds the meaning-to-token
@@ -35,10 +35,13 @@ design system:
 
 **This repo's constraints, which override anything the MCP returns:**
 
-1. **Base UI only.** 25 of the primitives in `src/components/ui` are built on
-   `@base-ui/react`, and there are zero `@radix-ui/*` packages installed. Never
-   install a studio block, never add `radix-ui`, and never let a
-   `registryDependencies` list pull components in.
+1. **Base UI only, decided per item.** 25 of the primitives in `src/components/ui`
+   are built on `@base-ui/react`, and there are zero `@radix-ui/*` packages
+   installed. Keep it that way — but do not assume Studio is Radix. This repo is
+   on `style: base-vega`, so the registry serves its Base UI variant. Resolve the
+   item, read it, and apply the gate in *Shadcn Studio frontend authority*
+   (`CLAUDE.md`): `radix-ui` in `dependencies` or a Radix import is a REJECT, and
+   never let a `registryDependencies` list pull one in.
 2. **Descend the ladder before creating anything.** Use an existing primitive,
    wrap it, or compose several in `src/views/...`. A new primitive in
    `src/components/ui` is the last resort, added with the shadcn CLI.

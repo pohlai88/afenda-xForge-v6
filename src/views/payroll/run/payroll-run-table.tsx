@@ -1,7 +1,10 @@
 'use client'
 
+// React Imports
+import type { CSSProperties } from 'react'
+
 // Third-party Imports
-import type { ColumnDef, FilterFn, Table as TanstackTable } from '@tanstack/react-table'
+import type { Column, ColumnDef, FilterFn, Table as TanstackTable } from '@tanstack/react-table'
 import { flexRender } from '@tanstack/react-table'
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon } from 'lucide-react'
 
@@ -17,6 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ExceptionBadge } from './exception-badge'
+import VarianceValue from '@/views/payroll/variance-value'
 
 // Util Imports
 import { cn } from '@/lib/utils'
@@ -27,8 +31,6 @@ import {
   EMPLOYEE_PAYROLL_STATUS_STYLES,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_STYLES,
-  formatSignedMoney,
-  formatSignedPercent,
   initials
 } from '@/utils/payroll-workspace'
 import { ariaSortFor } from '@/utils/table-utils'
@@ -56,6 +58,45 @@ export const hasOpenException: FilterFn<PayrollRunRow> = (row, _columnId, filter
 
   return open.some(e => filterValue.includes(e.severity))
 }
+
+/* -------------------------------------------------------------------------------------------- */
+/* Pinning                                                                                      */
+/* -------------------------------------------------------------------------------------------- */
+
+/**
+ * The identity block — checkbox and employee — stays put while the money columns scroll. Nine
+ * columns of payslip do not fit at 1280 with the sidebar open, and a figure whose row you can no
+ * longer name is not checkable.
+ *
+ * `getStart('left')` sums the *declared* sizes of the columns before this one, so a pinned column
+ * only lands in the right place if it also renders at its declared width — hence the width triple
+ * rather than the header's usual size hint.
+ */
+export const PINNED_COLUMNS = ['select', 'employee']
+
+const pinnedStyle = (column: Column<PayrollRunRow, unknown>): CSSProperties | undefined => {
+  if (!column.getIsPinned()) return undefined
+
+  const width = column.getSize()
+
+  return { left: `${column.getStart('left')}px`, width, minWidth: width, maxWidth: width }
+}
+
+/**
+ * `bg-inherit` takes the row's own background, so a pinned cell keeps the hover, selected and
+ * inspected tints instead of punching an untinted hole in the row. Those tints are translucent,
+ * which would let the scrolling columns show through, so an opaque card layer sits behind them.
+ * The seam border only appears on the last pinned column, and only once there is something to
+ * the right of it.
+ */
+const pinnedClass = (column: Column<PayrollRunRow, unknown>, header?: boolean) =>
+  column.getIsPinned() &&
+  cn(
+    'sticky bg-inherit before:bg-card before:absolute before:inset-0 before:-z-10',
+    header ? 'z-30' : 'z-10',
+    column.getIsLastColumn('left') &&
+      'after:border-border after:absolute after:inset-y-0 after:-right-px after:border-r'
+  )
 
 /* -------------------------------------------------------------------------------------------- */
 /* Columns                                                                                      */
@@ -158,22 +199,13 @@ export const buildPayrollColumns = (onSelectEmployee: (employeeId: string) => vo
     cell: ({ row }) => {
       const { variance, variancePercent } = row.original
 
-      if (!variance) {
-        return <span className='text-muted-foreground block text-right text-xs'>New</span>
-      }
-
       return (
-        <span
-          className={cn(
-            'block text-right tabular-nums',
-            variance.amount > 0 && 'text-success',
-            variance.amount < 0 && 'text-destructive',
-            variance.amount === 0 && 'text-muted-foreground'
-          )}
-        >
-          {formatSignedMoney(variance)}
-          <span className='text-muted-foreground ml-1 text-xs'>{formatSignedPercent(variancePercent)}</span>
-        </span>
+        <VarianceValue
+          value={variance}
+          percent={variancePercent}
+          emptyLabel='New'
+          className='block text-right'
+        />
       )
     }
   },
@@ -264,9 +296,9 @@ const PayrollRunTable = ({ table, selectedEmployeeId, onSelectEmployee, emptyMes
     <div className='flex min-h-0 flex-1 flex-col'>
       <div className='min-h-0 flex-1 overflow-auto'>
         <Table>
-          <TableHeader className='bg-card sticky top-0 z-10'>
+          <TableHeader className='bg-card sticky top-0 z-20'>
             {table.getHeaderGroups().map(headerGroup => (
-              <TableRow key={headerGroup.id} className='h-10'>
+              <TableRow key={headerGroup.id} className='bg-card h-10'>
                 {headerGroup.headers.map(header => {
                   const alignRight = RIGHT_ALIGNED.has(header.column.id)
                   const sorted = header.column.getIsSorted()
@@ -275,8 +307,16 @@ const PayrollRunTable = ({ table, selectedEmployeeId, onSelectEmployee, emptyMes
                     <TableHead
                       key={header.id}
                       aria-sort={ariaSortFor(header.column)}
-                      style={{ width: header.getSize() !== 150 ? `${header.getSize()}px` : undefined }}
-                      className={cn('text-muted-foreground text-xs first:pl-4 last:pr-4', alignRight && 'text-right')}
+                      style={
+                        pinnedStyle(header.column) ?? {
+                          width: header.getSize() !== 150 ? `${header.getSize()}px` : undefined
+                        }
+                      }
+                      className={cn(
+                        'text-muted-foreground text-xs first:pl-4 last:pr-4',
+                        alignRight && 'text-right',
+                        pinnedClass(header.column, true)
+                      )}
                     >
                       {header.isPlaceholder ? null : header.column.getCanSort() ? (
                         <span
@@ -344,11 +384,15 @@ const PayrollRunTable = ({ table, selectedEmployeeId, onSelectEmployee, emptyMes
                     key={row.id}
                     data-state={row.getIsSelected() ? 'selected' : undefined}
                     aria-current={inspected ? 'true' : undefined}
-                    className={cn('h-11 cursor-pointer', inspected && 'bg-primary/5 hover:bg-primary/5')}
+                    className={cn('bg-card h-11 cursor-pointer', inspected && 'bg-primary/5 hover:bg-primary/5')}
                     onClick={handleRowClick}
                   >
                     {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id} className='py-1.5 first:pl-4 last:pr-4'>
+                      <TableCell
+                        key={cell.id}
+                        style={pinnedStyle(cell.column)}
+                        className={cn('py-1.5 first:pl-4 last:pr-4', pinnedClass(cell.column))}
+                      >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -369,7 +413,8 @@ const PayrollRunTable = ({ table, selectedEmployeeId, onSelectEmployee, emptyMes
         </p>
 
         <div className='flex items-center gap-3'>
-          <div className='flex items-center gap-2'>
+          {/* Rows-per-page is a preference, not a position. It goes first when the footer tightens. */}
+          <div className='hidden items-center gap-2 @xl:flex'>
             <span className='text-muted-foreground text-xs'>Rows</span>
             <Select value={String(pageSize)} onValueChange={value => value && table.setPageSize(Number(value))}>
               <SelectTrigger size='sm' className='w-16' aria-label='Rows per page'>
@@ -384,7 +429,7 @@ const PayrollRunTable = ({ table, selectedEmployeeId, onSelectEmployee, emptyMes
               </SelectContent>
             </Select>
           </div>
-          <span className='text-muted-foreground text-xs tabular-nums'>
+          <span className='text-muted-foreground hidden text-xs tabular-nums @md:inline'>
             Page {pageCount === 0 ? 0 : pageIndex + 1} of {pageCount}
           </span>
           <div className='flex items-center gap-1'>

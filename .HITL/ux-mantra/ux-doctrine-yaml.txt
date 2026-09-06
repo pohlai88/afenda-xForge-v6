@@ -1,0 +1,1121 @@
+afenda_ux_doctrine:
+  schema_version: "1.0"
+  status: "normative"
+  authority: "product-ux"
+  product: "Afenda"
+  product_class: "business-operating-system"
+
+  mantra:
+    primary: "We resolve the complexity. You enjoy the simplicity."
+    engineering_test: >
+      Every complexity exposed to the user is complexity Afenda should first
+      attempt to absorb through understanding, organization, memory, inference,
+      automation, or better interaction design.
+
+  product_thesis:
+    statement: >
+      Afenda combines SaaS's ability to find anything quickly with the
+      operating consistency, direct manipulation, contextual commands,
+      keyboard efficiency, and inspectability of mature desktop software.
+    formula:
+      - "SaaS strength = find"
+      - "Desktop strength = operate"
+      - "Afenda = find + operate + understand"
+    target_character:
+      - quiet
+      - powerful
+      - predictable
+      - dense
+      - uncluttered
+      - inspectable
+      - task_adaptive
+      - long_session_comfortable
+
+  language:
+    requirement_levels:
+      MUST: "mandatory product invariant"
+      SHOULD: "default unless strong domain evidence overrides"
+      MAY: "optional capability"
+      MUST_NOT: "prohibited without explicit architecture approval"
+
+  # ---------------------------------------------------------------------------
+  # 00. CORE OPERATING SYSTEM
+  # ---------------------------------------------------------------------------
+
+  operating_system:
+    systems:
+      orient:
+        purpose: "Tell the user where they are, what this is, its state, and what comes next."
+      find:
+        purpose: "Reach objects, commands, reports, views, relationships, and recent work."
+      operate:
+        purpose: "Act on business objects through consistent commands."
+      explore:
+        purpose: "Drill down, query, compare, inspect, audit, and predict without losing context."
+      compose:
+        purpose: "Arrange workspaces, grids, tables, and task surfaces around the user's work."
+
+  # ---------------------------------------------------------------------------
+  # 01. ORIENTATION
+  # ---------------------------------------------------------------------------
+
+  orientation:
+    id: "D17"
+    priority: "critical"
+    rule: >
+      If a user lands on a primary Afenda surface and cannot immediately
+      understand where they are, what they are looking at, and what they can
+      do next, the interface has failed.
+
+    primary_workspace_MUST_expose:
+      - breadcrumb
+      - object_or_domain_type
+      - title
+      - scope
+      - lifecycle_or_status
+      - primary_next_action
+      - help_or_query_entrance
+
+    questions_MUST_answer:
+      where_am_i: true
+      what_is_this: true
+      what_state_is_it_in: true
+      what_should_i_do_next: true
+      how_do_i_get_help: true
+
+    breadcrumb:
+      required_on_primary_workspaces: true
+      semantic_role: "location and hierarchy"
+      MUST_NOT:
+        - "be replaced by pagination"
+        - "change meaning at responsive breakpoints"
+
+  # ---------------------------------------------------------------------------
+  # 02. DRILL DOWN
+  # ---------------------------------------------------------------------------
+
+  drill_down:
+    id: "D01"
+    rule: >
+      Hierarchical information SHOULD expand within the current working
+      context before forcing route navigation.
+
+    preferred_progression:
+      - summary
+      - accordion
+      - disclosure
+      - breakdown
+      - record
+      - source
+      - audit
+      - relationship
+
+    preferred_patterns:
+      - accordion
+      - collapsible
+      - popover
+      - drawer
+      - inspector
+      - nested_detail
+      - query
+
+    navigation_allowed_when:
+      - "primary work context genuinely changes"
+      - "content complexity cannot remain usable in the current workspace"
+      - "object deserves an independently addressable primary workspace"
+
+    MUST_NOT:
+      - "create route depth merely to represent parent-child information"
+      - "make users repeatedly navigate forward/backward for simple inspection"
+
+  # ---------------------------------------------------------------------------
+  # 03. SHORTCUTS / FAVOURITES
+  # ---------------------------------------------------------------------------
+
+  shortcuts_and_favourites:
+    id: "D02"
+    rule: >
+      Users MUST be able to retain frequently used business objects and
+      working contexts as shortcuts or favourites.
+
+    favourite_targets_MAY_include:
+      - domain
+      - page
+      - business_object
+      - report
+      - saved_query
+      - filtered_view
+      - workflow
+      - legal_entity
+      - recent_work_context
+
+    possible_surfaces:
+      - sidebar
+      - home_workspace
+      - global_search
+      - command_palette
+      - favourites_grid
+
+    invariant:
+      target_identity_MUST_be_stable: true
+
+  # ---------------------------------------------------------------------------
+  # 04. BUSINESS OBJECTS
+  # ---------------------------------------------------------------------------
+
+  business_objects:
+    id: "D09"
+    rule: >
+      Important business entities are first-class objects with stable identity
+      regardless of the domain or view in which they appear.
+
+    examples:
+      - employee
+      - company
+      - payroll_run
+      - invoice
+      - supplier
+      - purchase_order
+      - payment
+      - journal
+      - asset
+      - report
+      - exception
+      - location
+
+    universal_capabilities:
+      SHOULD_support:
+        - open
+        - context_menu
+        - properties
+        - search_related
+        - audit
+        - copy_reference
+      MAY_support:
+        - compare
+        - open_to_side
+        - history
+        - source
+        - export
+
+    identity_rule:
+      statement: >
+        The same object MUST NOT become a different conceptual identity because
+        it appears in another Afenda domain.
+
+  # ---------------------------------------------------------------------------
+  # 05. CONTEXT MENU
+  # ---------------------------------------------------------------------------
+
+  context_menu:
+    id: "D03"
+    canonical_question: "What can I do with this object?"
+
+    invocation:
+      desktop:
+        - right_click
+        - "Shift+F10"
+      touch:
+        - long_press
+        - overflow_trigger
+
+    command_order:
+      - default_action
+      - workspace_actions
+      - object_actions
+      - output_and_transfer
+      - audit_and_source
+      - properties
+
+    properties_position: "last"
+
+    invariants:
+      commands_apply_to_clicked_object: true
+      menu_structure_SHOULD_be_stable: true
+      irrelevant_commands_MUST_be_omitted: true
+
+    MUST_NOT:
+      - "use the context menu as a random dumping ground"
+      - "show large sets of disabled commands when omission is clearer"
+
+  # ---------------------------------------------------------------------------
+  # 06. PROPERTIES
+  # ---------------------------------------------------------------------------
+
+  properties:
+    id: "D04"
+    canonical_question: "What exactly is this object?"
+
+    definition: >
+      Properties is the canonical read-oriented object inspector. It is not
+      synonymous with Edit.
+
+    common_sections:
+      - identity
+      - lifecycle
+      - ownership
+      - organization
+      - configuration
+      - relationships
+      - source
+      - audit_metadata
+      - system_metadata
+
+    invocation:
+      context_menu: true
+      default_shortcut: "Alt+Enter"
+
+    rendering:
+      simple_object: "popover_or_compact_inspector"
+      normal_object: "inspector_or_workspace_group"
+      complex_object: "full_object_workspace"
+
+  # ---------------------------------------------------------------------------
+  # 07. CONTEXT PRESERVATION
+  # ---------------------------------------------------------------------------
+
+  preserve_context:
+    id: "D05"
+    rule: >
+      If a task can be completed without abandoning the current working
+      context, Afenda SHOULD preserve that context.
+
+    prefer_before_navigation:
+      - accordion
+      - popover
+      - floating_query
+      - drawer
+      - inspector
+      - tab
+      - workspace_group
+
+    state_SHOULD_preserve:
+      - filters
+      - sorting
+      - selection
+      - scroll_position
+      - open_contexts
+      - workspace_layout
+      - recent_objects
+
+  # ---------------------------------------------------------------------------
+  # 08. CRUD-SAP COMMAND GRAMMAR
+  # ---------------------------------------------------------------------------
+
+  command_grammar:
+    id: "D06"
+    name: "CRUD-SAP"
+
+    families:
+      C:
+        name: "Create"
+        question: "What can I create?"
+        semantic: "create new business state"
+
+      R:
+        name: "Read"
+        question: "What is here?"
+        semantic: "inspect, open, understand"
+
+      U:
+        name: "Update"
+        question: "What can I change?"
+        semantic: "modify existing business state"
+
+      D:
+        name: "Delete"
+        question: "What can cease to exist?"
+        semantic: "delete, cancel, archive, deactivate where domain permits"
+
+      S:
+        name: "Search"
+        question: "Where is the truth?"
+        semantic: "find, query, relate, discover"
+
+      A:
+        name: "Audit"
+        question: "What happened and why?"
+        semantic: "history, provenance, source, explanation"
+
+      P:
+        name: "Predict"
+        question: "What happens next?"
+        semantic: "risk, consequence, forecast, recommendation, next action"
+
+    conceptual_split:
+      CRUD: "execute the business"
+      SAP: "understand the business"
+
+    visual_rule: >
+      CRUD-SAP is a command taxonomy. It MUST NOT automatically become seven
+      permanently visible buttons.
+
+  # ---------------------------------------------------------------------------
+  # 09. CAPABILITY WITHOUT CHROME
+  # ---------------------------------------------------------------------------
+
+  capability_without_chrome:
+    id: "D07"
+
+    persistent_control_eligibility:
+      show_when_any:
+        - high_frequency
+        - high_consequence
+        - immediately_relevant
+        - required_to_understand_state
+        - obvious_next_action
+
+    otherwise_use:
+      - context_menu
+      - overflow_menu
+      - command_palette
+      - query
+      - keyboard
+      - popover
+
+    objective: "high capability, low visible complexity"
+
+  # ---------------------------------------------------------------------------
+  # 10. USER-CUSTOMISABLE WORKSPACE GRID
+  # ---------------------------------------------------------------------------
+
+  workspace_grid:
+    id: "D08"
+    rule: >
+      Afenda SHOULD provide excellent preset workspaces while allowing users to
+      show, hide, move, and resize approved components on a constrained grid.
+
+    layout_model: "fixed_grid"
+
+    component_sizes:
+      metric:
+        allowed:
+          - "2x2"
+          - "4x2"
+
+      small_card:
+        allowed:
+          - "2x2"
+          - "4x2"
+          - "4x4"
+
+      chart:
+        allowed:
+          - "4x4"
+          - "8x4"
+          - "8x8"
+
+      table:
+        allowed:
+          - "8x4"
+          - "8x8"
+          - "12x8"
+
+    user_actions:
+      - show
+      - hide
+      - move
+      - resize_to_approved_size
+      - restore_default
+
+    MUST_NOT:
+      - "allow arbitrary pixel-perfect freeform placement"
+      - "allow component sizes that destroy usability"
+
+    presets_SHOULD_include:
+      - recommended
+      - finance
+      - payroll
+      - people
+      - operations
+      - management
+
+  # ---------------------------------------------------------------------------
+  # 11. ANALYTICS BUILDER
+  # ---------------------------------------------------------------------------
+
+  analytics_builder:
+    inspiration:
+      - zoho_analytics
+      - retool
+
+    rule: >
+      Query and chart construction MUST be relationship-aware and type-aware.
+      Afenda SHOULD only offer analytically meaningful combinations.
+
+    flow:
+      - select_dataset
+      - select_x_axis
+      - infer_x_semantics
+      - constrain_valid_y_axes
+      - select_y_axis
+      - constrain_valid_breakdowns
+      - render
+
+    example:
+      x_axis: "department"
+      valid_y:
+        - gross_payroll
+        - net_payroll
+        - employer_cost
+        - headcount
+      invalid_y:
+        - passport_number
+        - bank_account
+        - employee_name
+
+    invariant:
+      meaningless_visualization_MUST_NOT_be_offered: true
+
+  # ---------------------------------------------------------------------------
+  # 12. DOMAIN PAGE BUDGET
+  # ---------------------------------------------------------------------------
+
+  domain_page_budget:
+    id: "D10"
+
+    rule: >
+      Every domain MUST define a bounded set of primary Next.js pages.
+      New routes require proof that they represent genuinely independent work
+      contexts.
+
+    domain_contract:
+      required_fields:
+        - domain_name
+        - primary_routes
+        - max_primary_pages
+        - justification
+
+    before_new_page_consider:
+      - accordion
+      - drill_down
+      - tab
+      - drawer
+      - inspector
+      - workspace_group
+      - floating_query
+      - object_properties
+
+    MUST_NOT:
+      - "recreate filesystem-style navigation depth in the route tree"
+      - "create pages for every nested record relationship"
+
+  # ---------------------------------------------------------------------------
+  # 13. WORKSPACE GROUPS
+  # ---------------------------------------------------------------------------
+
+  workspace_groups:
+    id: "D11"
+
+    core_rule: >
+      Spatial splits represent simultaneous visibility or comparison intent.
+      Opening another object alone does not justify a new split.
+
+    concepts:
+      group: "spatial region"
+      tab: "context within a group"
+      preview: "replaceable temporary context"
+      split: "simultaneous spatial context"
+
+    split_when:
+      - compare
+      - reference_simultaneously
+      - work_simultaneously
+      - monitor_alongside
+
+    normal_open:
+      behavior: "reuse_appropriate_group"
+
+    side_open:
+      behavior:
+        - find_suitable_neighbor_group
+        - reuse_if_available
+        - create_only_if_required
+
+    group_operations:
+      MAY_include:
+        - split_right
+        - split_left
+        - split_up
+        - split_down
+        - resize
+        - maximize
+        - restore
+        - close
+        - move
+
+  # ---------------------------------------------------------------------------
+  # 14. FLOATING 360 QUERY
+  # ---------------------------------------------------------------------------
+
+  floating_query:
+    id: "D12"
+    name: "Afenda 360 Query"
+
+    purpose: >
+      Provide a persistent, low-chrome entrance for contextual Search, Audit,
+      and Predict analysis while the user continues working.
+
+    semantic_core:
+      - Search
+      - Audit
+      - Predict
+
+    context_source:
+      - current_selection
+      - current_object
+      - current_metric
+      - current_chart_point
+      - current_report
+      - current_workflow_state
+
+    invocation:
+      persistent_floating_trigger: true
+      drawer_or_panel: true
+
+    default_queries:
+      - "Break this down"
+      - "Why?"
+      - "What changed?"
+      - "Compared with what?"
+      - "Show source"
+      - "What affects this?"
+      - "Who owns this?"
+      - "What happens next?"
+
+    behavior:
+      follow_selection: true
+      preserve_parent_context: true
+
+  # ---------------------------------------------------------------------------
+  # 15. ONE TABLE ENGINE
+  # ---------------------------------------------------------------------------
+
+  table_engine:
+    id: "D13"
+    cardinality: 1
+
+    rule: >
+      Afenda MUST have one table interaction engine. Domain differences belong
+      in schemas, datasets, permissions, column definitions, and actions.
+
+    engine_capabilities:
+      SHOULD_support:
+        - sorting
+        - filtering
+        - selection
+        - column_visibility
+        - column_ordering
+        - resizing
+        - pinning
+        - context_menu
+        - keyboard_navigation
+        - pagination_or_virtualization
+        - empty_state
+        - loading_state
+        - query
+      conditional:
+        - grouping
+        - aggregation
+        - export
+        - bulk_actions
+
+    per_dataset_configuration:
+      - schema
+      - columns
+      - relationships
+      - permissions
+      - actions
+      - filters
+      - aggregation_rules
+
+    invariant:
+      meaningless_columns_MUST_NOT_render: true
+      meaningless_controls_MUST_NOT_render: true
+      invalid_aggregations_MUST_NOT_be_offered: true
+
+    MUST_NOT:
+      - "create independently behaving table systems per domain"
+
+  # ---------------------------------------------------------------------------
+  # 16. DOMAIN TRUTH
+  # ---------------------------------------------------------------------------
+
+  domain_truth:
+    id: "D14"
+    priority: "critical"
+
+    rule: >
+      The interface MUST NOT communicate a state, certainty, relationship,
+      success, failure, or conclusion that the domain cannot prove.
+
+    examples:
+      prohibited:
+        - ui: "No exceptions"
+          known_state: "No exceptions matching current filter"
+
+        - ui: "green increase"
+          known_state: "increase has no inherent positive valence"
+
+  # ---------------------------------------------------------------------------
+  # 17. KEYBOARD
+  # ---------------------------------------------------------------------------
+
+  keyboard:
+    id: "D15"
+
+    philosophy: >
+      Borrow familiar Microsoft/desktop keyboard conventions where useful;
+      allow user customization for expert workflows.
+
+    default_bindings:
+      copy: "Ctrl+C"
+      paste: "Ctrl+V"
+      undo: "Ctrl+Z"
+      find: "Ctrl+F"
+      select_all: "Ctrl+A"
+      context_menu: "Shift+F10"
+      properties: "Alt+Enter"
+      open: "Enter"
+      cancel: "Esc"
+
+    customisation:
+      supported: true
+      precedence:
+        - system_default
+        - role_or_profile_preset
+        - user_override
+
+    invariant:
+      pointer_equivalent_MUST_exist: true
+
+  # ---------------------------------------------------------------------------
+  # 18. TASK-ADAPTIVE UI
+  # ---------------------------------------------------------------------------
+
+  task_adaptation:
+    id: "D16"
+
+    rule: >
+      Afenda is task-first, not desktop-first and not mobile-first.
+
+    adaptation_inputs:
+      - available_workspace
+      - task_complexity
+      - role
+      - user_preference
+      - device_capability
+
+    examples:
+      finance_analyst:
+        likely_surface:
+          - dense_table
+          - metrics
+          - comparison
+          - query
+
+      payroll_operator:
+        likely_surface:
+          - dense_table
+          - exceptions
+          - detail
+          - audit
+
+      warehouse_keeper:
+        likely_surface:
+          - object_identity
+          - quantity_input
+          - one_primary_action
+
+    user_preferences_MAY_include:
+      - sidebar_hidden
+      - compact_density
+      - simplified_workspace
+      - preferred_grid
+      - shortcut_profile
+
+    MUST_NOT:
+      - "degrade mobile into a miniature desktop ERP"
+      - "use desktop-first as justification for poor compact workflows"
+
+  # ---------------------------------------------------------------------------
+  # 19. SEARCH
+  # ---------------------------------------------------------------------------
+
+  search:
+    id: "D18"
+
+    rule: >
+      Users SHOULD search for what they need rather than remember where it
+      lives.
+
+    search_targets:
+      - business_objects
+      - commands
+      - reports
+      - favourites
+      - shortcuts
+      - saved_views
+      - recent_work
+      - relationships
+
+    conceptual_equivalence:
+      "find object": "open object"
+
+    MUST_NOT:
+      - "require users to memorize module or route hierarchy to find known objects"
+
+  # ---------------------------------------------------------------------------
+  # 20. COMPARISON
+  # ---------------------------------------------------------------------------
+
+  comparison:
+    id: "D19"
+
+    rule: >
+      When comparison is meaningful, Afenda SHOULD allow users to compare
+      objects without remembering one while viewing the other.
+
+    common_pairs:
+      - employee_vs_employee
+      - period_vs_period
+      - version_vs_version
+      - actual_vs_budget
+      - supplier_vs_supplier
+      - company_vs_company
+      - policy_vs_exception
+
+    implementation_options:
+      - dedicated_compare_view
+      - open_to_side
+      - query_comparison
+      - chart_overlay
+
+  # ---------------------------------------------------------------------------
+  # 21. STABLE LAYOUT / NAVIGATION GRAMMAR
+  # ---------------------------------------------------------------------------
+
+  layout_grammar:
+    id: "D20"
+
+    rule: >
+      Responsive presentation may compress; navigation semantics MUST remain
+      consistent.
+
+    persistent_frame:
+      - global_shell
+      - global_search
+      - breadcrumb
+      - object_identity
+      - scope
+      - status
+      - primary_action
+      - domain_navigation
+      - workspace
+      - query_access
+
+    invariants:
+      tab_remains_tab_semantics: true
+      breadcrumb_remains_breadcrumb_semantics: true
+      pagination_remains_pagination_semantics: true
+      context_menu_remains_context_menu_semantics: true
+
+    MUST_NOT:
+      - "change tabs into unrelated pagination semantics"
+      - "remove orientation simply to reduce visible chrome"
+
+  # ---------------------------------------------------------------------------
+  # 22. RESPONSIVENESS
+  # ---------------------------------------------------------------------------
+
+  responsive_layout:
+    rule: >
+      Layout SHOULD respond to actual available workspace, not browser viewport
+      alone.
+
+    inputs:
+      - container_width
+      - sidebar_state
+      - active_workspace_groups
+      - inspectors
+      - task_mode
+
+    preferred_mechanism:
+      - container_queries
+      - explicit_task_variants
+      - user_preferences
+
+  # ---------------------------------------------------------------------------
+  # 23. SUMMARY SURFACES
+  # ---------------------------------------------------------------------------
+
+  summary_surfaces:
+    rule: >
+      A meaningful summary SHOULD act as an entrance into explanation,
+      decomposition, records, or action.
+
+    progression:
+      - summary
+      - quick_breakdown
+      - related_records
+      - analysis
+      - action
+
+    examples:
+      metric:
+        display: "12 Open Exceptions"
+        click:
+          - severity_breakdown
+          - entity_breakdown
+          - open_details
+          - analyze
+
+  # ---------------------------------------------------------------------------
+  # 24. SEMANTIC COLOUR
+  # ---------------------------------------------------------------------------
+
+  semantic_colour:
+    red:
+      means:
+        - blocking
+        - error
+        - destructive
+        - failed
+
+    amber:
+      means:
+        - warning
+        - attention
+
+    green:
+      means:
+        - ready
+        - completed
+        - successful
+
+    neutral:
+      means:
+        - informational
+        - directional
+        - movement
+
+    rules:
+      colour_MUST_have_stable_semantics: true
+      colour_MUST_NOT_be_only_signal: true
+
+  # ---------------------------------------------------------------------------
+  # 25. ACTION HIERARCHY
+  # ---------------------------------------------------------------------------
+
+  action_hierarchy:
+    rule: >
+      Visual prominence follows consequence and current workflow relevance.
+
+    hierarchy:
+      primary:
+        maximum_visible_preferred: 1
+        meaning: "most important next consequential action"
+
+      secondary:
+        meaning: "supporting or alternate relevant action"
+
+      tertiary:
+        meaning: "utility, output, uncommon action"
+        preferred_locations:
+          - overflow
+          - context_menu
+          - command_palette
+
+  # ---------------------------------------------------------------------------
+  # 26. USER MEMORY
+  # ---------------------------------------------------------------------------
+
+  interface_memory:
+    rule: >
+      Afenda SHOULD remember interaction state that the software can remember
+      safely so users can spend attention on business judgment.
+
+    remember_where_appropriate:
+      - filters
+      - sorting
+      - column_layout
+      - selected_view
+      - workspace_grid
+      - sidebar_state
+      - open_groups
+      - recent_objects
+      - favourites
+      - user_shortcuts
+
+  # ---------------------------------------------------------------------------
+  # 27. PROGRESSIVE PERSISTENCE
+  # ---------------------------------------------------------------------------
+
+  progressive_persistence:
+    levels:
+      tooltip:
+        persistence: "transient"
+
+      popover:
+        persistence: "temporary_query"
+
+      drawer:
+        persistence: "temporary_task"
+
+      preview:
+        persistence: "replaceable_context"
+
+      tab:
+        persistence: "retained_context"
+
+      split_group:
+        persistence: "simultaneous_context"
+
+    invariant:
+      content_persistence_and_spatial_layout_are_independent: true
+
+  # ---------------------------------------------------------------------------
+  # 28. DESIGN SYSTEM / SHADCN STUDIO
+  # ---------------------------------------------------------------------------
+
+  implementation_policy:
+    ui_authority: "Shadcn Studio + existing Base UI/shadcn primitives"
+
+    selection_order:
+      - existing_project_pattern
+      - shadcn_studio_template_pattern
+      - shadcn_studio_block
+      - shadcn_studio_component
+      - existing_base_ui_primitive
+      - custom_composition
+
+    compatibility_gate:
+      incompatible_primitive:
+        decision: "REJECT"
+
+      base_ui_semantic:
+        decision: "ADOPT_ELIGIBLE"
+
+      base_ui_palette_or_visual_mismatch:
+        decision: "ADAPT"
+
+      useful_pattern_incompatible_implementation:
+        decision: "REFERENCE"
+
+    MUST_NOT:
+      - "introduce a parallel primitive system"
+      - "introduce Radix into the Base UI application without explicit approval"
+      - "create wrapper primitives merely to rename existing primitives"
+      - "install Studio resources without dependency and compatibility inspection"
+
+  # ---------------------------------------------------------------------------
+  # 29. DECISION ALGORITHMS
+  # ---------------------------------------------------------------------------
+
+  decision_rules:
+
+    choose_navigation:
+      steps:
+        - if: "primary_domain_or_work_context_changes"
+          then: "navigate"
+        - elif: "information_is_parent_child"
+          then: "drill_down"
+        - elif: "quick_explanation_only"
+          then: "popover"
+        - elif: "temporary_task"
+          then: "drawer_or_inspector"
+        - elif: "simultaneous_visibility_required"
+          then: "workspace_group"
+        - else: "reuse_current_context"
+
+    choose_visibility:
+      steps:
+        - if: "frequent_or_consequential_or_next_action"
+          then: "persistent_control"
+        - elif: "object_specific"
+          then: "context_menu"
+        - elif: "advanced_or_rare"
+          then: "overflow_or_command"
+        - elif: "explanatory"
+          then: "popover_or_query"
+
+    choose_new_page:
+      steps:
+        - check: "domain page budget"
+        - require: "independent work context"
+        - reject_if_solved_by:
+            - drill_down
+            - accordion
+            - tab
+            - drawer
+            - workspace_group
+            - query
+
+    choose_split:
+      steps:
+        - if: "comparison_or_simultaneous_work"
+          then:
+            - "reuse_suitable_neighbor_group_if_present"
+            - "otherwise_create_split"
+        - else: "reuse_existing_group"
+
+    choose_table_capability:
+      steps:
+        - require: "semantic validity for dataset"
+        - require: "permission validity"
+        - if_not_meaningful: "omit"
+
+    choose_chart_axis:
+      steps:
+        - select_x
+        - infer_x_type
+        - return_valid_y_for_x
+        - select_y
+        - return_valid_breakdowns_for_xy
+        - prohibit_meaningless_combinations
+
+  # ---------------------------------------------------------------------------
+  # 30. ANTI-PATTERNS
+  # ---------------------------------------------------------------------------
+
+  anti_patterns:
+    MUST_NOT:
+      - "route for every nested object"
+      - "page depth that reproduces folder-navigation complexity"
+      - "dead summary cards with no drill-down when explanation exists"
+      - "multiple independently behaving table systems"
+      - "meaningless columns or analytics options"
+      - "all capabilities permanently visible"
+      - "arbitrary dashboard freeform placement"
+      - "automatic split creation for every opened object"
+      - "responsive layouts that change interaction semantics"
+      - "remove breadcrumbs or orientation for cosmetic minimalism"
+      - "use semantic success/error colours for neutral direction"
+      - "force users to remember state Afenda can preserve"
+      - "make Properties synonymous with Edit"
+      - "make right-click behavior inconsistent between domains"
+
+  # ---------------------------------------------------------------------------
+  # 31. ACCEPTANCE CHECK
+  # ---------------------------------------------------------------------------
+
+  ux_acceptance:
+    every_primary_surface_MUST_pass:
+      - "User knows where they are."
+      - "User knows what object/workspace they are viewing."
+      - "User knows its scope and state."
+      - "User can identify the next important action."
+      - "User can search or query without leaving context."
+      - "Important objects expose contextual actions."
+      - "Important objects expose Properties."
+      - "Hierarchical detail drills down before navigating away."
+      - "The interface exposes no meaningless fields or controls."
+      - "The interaction grammar remains consistent under resizing."
+      - "Advanced capability exists without unnecessary permanent chrome."
+      - "Domain truth is never overstated."
+
+  final_test:
+    question: >
+      Could Afenda understand, remember, organize, constrain, infer, or automate
+      more so that the operator has to think about the software less?
+    if_yes: "Afenda SHOULD absorb that complexity."

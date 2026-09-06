@@ -13,7 +13,7 @@ import type { FundingSummary as Summary } from '@/utils/payroll-payments'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress, ProgressIndicator, ProgressTrack } from '@/components/ui/progress'
+import { Progress, ProgressIndicator, ProgressLabel, ProgressTrack } from '@/components/ui/progress'
 
 // Util Imports
 import { cn } from '@/lib/utils'
@@ -60,8 +60,14 @@ const FundingSummary = ({ run, batch, account, summary, className }: Props) => {
         <Progress
           value={Math.round(summary.coverage)}
           aria-label={`Funding covers ${Math.round(summary.coverage)}% of the amount required`}
-          className='gap-1'
+          className='flex-col gap-1.5'
         >
+          <div className='flex w-full items-baseline justify-between gap-3 text-xs'>
+            <ProgressLabel className='text-muted-foreground text-xs font-normal'>
+              Funded — {formatMoney(summary.available)} available against {formatMoney(summary.required)} required
+            </ProgressLabel>
+            <span className='tabular-nums'>{Math.round(summary.coverage)}%</span>
+          </div>
           <ProgressTrack className='h-2'>
             <ProgressIndicator className={cn(short ? 'bg-destructive' : 'bg-success')} />
           </ProgressTrack>
@@ -87,8 +93,11 @@ const FundingSummary = ({ run, batch, account, summary, className }: Props) => {
         </dl>
 
         {account && (
-          <div className='bg-muted/40 mt-auto flex items-center gap-3 rounded-md border p-3'>
-            <span className='bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-sm'>
+
+          // A rule and space, not a second card: this is the account the figure above is drawn on,
+          // not a separate object. The filled, bordered, rounded box made it read as one.
+          <div className='mt-auto flex items-center gap-3 border-t pt-4'>
+            <span className='text-muted-foreground flex size-8 shrink-0 items-center justify-center'>
               <LandmarkIcon className='size-4.5' />
             </span>
             <div className='flex min-w-0 flex-1 flex-col'>

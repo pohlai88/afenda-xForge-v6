@@ -1,5 +1,5 @@
 // Third-party Imports
-import { CheckCircle2Icon, ChevronRightIcon } from 'lucide-react'
+import { CheckCircle2Icon, ChevronRightIcon, ListFilterIcon } from 'lucide-react'
 
 // Type Imports
 import type { PayRunException } from '@/types/payroll/pay-run-types'
@@ -7,6 +7,7 @@ import type { PayRunException } from '@/types/payroll/pay-run-types'
 // Component Imports
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { ExceptionBadge, ExceptionStatusBadge } from './exception-badge'
 
 // Util Imports
@@ -26,6 +27,14 @@ type Props = {
   /** Hide the subject column when every exception is about the same person, as in the inspector. */
   showSubject?: boolean
   emptyMessage?: string
+
+  /**
+   * Whether a filter is what emptied the list, rather than there being nothing to show. The two
+   * are opposite claims — one says the run is clean, the other says you are not looking at all of
+   * it — so the empty state must not use the same reassuring tick for both.
+   */
+  filtered?: boolean
+  onClearFilter?: () => void
   className?: string
 }
 
@@ -40,16 +49,38 @@ const ExceptionList = ({
   onSelect,
   showSubject = true,
   emptyMessage = 'No exceptions found.',
+  filtered = false,
+  onClearFilter,
   className
 }: Props) => {
   const sorted = sortExceptions(exceptions, EXCEPTION_SEVERITY_ORDER) as ExceptionListItem[]
 
   if (sorted.length === 0) {
     return (
-      <div className={cn('text-muted-foreground flex flex-col items-center gap-2 py-10 text-center', className)}>
-        <CheckCircle2Icon className='text-success size-6' aria-hidden='true' />
-        <p className='text-sm'>{emptyMessage}</p>
-      </div>
+      <Empty className={cn('py-10', className)}>
+        <EmptyHeader>
+          <EmptyMedia variant='icon'>
+            {filtered ? (
+              <ListFilterIcon aria-hidden='true' />
+            ) : (
+              <CheckCircle2Icon className='text-success' aria-hidden='true' />
+            )}
+          </EmptyMedia>
+          <EmptyTitle>{filtered ? 'Nothing at this severity' : 'Nothing to resolve'}</EmptyTitle>
+          <EmptyDescription>
+            {filtered
+              ? 'Exceptions at other severities may still be open. Clear the filter to see the whole run.'
+              : emptyMessage}
+          </EmptyDescription>
+        </EmptyHeader>
+        {filtered && onClearFilter && (
+          <EmptyContent>
+            <Button variant='outline' size='sm' onClick={onClearFilter}>
+              Show all exceptions
+            </Button>
+          </EmptyContent>
+        )}
+      </Empty>
     )
   }
 

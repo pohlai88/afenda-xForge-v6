@@ -1,5 +1,5 @@
 // Third-party Imports
-import { DownloadIcon } from 'lucide-react'
+import { DownloadIcon, FileDownIcon } from 'lucide-react'
 
 // Type Imports
 import type { ReportExport } from '@/types/payroll/report-types'
@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 // Util Imports
@@ -21,7 +22,6 @@ export type RecentExportRow = ReportExport & {
 }
 
 type Props = {
-
   /** Newest first. */
   exports: RecentExportRow[]
   onRepeat: (row: RecentExportRow) => void
@@ -44,9 +44,18 @@ const RecentExports = ({ exports, onRepeat, className }: Props) => (
 
     <CardContent className='border-t px-0 pb-0'>
       {exports.length === 0 ? (
-        <p className='text-muted-foreground px-6 py-10 text-center text-sm'>
-          Generate a report above and it will be listed here, ready to export again.
-        </p>
+        <Empty className='py-10'>
+          <EmptyHeader>
+            <EmptyMedia variant='icon'>
+              <FileDownIcon aria-hidden='true' />
+            </EmptyMedia>
+            <EmptyTitle>No exports yet</EmptyTitle>
+            <EmptyDescription>
+              Choose a report above and export it. Every file is listed here with the parameters it used, so the same
+              export can be repeated in one click.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <div className='overflow-x-auto'>
           <Table>

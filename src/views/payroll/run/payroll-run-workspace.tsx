@@ -23,12 +23,20 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { CheckIcon, ClipboardCheckIcon, DownloadIcon, RefreshCwIcon, UploadIcon } from 'lucide-react'
+import {
+  CheckIcon,
+  ClipboardCheckIcon,
+  DownloadIcon,
+  MoreHorizontalIcon,
+  RefreshCwIcon,
+  UploadIcon
+} from 'lucide-react'
 import { parseAsString, parseAsStringLiteral, useQueryState } from 'nuqs'
 import { toast } from 'sonner'
 
 // Type Imports
 import type { Department, WorkLocation } from '@/types/hrm/employee-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 import type { PayRun, PayRunExceptionSeverity, Payslip } from '@/types/payroll/pay-run-types'
 import type { PayrollActor } from '@/types/payroll/permission-types'
 import type { PayrollRunRow } from '@/types/payroll/run-workspace-types'
@@ -37,6 +45,12 @@ import type { ApprovalReason } from '@/utils/payroll-approval'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import CalculationStaleBanner from './calculation-stale-banner'
 import ExceptionInspector from './exception-inspector'
@@ -51,7 +65,7 @@ import PayrollMetricRow, { type PayrollMetric } from './payroll-metric-row'
 import PayrollReconciliation from './payroll-reconciliation'
 import PayrollReviewDialog from './payroll-review-dialog'
 import PayrollRunHeader from './payroll-run-header'
-import PayrollRunTable, { buildPayrollColumns } from './payroll-run-table'
+import PayrollRunTable, { PINNED_COLUMNS, buildPayrollColumns } from './payroll-run-table'
 import PayrollStageBar from './payroll-stage-bar'
 import PayrollImport, { type ImportRow } from './payroll-import'
 import PayrollTableToolbar from './payroll-table-toolbar'
@@ -87,6 +101,9 @@ const VIEWS = ['employees', 'exceptions', 'reconciliation', 'audit'] as const
 
 type Props = {
   run: PayRun
+
+  /** The legal entity liable for this run, for the header's identity line. */
+  entity?: LegalEntity
   previousRun?: PayRun
   rows: PayrollRunRow[]
   previousSlips: Payslip[]
@@ -117,6 +134,7 @@ type Props = {
  */
 const PayrollRunWorkspace = ({
   run: initialRun,
+  entity,
   previousRun,
   rows: initialRows,
   previousSlips,
@@ -178,6 +196,9 @@ const PayrollRunWorkspace = ({
     data: rows,
     columns,
     state: { sorting, columnFilters, columnVisibility, rowSelection, pagination, globalFilter },
+
+    // Identity stays put while the money columns scroll. Uncontrolled: nothing offers to unpin it.
+    initialState: { columnPinning: { left: PINNED_COLUMNS } },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -235,6 +256,26 @@ const PayrollRunWorkspace = ({
   const awaitingApproval = run.status === 'calculated' || run.status === 'pending_approval'
   const needsReview = awaitingApproval && !evaluation.reviewed && !evaluation.stale
 
+  /**
+   * Which lifecycle action the operator should take next. Exactly one is filled; everything else
+   * still available drops to `outline`, and Export — which mutates nothing — leaves the row for the
+   * overflow menu. The order is the lifecycle's own: a stale calculation has to be redone before a
+   * review means anything, and a review has to exist before an approval can name one.
+   *
+   * Approve leads even while blocked. It is still the next step, and the approval dialog is where
+   * the blocking reasons are stated — the same verdict the server enforces, so nothing is promised
+   * that would then be refused silently. Gating it here instead would leave the header with three
+   * buttons of equal weight and no answer to "what now".
+   */
+  const primaryAction: 'recalculate' | 'review' | 'approve' | null =
+    evaluation.stale && mayProcess
+      ? 'recalculate'
+      : needsReview && mayReview
+        ? 'review'
+        : awaitingApproval && mayApprove
+          ? 'approve'
+          : null
+
   const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id])
   const selectedRows = rows.filter(row => selectedIds.includes(row.employeeId))
   const filteredRows = table.getFilteredRowModel().rows
@@ -279,7 +320,9 @@ const PayrollRunWorkspace = ({
       label: 'Net variance',
       value: netDelta === null ? '—' : formatSignedMoney({ amount: netDelta, currency: run.currency }),
       detail: previousRun ? `vs ${previousRun.reference}` : 'No previous run',
-      tone: netDelta === null ? 'default' : netDelta > 0 ? 'success' : netDelta < 0 ? 'destructive' : 'default'
+
+      // Direction, not valence: a run costing more is not a failure and costing less is not a win.
+      tone: 'default'
     },
     {
       key: 'exceptions',
@@ -592,8 +635,10 @@ const PayrollRunWorkspace = ({
     />
   )
 
+  // The panel is an @container, not a viewport consumer: with the sidebar expanded a 1280px screen
+  // leaves it around 1000px, and the toolbar has to compress on what it actually has.
   const employeesView = drilldown ?? (
-    <div className='bg-card flex flex-col overflow-hidden rounded-lg border'>
+    <div className='bg-card @container flex flex-col overflow-hidden rounded-lg border'>
       <PayrollTableToolbar
         table={table}
         search={globalFilter}
@@ -641,37 +686,65 @@ const PayrollRunWorkspace = ({
     <div className='flex flex-col gap-4'>
       <PayrollRunHeader
         run={run}
+        entity={entity}
         daysToPayday={daysToPayday}
         actions={
           <>
+            {mayProcess && primaryAction !== 'recalculate' && (
+              <Button variant='outline' onClick={() => handleRecalculate()}>
+                <RefreshCwIcon />
+                Recalculate
+              </Button>
+            )}
             {mayProcess && (
               <Button variant='outline' onClick={() => setImportOpen(true)}>
                 <UploadIcon />
                 Import inputs
               </Button>
             )}
-            {mayProcess && (
-              <Button variant='outline' onClick={() => handleRecalculate()}>
-                <RefreshCwIcon />
-                Recalculate
-              </Button>
-            )}
-            <Button variant='outline' onClick={() => handleExport()}>
-              <DownloadIcon />
-              Export
-            </Button>
-            {needsReview && mayReview && (
-              <Button variant={mayApprove ? 'outline' : 'default'} onClick={() => setReviewOpen(true)}>
+            {needsReview && mayReview && primaryAction !== 'review' && (
+              <Button variant='outline' onClick={() => setReviewOpen(true)}>
                 <ClipboardCheckIcon />
                 Mark as reviewed
               </Button>
             )}
-            {awaitingApproval && mayApprove && (
+            {awaitingApproval && mayApprove && primaryAction !== 'approve' && (
+              <Button variant='outline' onClick={() => setApprovalOpen(true)}>
+                <CheckIcon />
+                Approve payroll
+              </Button>
+            )}
+
+            {primaryAction === 'recalculate' && (
+              <Button onClick={() => handleRecalculate()}>
+                <RefreshCwIcon />
+                Recalculate
+              </Button>
+            )}
+            {primaryAction === 'review' && (
+              <Button onClick={() => setReviewOpen(true)}>
+                <ClipboardCheckIcon />
+                Mark as reviewed
+              </Button>
+            )}
+            {primaryAction === 'approve' && (
               <Button onClick={() => setApprovalOpen(true)}>
                 <CheckIcon />
                 Approve payroll
               </Button>
             )}
+
+            <DropdownMenu>
+              <DropdownMenuTrigger render={<Button variant='ghost' size='icon' aria-label='More run actions' />}>
+                <MoreHorizontalIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end'>
+                <DropdownMenuItem onClick={() => handleExport()}>
+                  <DownloadIcon />
+                  Export register
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         }
       />
@@ -691,7 +764,15 @@ const PayrollRunWorkspace = ({
       <PayrollMetricRow metrics={metrics} />
 
       <Tabs value={view} onValueChange={value => setView(value as (typeof VIEWS)[number])} className='gap-3'>
-        <TabsList variant='line' className='w-full justify-start border-b px-0'>
+        {/*
+          The four triggers need ~424px and a phone gives 375, so without a scroller here the whole
+          page scrolls sideways — the tab strip, not the table, was what overflowed. Scrolling keeps
+          all four reachable; dropping any of them would hide a view that has no other entrance.
+
+          overflow-y must be pinned too: setting only overflow-x computes the other axis to `auto`,
+          and the indicator's 1px puts a 16px scrollbar with arrow buttons on the tab strip.
+        */}
+        <TabsList variant='line' className='w-full justify-start overflow-x-auto overflow-y-hidden border-b px-0'>
           <TabsTrigger value='employees' className='flex-none px-3'>
             Employees
           </TabsTrigger>
@@ -731,9 +812,9 @@ const PayrollRunWorkspace = ({
               exceptions={filteredExceptions}
               selectedId={exceptionId}
               onSelect={exception => setExceptionId(exception.id)}
-              emptyMessage={
-                exceptionSeverity ? 'No open exceptions at this severity.' : 'No exceptions raised on this run.'
-              }
+              emptyMessage='No exceptions were raised on this run.'
+              filtered={!!exceptionSeverity}
+              onClearFilter={() => setExceptionSeverity(null)}
             />
           </div>
         </TabsContent>

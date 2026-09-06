@@ -60,7 +60,7 @@ const GroupMovement = ({ consolidation, className }: Props) => {
             <span
               className={cn(
                 'flex items-center gap-1 text-2xl font-semibold tabular-nums',
-                flat ? 'text-muted-foreground' : rising ? 'text-destructive' : 'text-success'
+                'text-foreground'
               )}
             >
               <TotalIcon className='size-5' aria-hidden='true' />
@@ -88,17 +88,11 @@ const GroupMovement = ({ consolidation, className }: Props) => {
               // A company that dropped out lowers the total, but that is not payroll getting
               // cheaper — it is a hole in the number. It reads as a warning rather than as an
               // improvement, whichever way the arithmetic went.
-              const tone =
-                line.kind === 'absence'
-                  ? 'text-warning'
-                  : line.change.amount === 0
-                    ? 'text-muted-foreground'
-                    : negative
-                      ? 'text-success'
-                      : 'text-destructive'
+              // An absent company keeps its warning: that is a hole in the number, a genuine state.
+              // Everything else is direction only, carried by the chevron and the sign.
+              const tone = line.kind === 'absence' ? 'text-warning' : 'text-muted-foreground'
 
-              const fill =
-                line.kind === 'absence' ? 'bg-warning/15' : negative ? 'bg-success/15' : 'bg-destructive/15'
+              const fill = line.kind === 'absence' ? 'bg-warning/15' : 'bg-muted-foreground/20'
 
               const body = (
                 <>

@@ -1,0 +1,1114 @@
+Yes. Your corrections make the doctrine much stronger because they move us away from merely borrowing **Windows appearance** or **modern SaaS patterns** and toward defining an actual **Afenda operating grammar**.
+
+And I checked the earlier Afenda canon: **CRUD-SAP = Create, Read, Update, Delete, Search, Audit, Predict. `P = Predict`.** Predict was the intelligence/workflow layer: show what happens next, what may break, who becomes blocked, what risk is emerging, and the safest next action.
+
+# Afenda UI/UX Doctrine v2
+
+## **The Business Operating System**
+
+### Product thesis
+
+> **SaaS solved finding. Desktop software solved operating. Afenda combines both.**
+
+We do not reproduce Windows.
+
+We borrow the interaction laws people already understand, remove the hierarchy/navigation friction that becomes painful at scale, and combine them with SaaS search, query, relationships, personalization and real-time intelligence.
+
+And our mantra should be:
+
+# **We resolve the complexity. You enjoy the simplicity.**
+
+Not as a literal Steve Jobs quotation, but very much in that design philosophy.
+
+---
+
+## 01 — Drill down, never drill away
+
+Hierarchy is unavoidable in business information.
+
+But hierarchy should primarily exist **inside the current working context**, not as an endless hierarchy of routes.
+
+The default progression should be:
+
+```text
+Summary
+   ↓
+Accordion / disclosure
+   ↓
+Breakdown
+   ↓
+Record
+   ↓
+Source / audit / relationship
+```
+
+not:
+
+```text
+Page
+→ subpage
+→ subpage
+→ detail
+→ sub-detail
+→ back
+→ back
+→ back
+```
+
+Accordion/disclosure therefore becomes a core Afenda pattern.
+
+A payroll summary can expand:
+
+```text
+Employer Cost             S$1.63M
+⌄
+   Salary                 S$1.24M
+   CPF                       221K
+   SDL                        18K
+   Other                     151K
+```
+
+And one layer may expand again where meaningful.
+
+**Doctrine rule:**
+
+> **If information has a parent-child relationship, first attempt progressive drill-down in place before creating another page.**
+
+---
+
+## 02 — Everything important can become a Shortcut or Favourite
+
+Windows taught users shortcuts.
+
+Modern SaaS gives us a much better version because a shortcut does not have to point merely to a file.
+
+Users should be able to favourite:
+
+```text
+Payroll
+September Payroll
+Grace Chen
+Open exceptions
+AP ageing report
+Singapore company
+My approvals
+Supplier ABC
+Month-end close
+```
+
+And eventually even a **query**:
+
+```text
+My saved view:
+Singapore employees
+with blocking payroll exceptions
+```
+
+Favourite becomes a first-class object reference.
+
+It may appear in:
+
+* sidebar;
+* home workspace;
+* command search;
+* recent/favourites area;
+* custom dashboard grid.
+
+The user decides what matters frequently.
+
+---
+
+## 03 — Right-click is the Golden Key
+
+This remains one of our strongest doctrines.
+
+> **Right-click answers: “What can I do with this?”**
+
+It works on:
+
+```text
+record
+row
+metric
+chart point
+column
+report
+workflow state
+exception
+document
+company
+employee
+payment
+```
+
+The exact commands change.
+
+The grammar stays stable.
+
+Mouse:
+
+```text
+Right click
+```
+
+Keyboard:
+
+```text
+Shift + F10
+```
+
+Touch:
+
+```text
+Long press / ⋯
+```
+
+Same contextual command model.
+
+---
+
+## 04 — Properties means “What exactly is this?”
+
+Right-click's universal destination:
+
+```text
+Properties
+```
+
+Properties is **not synonymous with Edit**.
+
+It exposes canonical truth:
+
+```text
+Identity
+State
+Relationships
+Configuration
+Ownership
+Source
+Audit metadata
+System metadata
+```
+
+Examples:
+
+```text
+Employee Properties
+Invoice Properties
+Payroll Run Properties
+Company Properties
+Report Properties
+Payment Properties
+```
+
+This gives Afenda universal object inspectability.
+
+---
+
+## 05 — Preserve working context
+
+> **If the task can be completed while maintaining the user's current context, do not replace that context.**
+
+Use:
+
+```text
+accordion
+popover
+floating query
+drawer
+inspector
+tab
+workspace group
+```
+
+before creating navigation.
+
+A route changes **primary work context**.
+
+A contextual investigation should usually not.
+
+---
+
+# 06 — CRUD-SAP is Afenda's command grammar
+
+Instead of copying:
+
+```text
+File
+Edit
+View
+...
+```
+
+we already have a better grammar designed around **business information**:
+
+# **CRUD-SAP**
+
+| Command family  | Meaning                               | Question                 |
+| --------------- | ------------------------------------- | ------------------------ |
+| **C — Create**  | create business object                | What can I create?       |
+| **R — Read**    | inspect/use object                    | What is here?            |
+| **U — Update**  | change object                         | What can I change?       |
+| **D — Delete**  | remove/deprecate/cancel where allowed | What can cease to exist? |
+| **S — Search**  | discover/query relationships          | Where is the truth?      |
+| **A — Audit**   | provenance/history/explanation        | What happened and why?   |
+| **P — Predict** | consequence/intelligence              | What happens next?       |
+
+This is **far more Afenda** than File/Edit/View.
+
+And importantly, CRUD-SAP need not always be seven visible buttons.
+
+It is the **classification system for commands**.
+
+For example, right-click Grace:
+
+```text
+Open                         R
+
+Edit employment             U
+Change compensation         U
+
+Search related records      S
+
+Audit history               A
+Trace payroll calculation   A
+
+Predict next payroll        P
+Flag likely issue           P
+
+Properties                  R
+```
+
+The product can remain visually quiet while all commands belong to a stable grammar.
+
+---
+
+## 07 — Capability without chrome
+
+> **Having a capability does not mean displaying a control.**
+
+Show permanently only what is:
+
+* frequent;
+* important;
+* immediately relevant;
+* necessary to understand current state.
+
+Everything else remains reachable through:
+
+```text
+context
+CRUD-SAP
+command
+overflow
+query
+shortcut
+keyboard
+```
+
+Afenda should achieve:
+
+# **maximum capability / minimum visible complexity**
+
+---
+
+# 08 — The Workspace Grid belongs to the user
+
+This is an important correction.
+
+The dashboard should **not be a fixed composition designed once by us**.
+
+ERPNext already demonstrates user-specific Workspace customization with dashboards, shortcuts and link cards. ([Frappe Docs][1])
+
+Afenda should push this substantially further.
+
+### Fixed-grid composition system
+
+We define a predictable grid.
+
+For example:
+
+```text
+small metric       2 × 2
+medium card        4 × 2
+chart              4 × 4
+table              8 × 8
+large workspace    12 × 8
+```
+
+Exact units can be refined later.
+
+Components have approved size presets.
+
+The user can:
+
+```text
+show
+hide
+move
+resize
+restore
+```
+
+But resizing is **constrained**, not arbitrary pixel positioning.
+
+Example:
+
+```text
+Revenue
+[2×2] [4×2]
+
+Exceptions
+[2×2] [4×2] [4×4]
+
+Employee Table
+[8×4] [8×8] [12×8]
+```
+
+This avoids dashboard chaos.
+
+### System gives excellent presets
+
+Afenda ships:
+
+```text
+Recommended
+Finance
+Payroll
+HR
+Operations
+Management
+```
+
+The user starts with a great workspace.
+
+Then changes only what they care about.
+
+---
+
+### Query-driven visualisation
+
+Your Zoho observation is also important.
+
+Zoho Analytics' chart designer uses a model where columns are dragged into X-axis, Y-axis, Color, Text and Tooltip roles. ([Zoho Corporation][2])
+
+Afenda should make this **more governed**.
+
+Not every field should appear as every possible Y-axis.
+
+Instead:
+
+```text
+Choose X
+   ↓
+Afenda understands its type/context
+   ↓
+only valid Y measures appear
+   ↓
+choose Y
+   ↓
+only meaningful breakdowns appear
+```
+
+Example:
+
+```text
+X = Department
+
+Y suggestions:
+✓ Gross Payroll
+✓ Net Payroll
+✓ Headcount
+✓ Employer Cost
+
+✕ Employee Name
+✕ Bank Account
+✕ Passport Number
+```
+
+Meaningless analytics are impossible by design.
+
+That is the key difference.
+
+---
+
+## 09 — Business objects have one identity everywhere
+
+An Employee does not become a different conceptual object because it appears in:
+
+```text
+HR
+Payroll
+Attendance
+Expense
+Organization
+```
+
+Same object identity.
+
+Different context/view.
+
+Therefore:
+
+```text
+Right-click
+Properties
+Search
+Audit
+Open
+```
+
+remain predictable.
+
+This is critical as Afenda scales.
+
+---
+
+# 10 — Every domain receives a fixed Page Budget
+
+This is an excellent architecture constraint.
+
+Without it, Next.js route trees eventually reproduce Windows' folder hierarchy:
+
+```text
+/payroll
+/payroll/run
+/payroll/run/detail
+/payroll/run/employee
+/payroll/run/employee/input
+/payroll/run/employee/input/history
+...
+```
+
+We should explicitly prevent that.
+
+Each domain declares its **maximum set of primary pages**.
+
+Conceptually:
+
+```text
+PAYROLL
+maximum primary pages: N
+
+PEOPLE
+maximum primary pages: N
+
+PROCUREMENT
+maximum primary pages: N
+```
+
+The exact number can differ by domain.
+
+But once ratified:
+
+> **A new page requires proof that the concern represents a genuinely independent work context.**
+
+Otherwise use:
+
+```text
+drill-down
+accordion
+tab
+drawer
+query
+workspace
+object
+```
+
+This forces good categorization.
+
+And makes the sidebar comprehensible even after Afenda reaches hundreds of capabilities.
+
+---
+
+## 11 — Split only for simultaneous work
+
+The IDE lesson remains.
+
+Opening another object does not automatically create another pane.
+
+Split when the user means:
+
+```text
+compare
+reference simultaneously
+work simultaneously
+monitor alongside
+```
+
+Workspace groups are spatial.
+
+Tabs are contextual.
+
+Existing groups should be reused before creating new ones.
+
+---
+
+# 12 — The Floating Query is Afenda's 360° lens
+
+This deserves to become a major Afenda interaction.
+
+You were referring to the TanStack Devtools interaction: its floating mode exposes a small persistent trigger that opens/closes a panel; TanStack's newer Devtools configuration even supports a draggable floating trigger whose position is persisted. ([TanStack][3])
+
+We should borrow the **interaction concept**, not the developer tool itself.
+
+Imagine one subtle floating Afenda Query control:
+
+```text
+                 ◉
+```
+
+Select anything:
+
+```text
+Employee
+Invoice
+Payroll metric
+Chart point
+Department
+Payment
+```
+
+Press:
+
+```text
+◉ Analyze
+```
+
+and a drawer opens:
+
+```text
+┌────────────────────────────────────┐
+│ Grace Chen — 360°                  │
+│                                    │
+│ Current                            │
+│ Payroll                            │
+│ Employment                         │
+│ Attendance                         │
+│ Exceptions                         │
+│ Changes                            │
+│ Relationships                      │
+│                                    │
+│ Ask / Query...                     │
+└────────────────────────────────────┘
+```
+
+The analysis follows the current selected context.
+
+Change selection:
+
+```text
+Grace
+→ September payroll
+→ Department
+→ exception
+```
+
+The lens follows.
+
+### Query should support:
+
+```text
+Break this down
+Why?
+Compared with?
+What changed?
+Show source
+What affects this?
+Who owns this?
+What happens next?
+```
+
+That's where CRUD-SAP intersects beautifully:
+
+```text
+S = query
+A = explain
+P = consequence
+```
+
+So the floating lens is effectively:
+
+# **SAP on demand**
+
+Search → Audit → Predict.
+
+That could become one of Afenda's most distinctive features.
+
+---
+
+# 13 — One Table Engine
+
+Strongly agree.
+
+We should not create:
+
+```text
+EmployeeTable
+PayrollTable
+VendorTable
+InvoiceTable
+PaymentTable
+ReportTable
+...
+```
+
+as independently behaving table products.
+
+There should be **one table interaction engine**.
+
+Variation comes from:
+
+```text
+dataset
+schema
+column definitions
+permissions
+actions
+view configuration
+```
+
+Not different interaction grammars.
+
+Therefore all Afenda tables inherit:
+
+```text
+sorting
+filtering
+selection
+column visibility
+column ordering
+resizing
+pinning
+context menu
+keyboard
+pagination/virtualization strategy
+empty state
+loading state
+query
+export where meaningful
+```
+
+But the schema determines what is actually valid.
+
+> **Afenda must never display a column, aggregate, filter or control that has no meaning for that dataset.**
+
+One engine.
+
+Many schemas.
+
+No meaningless universality.
+
+---
+
+## 14 — Domain truth outranks visual convention
+
+Still fundamental.
+
+Never say:
+
+```text
+No exceptions
+```
+
+when we only know:
+
+```text
+No exceptions in this filter
+```
+
+Never paint an increase green merely because it increased.
+
+Never enable a control whose underlying policy cannot execute.
+
+The UI describes the domain faithfully.
+
+---
+
+# 15 — Microsoft keyboard grammar by default; user grammar by choice
+
+Yes — we should **not invent bizarre shortcuts unnecessarily**.
+
+Borrow familiar defaults:
+
+```text
+Ctrl+C
+Ctrl+V
+Ctrl+Z
+Ctrl+F
+Ctrl+A
+
+Shift+F10
+Alt+Enter
+
+Esc
+Enter
+Tab
+Arrow keys
+```
+
+Then define Afenda-specific defaults where needed.
+
+But:
+
+> **The user should eventually be able to remap expert shortcuts.**
+
+So keyboard architecture becomes:
+
+```text
+System default
+      ↓
+Role/profile preset
+      ↓
+User override
+```
+
+A warehouse operator and finance analyst may want very different accelerators.
+
+The visible UI stays the same.
+
+---
+
+# 16 — Task-first adaptation, NOT desktop-first
+
+I agree with your correction completely.
+
+Calling Afenda “desktop-first” would eventually become an excuse for traditional ERP interfaces.
+
+The correct doctrine is:
+
+> **The interface adapts to the task, user and available workspace.**
+
+A CFO may want:
+
+```text
+sidebar
+metrics
+comparison
+table
+query
+```
+
+A payroll officer:
+
+```text
+dense table
+exceptions
+detail
+```
+
+A warehouse worker:
+
+```text
+PO #10482
+
+Received quantity
+[ 120 ]
+
+[ SAVE ]
+```
+
+That is still Afenda.
+
+Not a degraded mobile version.
+
+A **task-appropriate version**.
+
+Likewise, users who prefer compact operation can:
+
+```text
+hide sidebar permanently
+compact table
+reduce workspace chrome
+hide unnecessary widgets
+```
+
+The system should remember it.
+
+So responsive design is not:
+
+```text
+desktop → tablet → phone
+```
+
+It is:
+
+```text
+available space
++
+task complexity
++
+user preference
++
+role context
+```
+
+---
+
+# 17 — Orientation is mandatory
+
+This may be one of the most important doctrines.
+
+> **If someone lands on an Afenda screen and cannot immediately understand where they are, what they are seeing, and what they can do next, we have failed.**
+
+Every primary workspace needs a persistent orientation frame.
+
+At minimum:
+
+```text
+Breadcrumb
+
+Object/domain type
+Title
+
+Status/context
+Current scope
+
+Primary next action
+
+Help / Query
+```
+
+For example:
+
+```text
+Payroll / Runs / September 2026
+
+PAYROLL RUN
+September 2026
+Afenda Singapore · Monthly
+
+APPROVED
+
+[Release payments]        ◉ Analyze
+```
+
+The user knows:
+
+```text
+WHERE AM I?
+Payroll / Runs / Sep 2026
+
+WHAT IS THIS?
+Payroll Run
+
+WHAT STATE?
+Approved
+
+WHAT NEXT?
+Release payments
+
+WHAT IF I DON'T KNOW?
+Analyze / Help
+```
+
+That orientation should never disappear because somebody thought a cleaner screen looked nicer.
+
+---
+
+## 18 — Search replaces hierarchy memory
+
+Afenda may have excellent categorization.
+
+But the user should not be required to know it.
+
+Search should understand:
+
+```text
+people
+objects
+commands
+reports
+saved views
+recent work
+shortcuts
+relationships
+```
+
+So even if someone does not know whether something belongs to:
+
+```text
+Payroll
+People
+Finance
+```
+
+they can still find it.
+
+Categories organize Afenda.
+
+Search liberates the user from memorizing them.
+
+---
+
+## 19 — Compare is a first-class work operation
+
+Users should not be forced to remember A while looking at B.
+
+Comparisons should exist wherever meaningful:
+
+```text
+employee ↔ employee
+period ↔ period
+version ↔ version
+actual ↔ budget
+supplier ↔ supplier
+company ↔ company
+rule ↔ rule
+```
+
+Comparison may occur:
+
+* in a dedicated compare view;
+* open-to-side;
+* a query result;
+* chart overlay.
+
+But it should be a recognized system capability, not reinvented separately in each domain.
+
+---
+
+# 20 — Afenda has one stable Layout & Navigation Grammar
+
+Strongly agree with your correction.
+
+Responsive design must **not change the meaning of navigation**.
+
+If something is:
+
+```text
+Tabs
+```
+
+on one width, it does **not magically become pagination** at another width.
+
+If something is:
+
+```text
+Breadcrumb
+```
+
+it remains the breadcrumb.
+
+If something is:
+
+```text
+Context Menu
+```
+
+it stays context menu semantics.
+
+The visual representation may compress.
+
+The interaction grammar does not mutate.
+
+### Persistent Afenda frame
+
+Conceptually:
+
+```text
+┌──────────────────────────────────────────────────────┐
+│ Global shell / search / shortcuts                    │
+├──────────────────────────────────────────────────────┤
+│ Breadcrumb                                           │
+│                                                      │
+│ Object identity · scope · status · action            │
+├──────────────────────────────────────────────────────┤
+│ Domain navigation / tabs where applicable            │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│ WORKSPACE GRID                                       │
+│                                                      │
+│ dashboard / report / table / object / task           │
+│                                                      │
+└──────────────────────────────────────────────────────┘
+                                             ◉ Query
+```
+
+A user should always recognize **Afenda** even when moving from Payroll to Procurement to Warehouse.
+
+Consistency must be structural, not merely colors and typography.
+
+---
+
+# The revised operating model
+
+I think these twenty doctrines now collapse into **five systems**:
+
+| System      | Afenda responsibility                                       |
+| ----------- | ----------------------------------------------------------- |
+| **Orient**  | Breadcrumb, identity, scope, state, next action, help       |
+| **Find**    | Search, shortcut, favourite, recent, relationships          |
+| **Operate** | CRUD-SAP, right-click, keyboard, direct manipulation        |
+| **Explore** | Drill-down, accordion, floating 360° Query, compare         |
+| **Compose** | User workspace grid, one table engine, task-adaptive layout |
+
+That is much cleaner than thinking in terms of “pages and components.”
+
+---
+
+# And CRUD-SAP now sits at the center
+
+This is the part I particularly like.
+
+```text
+               AFENDA
+
+        ┌──────── FIND ────────┐
+        │                      │
+        │      S — SEARCH      │
+        │           ↓          │
+C ─ CREATE   R ─ READ   U ─ UPDATE   D ─ DELETE
+        │           ↓          │
+        │      A — AUDIT       │
+        │           ↓          │
+        │      P — PREDICT     │
+        │                      │
+        └──────────────────────┘
+```
+
+CRUD operates the business.
+
+**SAP understands the business.**
+
+That distinction could be very powerful:
+
+> **CRUD executes. SAP gives intelligence.**
+
+And the floating Query/360° panel can become the primary entrance into **S → A → P**.
+
+That connects an idea you defined months ago with the interaction doctrine we're designing now.
+
+---
+
+# Afenda's new mantra
+
+I would retire:
+
+> Find fast. Stay in context. Act on the object.
+
+It is accurate, but too technical.
+
+Your proposed philosophy is much stronger emotionally:
+
+# **We resolve the complexity. You enjoy the simplicity.**
+
+And underneath it, for the product team:
+
+> **Every complexity we expose to the user is complexity Afenda failed to absorb.**
+
+That should be the test for the entire frontend.
+
+Not “is this beautiful?”
+
+Not “does Shadcn Studio have a block for this?”
+
+But:
+
+> **Could Afenda understand more, remember more, organize more, or infer more so the operator has to think about the software less?**
+
+That is a genuinely strong north star.
+
+[1]: https://docs.frappe.io/erpnext/workspace?utm_source=chatgpt.com "Customizing Workspace"
+[2]: https://help.zoho.com/portal/en/kb/analytics/user-guide/creating-reports/charts/articles/creating-a-new-chart?utm_source=chatgpt.com "Creating a New Chart l Zoho Analytics Help"
+[3]: https://tanstack.com/query/latest/docs/framework/react/devtools?utm_source=chatgpt.com "Devtools | TanStack Query React Docs"

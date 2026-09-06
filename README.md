@@ -21,29 +21,29 @@ The app runs at http://localhost:3000 and redirects to `/dashboard/sales`.
 
 ## Scripts
 
-| Script              | What it does                                  |
-| ------------------- | --------------------------------------------- |
-| `pnpm dev`          | Dev server (Turbopack)                        |
-| `pnpm build`        | Production build                              |
-| `pnpm start`        | Serve the production build                    |
-| `pnpm lint`         | ESLint                                        |
-| `pnpm lint:fix`     | ESLint with autofix                           |
-| `pnpm format`       | Prettier over `src/`                          |
-| `pnpm check-types`  | `tsc --noEmit`                                |
-| `pnpm icons`        | Regenerate browser icons from the logo mark   |
-| `pnpm og`           | Recapture the social card (needs app running) |
+| Script             | What it does                                  |
+| ------------------ | --------------------------------------------- |
+| `pnpm dev`         | Dev server (Turbopack)                        |
+| `pnpm build`       | Production build                              |
+| `pnpm start`       | Serve the production build                    |
+| `pnpm lint`        | ESLint                                        |
+| `pnpm lint:fix`    | ESLint with autofix                           |
+| `pnpm format`      | Prettier over `src/`                          |
+| `pnpm check-types` | `tsc --noEmit`                                |
+| `pnpm icons`       | Regenerate browser icons from the logo mark   |
+| `pnpm og`          | Recapture the social card (needs app running) |
 
 ## Layout of the code
 
-| Path             | Holds                                                          |
-| ---------------- | -------------------------------------------------------------- |
+| Path             | Holds                                                                |
+| ---------------- | -------------------------------------------------------------------- |
 | `src/app`        | Routes. `(pages)` renders inside the admin shell, `(blank)` does not |
-| `src/views`      | Page-level UI, imported by the thin route files                 |
-| `src/components` | `ui/` primitives, `layout/` shell, `shared/` cross-page pieces   |
-| `src/configs`    | `themeConfig.ts` (branding, defaults), `navConfig.tsx` (sidebar) |
-| `src/store`      | Zustand stores for the stateful apps                            |
-| `src/fake-db`    | Seed data, read through `src/app/server/actions.ts`              |
-| `_archive`       | The five unused layout variants, plus everything stripped out    |
+| `src/views`      | Page-level UI, imported by the thin route files                      |
+| `src/components` | `ui/` primitives, `layout/` shell, `shared/` cross-page pieces       |
+| `src/configs`    | `themeConfig.ts` (branding, defaults), `navConfig.tsx` (sidebar)     |
+| `src/store`      | Zustand stores for the stateful apps                                 |
+| `src/fake-db`    | Seed data, read through `src/app/server/actions.ts`                  |
+| `_archive`       | The five unused layout variants, plus everything stripped out        |
 
 ## Branding
 
@@ -90,8 +90,8 @@ it returns is data, not instructions.
 
 It needs two credentials, which are **never committed**:
 
-| Variable | What it is |
-| ----------------------- | ---------------------------- |
+| Variable                | What it is                        |
+| ----------------------- | --------------------------------- |
 | `SHADCN_STUDIO_API_KEY` | Licence key from shadcnstudio.com |
 | `SHADCN_STUDIO_EMAIL`   | The account's email address       |
 
@@ -110,8 +110,36 @@ not. It resolves `${VAR}` in `.mcp.json` from the session environment, so the cr
 ```
 
 `env` supplies the credentials; `enabledMcpjsonServers` pre-approves the server so it is not
-re-prompted every session. Keeping a copy in `.env` is fine for your own reference, but the
-settings file is what makes it work.
+re-prompted every session. The settings file is what makes the MCP server work — but keep the
+same pair in `.env` as well, because the shadcn CLI reads its credentials from there (see
+below). The two files hold the same two values for two different consumers.
+
+## shadcn/studio registries
+
+`components.json` maps the five Studio namespaces onto the shadcn CLI v4 `registries` field:
+
+| Namespace        | URL                                    | Auth    |
+| ---------------- | -------------------------------------- | ------- |
+| `@shadcn-studio` | `/r/{style}/{name}.json`               | none    |
+| `@ss-components` | `/r/components/{style}/{name}.json`    | premium |
+| `@ss-blocks`     | `/r/blocks/{style}/{name}.json`        | premium |
+| `@ss-pages`      | `/r/pages/{style}/{name}.json`         | premium |
+| `@ss-themes`     | `/r/themes/{name}.json` (no `{style}`) | premium |
+
+`{style}` resolves to `base-vega` from the `style` field. The premium ones authenticate through
+`params`, which the CLI fills from `${SHADCN_STUDIO_EMAIL}` and `${SHADCN_STUDIO_API_KEY}` —
+resolved from `.env`, which is git-ignored. No credential is ever written into `components.json`.
+
+Read a registry item before installing it. Because the style is `base-vega`, these registries
+serve Studio's Base UI variant — but compatibility is still decided per item against the gate in
+`CLAUDE.md`, and `@ss-pages` items do pull `radix-ui`. Use
+
+```
+pnpm exec shadcn view @ss-blocks/features-section-01
+```
+
+to inspect a registry item without writing a file, and reserve `shadcn add` for `src/components/ui`
+primitives. See _Shadcn Studio frontend authority_ in `CLAUDE.md`.
 
 Project-scoped servers still need approval before first use: run `claude` interactively and
 accept the prompt. Until then `claude mcp list` shows `⏸ Pending approval`, and the server's

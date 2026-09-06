@@ -63,11 +63,15 @@ const PayrollCostTrend = ({ points, currencySymbol, className }: Props) => {
             .join(' ')}
         </p>
         <ChartContainer config={chartConfig} className='max-h-85 min-h-60 w-full'>
-          <ComposedChart accessibilityLayer data={points} margin={{ top: 20, right: 8, left: -8 }}>
+          <ComposedChart accessibilityLayer data={points} margin={{ top: 20, right: 8, left: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray='4' stroke='var(--border)' />
             <XAxis dataKey='reference' tickLine={false} axisLine={false} tickMargin={10} />
+            {/* width='auto' sizes to the widest tick rather than a fixed 60px: the currency symbol
+                is one character in SGD and two in MYR, and a negative left margin here clipped
+                "S$340K" down to "$340K" — a different currency, not a cosmetic trim. */}
             <YAxis
               yAxisId='cost'
+              width='auto'
               tickLine={false}
               axisLine={false}
               tickMargin={8}
