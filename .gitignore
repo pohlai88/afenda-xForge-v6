@@ -46,7 +46,6 @@ next-env.d.ts
 
 # Skills
 .agent/
-CLAUDE.md
 
 # Claude Code: share project config, keep personal credentials out.
 # settings.local.json holds the shadcn-studio API key that .mcp.json reads via ${VAR}.
