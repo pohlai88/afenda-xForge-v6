@@ -15,6 +15,9 @@ import {
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
+// Type Imports
+import type { CurrencyCode } from '@/types/common/primitive-types'
+
 // Component Imports
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -67,7 +70,7 @@ type Props = {
 
   /** Component codes the calculation knows. */
   componentCodes: Set<string>
-  currency: 'SGD' | 'MYR' | 'USD' | 'EUR' | 'GBP' | 'AUD' | 'INR'
+  currency: CurrencyCode
   onImport: (rows: ImportRow[]) => void
 }
 

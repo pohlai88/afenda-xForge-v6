@@ -14,6 +14,7 @@ import AccountingSettings from './accounting'
 import ApprovalSettingsSection from './approvals'
 import BankingSettings from './banking'
 import ComponentSettings from './components'
+import EntitySettings from './entities'
 import GeneralSettings from './general'
 import NotificationSettings from './notifications'
 import PayGroupSettings from './pay-groups'
@@ -22,6 +23,7 @@ import StatutorySettings from './statutory'
 
 const SECTIONS = [
   'general',
+  'entities',
   'pay-groups',
   'schedules',
   'components',
@@ -36,21 +38,38 @@ const SECTIONS = [
 type Props = {
   settings: PayrollSettings
   fundingAccounts: FundingAccount[]
+
+  /** Active employees per entity id. Counted on the server so the list states a fact, not a guess. */
+  employeeCounts: Record<string, number>
+
+  /** Pay runs per entity id. */
+  runCounts: Record<string, number>
 }
 
 /**
  * Same shape as the account settings page: a line of tabs, the section in the URL so a link to
  * "banking settings" lands on banking settings.
  */
-const PayrollSettingsTabs = ({ settings, fundingAccounts }: Props) => {
+const PayrollSettingsTabs = ({ settings, fundingAccounts, employeeCounts, runCounts }: Props) => {
   const [section, setSection] = useQueryState(
     'section',
     parseAsStringLiteral(SECTIONS).withDefault('general').withOptions({ history: 'push', clearOnDefault: false })
   )
 
   const tabs: { value: (typeof SECTIONS)[number]; name: string; content: React.ReactNode }[] = [
-    { value: 'general', name: 'General', content: <GeneralSettings settings={settings.general} /> },
-    { value: 'pay-groups', name: 'Pay groups', content: <PayGroupSettings payGroups={settings.payGroups} /> },
+    { value: 'general', name: 'General', content: <GeneralSettings settings={settings.general} entities={settings.entities} /> },
+    {
+      value: 'entities',
+      name: 'Entities',
+      content: (
+        <EntitySettings
+          entities={settings.entities}
+          employeeCounts={employeeCounts}
+          runCounts={runCounts}
+        />
+      )
+    },
+    { value: 'pay-groups', name: 'Pay groups', content: <PayGroupSettings payGroups={settings.payGroups} entities={settings.entities} /> },
     {
       value: 'schedules',
       name: 'Schedules',
@@ -60,9 +79,9 @@ const PayrollSettingsTabs = ({ settings, fundingAccounts }: Props) => {
     {
       value: 'statutory',
       name: 'Statutory',
-      content: <StatutorySettings rules={settings.statutory} currency={settings.general.defaultCurrency} />
+      content: <StatutorySettings rules={settings.statutory} />
     },
-    { value: 'banking', name: 'Banking', content: <BankingSettings accounts={fundingAccounts} /> },
+    { value: 'banking', name: 'Banking', content: <BankingSettings accounts={fundingAccounts} entities={settings.entities} /> },
     {
       value: 'accounting',
       name: 'Accounting',
@@ -75,7 +94,7 @@ const PayrollSettingsTabs = ({ settings, fundingAccounts }: Props) => {
         <ApprovalSettingsSection
           settings={settings.approvals}
           roles={settings.access}
-          currency={settings.general.defaultCurrency}
+          currency={settings.general.reportingCurrency}
         />
       )
     },

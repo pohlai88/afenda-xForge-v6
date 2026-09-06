@@ -18,30 +18,30 @@ export const recentExports: ReportExport[] = [
   {
     id: 'export-2026-08-29-register',
     reportKey: 'register',
-    runReference: 'PR-2026-08',
+    runReference: 'PR-SG-2026-08',
     format: 'xlsx',
     rowCount: 31,
-    fileName: 'PR-2026-08-payroll-register.xlsx',
+    fileName: 'PR-SG-2026-08-payroll-register.xlsx',
     createdAt: '2026-08-29T06:40:00.000Z',
     createdBy: 'emp-020'
   },
   {
     id: 'export-2026-08-27-bank',
     reportKey: 'bank_file',
-    runReference: 'PR-2026-08',
+    runReference: 'PR-SG-2026-08',
     format: 'csv',
     rowCount: 31,
-    fileName: 'PR-2026-08-bank-file.csv',
+    fileName: 'PR-SG-2026-08-bank-file.csv',
     createdAt: '2026-08-27T01:05:00.000Z',
     createdBy: 'emp-022'
   },
   {
     id: 'export-2026-08-10-statutory',
     reportKey: 'statutory',
-    runReference: 'PR-2026-07',
+    runReference: 'PR-SG-2026-07',
     format: 'csv',
     rowCount: 32,
-    fileName: 'PR-2026-07-statutory-summary.csv',
+    fileName: 'PR-SG-2026-07-statutory-summary.csv',
     createdAt: '2026-08-10T03:30:00.000Z',
     createdBy: 'emp-022'
   }

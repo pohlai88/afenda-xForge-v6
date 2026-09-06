@@ -11,6 +11,8 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 // Type Imports
+import { CURRENCY_CODES } from '@/types/common/primitive-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 import type { PayGroup } from '@/types/payroll/settings-types'
 
 // Component Imports
@@ -31,7 +33,6 @@ import { savePayGroup } from '@/app/server/actions'
 import { cn } from '@/lib/utils'
 
 const FREQUENCIES = ['weekly', 'biweekly', 'semi_monthly', 'monthly'] as const
-const CURRENCIES = ['SGD', 'MYR', 'USD', 'EUR', 'GBP', 'AUD', 'INR'] as const
 
 const FREQUENCY_LABELS: Record<(typeof FREQUENCIES)[number], string> = {
   weekly: 'Weekly',
@@ -42,8 +43,8 @@ const FREQUENCY_LABELS: Record<(typeof FREQUENCIES)[number], string> = {
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
-  entity: z.string().min(1, 'Entity is required'),
-  currency: z.enum(CURRENCIES),
+  entityId: z.string().min(1, 'Choose the legal entity that employs this group'),
+  currency: z.enum(CURRENCY_CODES),
   frequency: z.enum(FREQUENCIES),
   paydayRule: z.string().min(1, 'Describe when this group is paid'),
   cutoffDaysBeforePayday: z.coerce
@@ -58,7 +59,7 @@ type Values = z.infer<typeof schema>
 
 const EMPTY: Values = {
   name: '',
-  entity: '',
+  entityId: '',
   currency: 'SGD',
   frequency: 'monthly',
   paydayRule: '',
@@ -68,6 +69,7 @@ const EMPTY: Values = {
 
 type Props = {
   payGroups: PayGroup[]
+  entities: LegalEntity[]
 }
 
 /**
@@ -75,8 +77,9 @@ type Props = {
  * users list edits a user. Saving goes through `savePayGroup`; the list adopts the record the
  * server returns.
  */
-const PayGroupSettings = ({ payGroups: initial }: Props) => {
+const PayGroupSettings = ({ payGroups: initial, entities }: Props) => {
   const [payGroups, setPayGroups] = useState(initial)
+  const entityById = new Map(entities.map(entity => [entity.id, entity]))
   const [editing, setEditing] = useState<PayGroup | 'new' | null>(null)
 
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: EMPTY })
@@ -139,7 +142,7 @@ const PayGroupSettings = ({ payGroups: initial }: Props) => {
                   <span className='flex flex-col'>
                     <span className='font-medium'>{group.name}</span>
                     <span className='text-muted-foreground text-xs'>
-                      {group.entity} · {group.currency}
+                      {entityById.get(group.entityId)?.name ?? 'Unknown entity'} · {group.currency}
                     </span>
                   </span>
                 </TableCell>
@@ -194,12 +197,38 @@ const PayGroupSettings = ({ payGroups: initial }: Props) => {
                 )}
               />
               <Controller
-                name='entity'
+                name='entityId'
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className='gap-2'>
                     <FieldLabel htmlFor={field.name}>Legal entity</FieldLabel>
-                    <Input {...field} id={field.name} aria-invalid={fieldState.invalid} />
+                    <Select
+                      value={field.value}
+                      onValueChange={value => {
+                        if (!value) return
+
+                        field.onChange(value)
+
+                        // The entity decides the currency it pays in, so choosing one settles it.
+                        // Leaving the two independent lets someone save a Malaysian pay group
+                        // priced in dollars, which no account could fund.
+                        const entity = entityById.get(value)
+
+                        if (entity) form.setValue('currency', entity.currency, { shouldDirty: true })
+                      }}
+                      items={entities.map(entity => ({ value: entity.id, label: entity.name }))}
+                    >
+                      <SelectTrigger id={field.name} className='w-full' aria-invalid={fieldState.invalid}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {entities.map(entity => (
+                          <SelectItem key={entity.id} value={entity.id}>
+                            {entity.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}
@@ -211,18 +240,8 @@ const PayGroupSettings = ({ payGroups: initial }: Props) => {
                   render={({ field }) => (
                     <Field className='gap-2'>
                       <FieldLabel htmlFor={field.name}>Currency</FieldLabel>
-                      <Select value={field.value} onValueChange={value => value && field.onChange(value)}>
-                        <SelectTrigger id={field.name} className='w-full'>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {CURRENCIES.map(currency => (
-                            <SelectItem key={currency} value={currency}>
-                              {currency}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input {...field} id={field.name} readOnly tabIndex={-1} className='bg-muted/50' />
+                      <FieldDescription>Set by the legal entity. A second currency means a second entity.</FieldDescription>
                     </Field>
                   )}
                 />

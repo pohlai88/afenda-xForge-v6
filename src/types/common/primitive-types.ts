@@ -16,7 +16,25 @@ export type IsoDate = string
 /** An instant in UTC: '2026-09-06T14:03:00.000Z'. Use for audit trails and cut-offs. */
 export type IsoDateTime = string
 
-export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'SGD' | 'MYR' | 'AUD' | 'INR'
+/**
+ * The one list of currencies. It is a runtime tuple rather than a bare union because the same
+ * seven-then-eight codes were being retyped in three Zod enums and three Select options, and
+ * those copies had already started to drift. Everything else derives from this.
+ */
+export const CURRENCY_CODES = ['SGD', 'MYR', 'VND', 'USD', 'EUR', 'GBP', 'AUD', 'INR'] as const
+
+export type CurrencyCode = (typeof CURRENCY_CODES)[number]
+
+/**
+ * ISO 3166-1 alpha-2, for the countries payroll actually runs in.
+ *
+ * A cross-module primitive like CurrencyCode: an HR work location and a payroll legal entity
+ * both carry one, and payroll consolidates by it. `WorkLocation.country` remains a display
+ * string ('Singapore'); this is the key you group and compare on.
+ */
+export const COUNTRY_CODES = ['SG', 'MY', 'VN'] as const
+
+export type CountryCode = (typeof COUNTRY_CODES)[number]
 
 /**
  * An amount in **minor units** — cents, not dollars. 1234 with currency 'USD' is $12.34.
@@ -29,8 +47,27 @@ export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'SGD' | 'MYR' | 'AUD' | 'INR'
  * Convert at the display boundary only.
  */
 export interface Money {
-
   /** Minor units (cents). Always an integer. */
   amount: number
   currency: CurrencyCode
+}
+
+/**
+ * An exchange rate as an exact fraction: `numerator` units of `to` per `denominator` units of
+ * `from`.
+ *
+ * Rates are fractions rather than decimals for the same reason Money is minor units. A decimal
+ * rate is a float, and converting a few hundred thousand minor units through a float and back
+ * does not round-trip: the inverse of 3.4512 is not exactly representable, so SGD → MYR → SGD
+ * loses cents. Two integers invert by swapping, so the round trip is exact and conversion never
+ * leaves integer arithmetic.
+ *
+ * 1 SGD = 19,012 VND is { numerator: 19012, denominator: 1 }.
+ * 1 SGD = 3.4512 MYR is { numerator: 34512, denominator: 10000 }.
+ */
+export interface FxQuote {
+  from: CurrencyCode
+  to: CurrencyCode
+  numerator: number
+  denominator: number
 }

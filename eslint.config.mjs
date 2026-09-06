@@ -45,7 +45,15 @@ const eslintConfig = defineConfig([
           beforeLineComment: true,
           allowBlockStart: true,
           allowObjectStart: true,
-          allowArrayStart: true
+          allowArrayStart: true,
+
+          // Interfaces and type literals need the same exemption the other block starts already
+          // have. Without these two, a doc comment on the first member of an interface is an
+          // unwinnable fight: Prettier removes the blank line after the brace, this rule demands
+          // one back, and `--fix` and the format hook undo each other on every save. Documenting
+          // the first field of a type is too common here to give up, so the linter yields.
+          allowInterfaceStart: true,
+          allowTypeStart: true
         }
       ],
       '@stylistic/padding-line-between-statements': [

@@ -43,7 +43,7 @@ const TERMINAL_STATUSES = new Set(['paid', 'closed', 'cancelled', 'failed'])
 
 /**
  * `/payroll` is the payroll overview; the run workspace is `/payroll/runs/[runId]`.
- * `?run=PR-2026-08` selects a past run. Absent or unrecognised falls back to the latest.
+ * `?run=PR-SG-2026-08` selects a past run. Absent or unrecognised falls back to the latest.
  * `?dept=eng` filters the exception queue to one department, set by clicking a department
  * in the cost chart. Absent or unrecognised means no filter.
  */

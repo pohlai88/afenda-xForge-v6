@@ -32,6 +32,10 @@ export interface FilingLine {
 
 export interface StatutoryFiling {
   id: string
+
+  /** The entity that files. Statutory liability is local, so it never spans companies. */
+  entityId: string
+
   kind: FilingKind
 
   /** Set for per-run filings; the annual return spans every run of the year. */

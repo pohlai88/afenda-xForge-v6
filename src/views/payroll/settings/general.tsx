@@ -7,6 +7,9 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 // Type Imports
+import { CURRENCY_CODES } from '@/types/common/primitive-types'
+import { FX_BASES } from '@/types/payroll/group-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 import type { PayrollGeneralSettings } from '@/types/payroll/settings-types'
 
 // Component Imports
@@ -19,15 +22,15 @@ import SettingsSection from './settings-section'
 // Action Imports
 import { savePayrollSettingsSection } from '@/app/server/actions'
 
-const CURRENCIES = ['SGD', 'MYR', 'USD', 'EUR', 'GBP', 'AUD', 'INR'] as const
+// Util Imports
+import { FX_BASIS_LABELS } from '@/utils/payroll-group'
 
-const TIMEZONES = ['Asia/Singapore', 'Asia/Kuala_Lumpur', 'Asia/Kolkata', 'Australia/Sydney', 'Europe/London', 'UTC']
 
 const schema = z.object({
-  entityName: z.string().min(1, 'Entity name is required'),
-  registrationNumber: z.string().min(1, 'Registration number is required'),
-  defaultCurrency: z.enum(CURRENCIES),
-  timezone: z.string().min(1, 'Choose a timezone'),
+  groupName: z.string().min(1, 'The group needs a name'),
+  homeEntityId: z.string().min(1, 'Choose a home entity'),
+  reportingCurrency: z.enum(CURRENCY_CODES),
+  fxBasis: z.enum(FX_BASES),
   payslipSender: z.string().email('Enter a valid email address'),
   rounding: z.enum(['nearest_cent', 'nearest_dollar'])
 })
@@ -36,9 +39,10 @@ type Values = z.infer<typeof schema>
 
 type Props = {
   settings: PayrollGeneralSettings
+  entities: LegalEntity[]
 }
 
-const GeneralSettings = ({ settings }: Props) => {
+const GeneralSettings = ({ settings, entities }: Props) => {
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: settings })
 
   const onSubmit = async (values: Values) => {
@@ -57,8 +61,8 @@ const GeneralSettings = ({ settings }: Props) => {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)}>
       <SettingsSection
-        title='Legal entity'
-        description='The employer on every payslip and statutory filing. Changing the currency affects new runs only.'
+        title='Group'
+        description='How consolidated figures are stated. Each run is still calculated in its own entity&rsquo;s currency; these settings only decide how the group adds them up.'
         footer={
           <>
             <Button
@@ -77,69 +81,95 @@ const GeneralSettings = ({ settings }: Props) => {
       >
         <FieldGroup className='grid gap-6 sm:grid-cols-2'>
           <Controller
-            name='entityName'
+            name='groupName'
             control={form.control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid} className='gap-2'>
-                <FieldLabel htmlFor={field.name}>Entity name</FieldLabel>
+                <FieldLabel htmlFor={field.name}>Group name</FieldLabel>
                 <Input {...field} id={field.name} aria-invalid={fieldState.invalid} />
+                <FieldDescription>Shown on Group payroll and on consolidated reports.</FieldDescription>
                 {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
               </Field>
             )}
           />
           <Controller
-            name='registrationNumber'
-            control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className='gap-2'>
-                <FieldLabel htmlFor={field.name}>Registration number</FieldLabel>
-                <Input {...field} id={field.name} aria-invalid={fieldState.invalid} className='font-mono' />
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-              </Field>
-            )}
-          />
-          <Controller
-            name='defaultCurrency'
+            name='homeEntityId'
             control={form.control}
             render={({ field }) => (
               <Field className='gap-2'>
-                <FieldLabel htmlFor={field.name}>Default currency</FieldLabel>
+                <FieldLabel htmlFor={field.name}>Home entity</FieldLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={value => value && field.onChange(value)}
+                  items={entities.map(entity => ({ value: entity.id, label: entity.name }))}
+                >
+                  <SelectTrigger id={field.name} className='w-full'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {entities.map(entity => (
+                      <SelectItem key={entity.id} value={entity.id}>
+                        {entity.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  The company screens open to when no other is chosen. Registration numbers live on each entity.
+                </FieldDescription>
+              </Field>
+            )}
+          />
+          <Controller
+            name='reportingCurrency'
+            control={form.control}
+            render={({ field }) => (
+              <Field className='gap-2'>
+                <FieldLabel htmlFor={field.name}>Reporting currency</FieldLabel>
                 <Select value={field.value} onValueChange={value => value && field.onChange(value)}>
                   <SelectTrigger id={field.name} className='w-full'>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CURRENCIES.map(currency => (
+                    {CURRENCY_CODES.map(currency => (
                       <SelectItem key={currency} value={currency}>
                         {currency}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FieldDescription>One currency per run. A second currency means a second pay group.</FieldDescription>
+                <FieldDescription>
+                  What consolidated figures are stated in. Runs are unaffected; each pays in its entity&rsquo;s currency.
+                </FieldDescription>
               </Field>
             )}
           />
           <Controller
-            name='timezone'
+            name='fxBasis'
             control={form.control}
-            render={({ field, fieldState }) => (
-              <Field data-invalid={fieldState.invalid} className='gap-2'>
-                <FieldLabel htmlFor={field.name}>Timezone</FieldLabel>
-                <Select value={field.value} onValueChange={value => value && field.onChange(value)}>
+            render={({ field }) => (
+              <Field className='gap-2'>
+                <FieldLabel htmlFor={field.name}>Exchange rate basis</FieldLabel>
+                <Select
+                  value={field.value}
+                  onValueChange={value => value && field.onChange(value)}
+                  items={FX_BASES.map(basis => ({ value: basis, label: FX_BASIS_LABELS[basis] }))}
+                >
                   <SelectTrigger id={field.name} className='w-full'>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {TIMEZONES.map(zone => (
-                      <SelectItem key={zone} value={zone}>
-                        {zone}
+                    {FX_BASES.map(basis => (
+                      <SelectItem key={basis} value={basis}>
+                        {FX_BASIS_LABELS[basis]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <FieldDescription>Cut-off times and paydays are evaluated in this zone.</FieldDescription>
-                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                <FieldDescription>
+                  Which rate consolidation translates at. The same payroll consolidates to a different total on a
+                  different basis, so every group figure states the one it used.
+                </FieldDescription>
               </Field>
             )}
           />

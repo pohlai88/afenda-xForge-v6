@@ -7,110 +7,152 @@
  * bridge does not balance is worse than no dashboard. Deriving them means the two identities
  * in PayRunTotals hold by construction.
  *
+ * A run belongs to one legal entity, and the entity decides the currency, the payday rule and
+ * which statutory profile the calculation applies. There is no group-level run: consolidation
+ * translates and adds finished runs, it does not calculate across them.
+ *
  * Everything here is deterministic — no Math.random or Date.now. These modules are imported on
  * both sides of the server/client boundary, and anything that varies between the two renders
  * is a hydration mismatch waiting to happen.
  */
 
 // Type Imports
-import type { Money } from '@/types/common/primitive-types'
+import type { CurrencyCode, Money } from '@/types/common/primitive-types'
 import type { Employee } from '@/types/hrm/employee-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 import type { PayComponent, PayRun, PayRunException, PayRunTotals, Payslip } from '@/types/payroll/pay-run-types'
+import type { StatutoryProfile } from '@/types/payroll/statutory-types'
 
 // Data Imports
 import { employees } from '@/fake-db/hrm/employees'
+import { legalEntities, entityFor } from '@/fake-db/hrm/entities'
+import { statutoryProfileFor } from '@/fake-db/payroll/statutory-profiles'
 
-const CURRENCY = 'SGD' as const
+const money = (amount: number, currency: CurrencyCode): Money => ({ amount: Math.round(amount), currency })
 
-/** Ordinary-wage ceiling that statutory contributions are capped at, in minor units. */
-const CONTRIBUTION_CEILING = 680000
-const EMPLOYEE_RATE = 0.2
-const EMPLOYER_RATE = 0.17
-const TAX_RATE = 0.15
-const MONTHLY_HOURS = 176
+const add = (values: Money[], currency: CurrencyCode): Money =>
+  money(
+    values.reduce((sum, v) => sum + v.amount, 0),
+    currency
+  )
 
-const sgd = (amount: number): Money => ({ amount: Math.round(amount), currency: CURRENCY })
-
-const add = (...values: Money[]): Money => sgd(values.reduce((sum, v) => sum + v.amount, 0))
-
-type Period = {
+export type Period = {
   id: string
   reference: string
+
+  /** 'YYYY-MM'. The key every entity's run for the same month shares. */
+  key: string
+
+  entityId: string
+  currency: CurrencyCode
+  payGroup: string
   periodStart: string
   periodEnd: string
   payDate: string
   cutoffAt: string
+
+  /** Index within this entity's own series, used by the deterministic overtime pattern. */
+  monthIndex: number
 }
 
-// Six months to Sept 2026. The last one is still open; the rest are paid and closed.
-const periods: Period[] = [
-  {
-    id: 'run-2026-04',
-    reference: 'PR-2026-04',
-    periodStart: '2026-04-01',
-    periodEnd: '2026-04-30',
-    payDate: '2026-04-28',
-    cutoffAt: '2026-04-24T09:00:00.000Z'
-  },
-  {
-    id: 'run-2026-05',
-    reference: 'PR-2026-05',
-    periodStart: '2026-05-01',
-    periodEnd: '2026-05-31',
-    payDate: '2026-05-28',
-    cutoffAt: '2026-05-25T09:00:00.000Z'
-  },
-  {
-    id: 'run-2026-06',
-    reference: 'PR-2026-06',
-    periodStart: '2026-06-01',
-    periodEnd: '2026-06-30',
-    payDate: '2026-06-26',
-    cutoffAt: '2026-06-24T09:00:00.000Z'
-  },
-  {
-    id: 'run-2026-07',
-    reference: 'PR-2026-07',
-    periodStart: '2026-07-01',
-    periodEnd: '2026-07-31',
-    payDate: '2026-07-28',
-    cutoffAt: '2026-07-24T09:00:00.000Z'
-  },
-  {
-    id: 'run-2026-08',
-    reference: 'PR-2026-08',
-    periodStart: '2026-08-01',
-    periodEnd: '2026-08-31',
-    payDate: '2026-08-28',
-    cutoffAt: '2026-08-25T09:00:00.000Z'
-  },
-  {
-    id: 'run-2026-09',
-    reference: 'PR-2026-09',
-    periodStart: '2026-09-01',
-    periodEnd: '2026-09-30',
-    payDate: '2026-09-28',
-    cutoffAt: '2026-09-24T09:00:00.000Z'
-  }
-]
+const MONTHS = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09']
 
-/** On the payroll for a period if hired by the end of it and not gone before it started. */
+/** Singapore's paydays, kept exactly as seeded: the 28th, except June, when it falls on a Sunday. */
+const SG_PAY_DAY = [28, 28, 26, 28, 28, 28]
+
+const lastDayOf = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate()
+
+const iso = (year: number, month: number, day: number) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+const minusDays = (date: string, days: number) => {
+  const at = new Date(`${date}T00:00:00.000Z`)
+
+  at.setUTCDate(at.getUTCDate() - days)
+
+  return at.toISOString().slice(0, 10)
+}
+
+/**
+ * When each entity pays, and how long before that the inputs close.
+ *
+ * These differ on purpose. A group whose companies all paid on the same day would never show
+ * the thing that makes multi-entity payroll hard: on any given day the entities are at different
+ * stages, and "is the group ready" is not one question.
+ */
+const PAYDAY: Record<string, (year: number, month: number, index: number) => string> = {
+  'ent-sg': (year, month, index) => iso(year, month, SG_PAY_DAY[index]),
+  'ent-my': (year, month) => iso(year, month, lastDayOf(year, month)),
+  'ent-mfg': (year, month) => iso(year, month, lastDayOf(year, month)),
+  'ent-vn': (year, month) => (month === 12 ? iso(year + 1, 1, 5) : iso(year, month + 1, 5)),
+  'ent-feed': (year, month) => (month === 12 ? iso(year + 1, 1, 5) : iso(year, month + 1, 5))
+}
+
+const CUTOFF_DAYS: Record<string, number> = { 'ent-sg': 4, 'ent-my': 5, 'ent-mfg': 5, 'ent-vn': 7, 'ent-feed': 7 }
+
+/**
+ * Afenda Feed Vietnam has not calculated September.
+ *
+ * The run is absent rather than present with zero totals. A zeroed draft would be a claim that
+ * the payroll is nil; absence is the truth, which is that nobody has run it yet. Everything
+ * downstream reads the missing run as "awaiting data" and excludes the entity from the group
+ * figure by name.
+ */
+const SKIPPED: { entityId: string; key: string }[] = [{ entityId: 'ent-feed', key: '2026-09' }]
+
+const buildPeriods = (): Period[] => {
+  const built: Period[] = []
+
+  for (const entity of legalEntities) {
+    MONTHS.forEach((key, index) => {
+      if (SKIPPED.some(skip => skip.entityId === entity.id && skip.key === key)) return
+
+      const [year, month] = key.split('-').map(Number)
+      const payDate = PAYDAY[entity.id](year, month, index)
+      const code = entity.code.toLowerCase()
+
+      built.push({
+        id: `run-${code}-${key}`,
+        reference: `PR-${entity.code}-${key}`,
+        key,
+        entityId: entity.id,
+        currency: entity.currency,
+        payGroup: `${entity.code} Monthly`,
+        periodStart: iso(year, month, 1),
+        periodEnd: iso(year, month, lastDayOf(year, month)),
+        payDate,
+        cutoffAt: `${minusDays(payDate, CUTOFF_DAYS[entity.id])}T09:00:00.000Z`,
+        monthIndex: index
+      })
+    })
+  }
+
+  return built
+}
+
+const periods: Period[] = buildPeriods()
+
+/** On the payroll for a period if employed by this entity, hired by the end, and not gone before. */
 const isPaidIn = (employee: Employee, period: Period) =>
-  employee.hireDate <= period.periodEnd && (!employee.terminationDate || employee.terminationDate >= period.periodStart)
+  employee.entityId === period.entityId &&
+  employee.hireDate <= period.periodEnd &&
+  (!employee.terminationDate || employee.terminationDate >= period.periodStart)
 
 /**
  * Overtime hours, derived from the employee number and the period index so the same person
  * gets the same hours on every render. Only the departments that actually work shifts.
  */
-const overtimeHours = (employee: Employee, periodIndex: number) => {
+const overtimeHours = (employee: Employee, period: Period) => {
   if (employee.departmentId !== 'dept-ops' && employee.departmentId !== 'dept-support') return 0
 
   const seed = Number(employee.employeeNumber.replace('EMP-', ''))
 
-  // The September spike in Operations is deliberate — it is what the overtime exception flags.
-  const spike = periodIndex === 5 && employee.departmentId === 'dept-ops' ? 9 : 0
+  // The September spike in Singapore Operations is deliberate — it is what the overtime
+  // exception flags. Scoped to that entity so the other companies are not made anomalous
+  // by a pattern that belongs to one run's story.
+  const spike = period.monthIndex === 5 && employee.departmentId === 'dept-ops' && period.entityId === 'ent-sg' ? 9 : 0
 
-  return ((seed * 7 + periodIndex * 5) % 7) + spike
+  return ((seed * 7 + period.monthIndex * 5) % 7) + spike
 }
 
 /** Earnings an import may add or override, with the label the payslip shows for each. */
@@ -128,22 +170,27 @@ export type PayInputOverride = { code: string; amount: Money }
  * The calculation, in one place. The seed calls it to build every payslip at load; the
  * recalculation action calls it again with imported overrides so "Calculation #9" is a real
  * calculation over real inputs rather than a version number moving on its own.
+ *
+ * The statutory profile is a parameter rather than a constant, which is the whole reason a
+ * Malaysian payslip can show EPF and SOCSO while a Singaporean one shows CPF.
  */
 export const calculatePayslip = (
   employee: Employee,
   period: Period,
-  periodIndex: number,
+  profile: StatutoryProfile,
   overrides: PayInputOverride[] = []
 ): Payslip => {
+  const currency = period.currency
+  const at = (amount: number) => money(amount, currency)
   const annual = employee.compensation.amount.amount
   const base = Math.round((annual / 12) * employee.fte)
-  const otHours = overtimeHours(employee, periodIndex)
-  const hourlyRate = Math.round(base / MONTHLY_HOURS)
+  const otHours = overtimeHours(employee, period)
+  const hourlyRate = Math.round(base / profile.monthlyHours)
   const otRate = Math.round(hourlyRate * 1.5)
   const overtime = otHours * otRate
 
   const components: PayComponent[] = [
-    { code: 'BASE', label: 'Base salary', kind: 'earning', amount: sgd(base), taxable: true }
+    { code: 'BASE', label: 'Base salary', kind: 'earning', amount: at(base), taxable: true }
   ]
 
   if (overtime > 0) {
@@ -151,10 +198,10 @@ export const calculatePayslip = (
       code: 'OT15',
       label: 'Overtime 1.5x',
       kind: 'earning',
-      amount: sgd(overtime),
+      amount: at(overtime),
       taxable: true,
       quantity: otHours,
-      rate: sgd(otRate)
+      rate: at(otRate)
     })
   }
 
@@ -180,64 +227,106 @@ export const calculatePayslip = (
   }
 
   const gross = components.reduce((sum, c) => sum + c.amount.amount, 0)
-  const contributable = Math.min(gross, CONTRIBUTION_CEILING)
-  const cpfEmployee = Math.round(contributable * EMPLOYEE_RATE)
-  const cpfEmployer = Math.round(contributable * EMPLOYER_RATE)
-  const tax = Math.round((gross - cpfEmployee) * TAX_RATE)
-  const net = gross - tax - cpfEmployee
 
-  components.push(
-    { code: 'TAX', label: 'Income tax', kind: 'tax', amount: sgd(tax) },
-    { code: 'CPF_EE', label: 'CPF (employee)', kind: 'deduction', amount: sgd(cpfEmployee) },
-    { code: 'CPF_ER', label: 'CPF (employer)', kind: 'employer_contribution', amount: sgd(cpfEmployer) }
-  )
+  // Each contribution is capped independently: SOCSO and EIS stop at their ceiling while EPF
+  // does not, and applying one ceiling to all of them would quietly under-report the uncapped
+  // ones on every Malaysian payslip.
+  const contributions = profile.contributions.map(rule => {
+    const contributable = rule.ceiling ? Math.min(gross, rule.ceiling.amount) : gross
+
+    return { rule, amount: Math.round((contributable * rule.rate) / 100) }
+  })
+
+  const employeeContributions = contributions
+    .filter(c => c.rule.party === 'employee')
+    .reduce((sum, c) => sum + c.amount, 0)
+
+  const tax = Math.round(((gross - employeeContributions) * profile.tax.rate) / 100)
+  const net = gross - tax - employeeContributions
+
+  components.push({ code: profile.tax.code, label: profile.tax.label, kind: 'tax', amount: at(tax) })
+
+  for (const { rule, amount } of contributions) {
+    components.push({
+      code: rule.code,
+      label: rule.label,
+      kind: rule.party === 'employee' ? 'deduction' : 'employer_contribution',
+      amount: at(amount)
+    })
+  }
 
   return {
     id: `slip-${period.id}-${employee.id}`,
     payRunId: period.id,
     employeeId: employee.id,
-    status: periodIndex === periods.length - 1 ? 'draft' : 'paid',
+    status: period.monthIndex === MONTHS.length - 1 ? 'draft' : 'paid',
     components,
-    grossPay: sgd(gross),
-    netPay: sgd(net),
-    hoursRegular: Math.round(MONTHLY_HOURS * employee.fte),
+    grossPay: at(gross),
+    netPay: at(net),
+    hoursRegular: Math.round(profile.monthlyHours * employee.fte),
     hoursOvertime: otHours || undefined
   }
 }
 
-/** The period a run id belongs to, with its index, for recalculating that run's payslips. */
-export const periodForRun = (runId: string) => {
-  const index = periods.findIndex(period => period.id === runId)
+/**
+ * The period a run belongs to, with the statutory profile that priced it.
+ *
+ * Matches an id or a reference, because `getPayRun` accepts either and a recalculation that
+ * silently found nothing would leave the run untouched while reporting success.
+ */
+export const periodForRun = (runIdOrReference: string) => {
+  const period = periods.find(p => p.id === runIdOrReference || p.reference === runIdOrReference)
 
-  return index === -1 ? undefined : { period: periods[index], index }
+  if (!period) return undefined
+
+  return { period, profile: statutoryProfileFor(entityFor(period.entityId)) }
 }
 
-const sumComponent = (slips: Payslip[], code: string): Money =>
-  add(...slips.flatMap(s => s.components.filter(c => c.code === code).map(c => c.amount)))
+export const periodsForEntity = (entityId: string) => periods.filter(period => period.entityId === entityId)
 
-export const totalsFor = (slips: Payslip[]): PayRunTotals => {
-  const grossPay = add(...slips.map(s => s.grossPay))
-  const employeeTaxes = sumComponent(slips, 'TAX')
-  const employeeDeductions = sumComponent(slips, 'CPF_EE')
-  const employerContributions = sumComponent(slips, 'CPF_ER')
+/**
+ * Totals from payslips, summed by component KIND rather than by hard-coded codes.
+ *
+ * The previous version added up 'TAX', 'CPF_EE' and 'CPF_ER' by name, which silently returned
+ * zero deductions for every country that does not call them that. The kind is the thing the
+ * totals actually mean.
+ */
+export const totalsFor = (slips: Payslip[], currency: CurrencyCode): PayRunTotals => {
+  const ofKind = (kind: PayComponent['kind']) =>
+    add(
+      slips.flatMap(s => s.components.filter(c => c.kind === kind).map(c => c.amount)),
+      currency
+    )
+
+  const grossPay = add(
+    slips.map(s => s.grossPay),
+    currency
+  )
+
+  const employeeTaxes = ofKind('tax')
+  const employeeDeductions = ofKind('deduction')
+  const employerContributions = ofKind('employer_contribution')
 
   return {
     grossPay,
     employeeTaxes,
     employeeDeductions,
-    netPay: sgd(grossPay.amount - employeeTaxes.amount - employeeDeductions.amount),
+    netPay: money(grossPay.amount - employeeTaxes.amount - employeeDeductions.amount, currency),
     employerContributions,
-    employerCost: sgd(grossPay.amount + employerContributions.amount)
+    employerCost: money(grossPay.amount + employerContributions.amount, currency)
   }
 }
 
+const sgd = (amount: number): Money => money(amount, 'SGD')
+const myr = (amount: number): Money => money(amount, 'MYR')
+
 /**
- * Exceptions on the open run. Earlier runs closed clean.
+ * Exceptions on the open runs. Earlier runs closed clean.
  *
  * Owners are the people who would actually clear each one: missing HR data goes to People,
  * calculation questions to Finance, spend questions to the department head.
  */
-const openRunExceptions: PayRunException[] = [
+const sgOpenExceptions: PayRunException[] = [
   {
     id: 'exc-001',
     kind: 'missing_bank_details',
@@ -329,62 +418,168 @@ const openRunExceptions: PayRunException[] = [
   }
 ]
 
-const allPayslips: Payslip[] = periods.flatMap((period, index) =>
-  employees.filter(e => isPaidIn(e, period)).map(e => calculatePayslip(e, period, index))
+/** Manufacturing cannot advance: one of its line operators has no account to pay into. */
+const mfgOpenExceptions: PayRunException[] = [
+  {
+    id: 'exc-mfg-001',
+    kind: 'missing_bank_details',
+    severity: 'blocking',
+    employeeId: 'emp-063',
+    title: 'No bank account on file',
+    message: 'Aiman Zainal has no bank account on file — payment cannot be issued',
+    rule: 'Every employee paid by bank transfer must have a verified account before approval',
+    source: 'Employment profile · Banking',
+    ownerId: 'emp-023',
+    detectedAt: '2026-09-20T01:10:00.000Z'
+  },
+  {
+    id: 'exc-mfg-002',
+    kind: 'overtime_spike',
+    severity: 'warning',
+    departmentId: 'dept-ops',
+    title: 'Plant overtime above plan',
+    message: 'Johor Bahru overtime is 1.8x its six-month average',
+    rule: 'Department overtime above 2x its trailing six-month average is flagged for review',
+    source: 'Timesheet import · 20 Sep',
+    impact: myr(184000),
+    previousValue: '212 hours',
+    currentValue: '381 hours',
+    ownerId: 'emp-015',
+    detectedAt: '2026-09-20T01:10:00.000Z'
+  }
+]
+
+/** Vietnam is in review with one acknowledged warning — reviewed, not merely untouched. */
+const vnOpenExceptions: PayRunException[] = [
+  {
+    id: 'exc-vn-001',
+    kind: 'missing_tax_details',
+    severity: 'warning',
+    employeeId: 'emp-093',
+    title: 'Tax identifier missing',
+    message: 'Anh Ngo is missing a tax identifier — withholding defaulted to standard rate',
+    rule: 'Withholding uses the standard rate when no tax identifier is on file',
+    source: 'Employment profile · Tax',
+    previousValue: 'Personal rate',
+    currentValue: 'Standard rate (10%)',
+    ownerId: 'emp-023',
+    detectedAt: '2026-09-16T02:00:00.000Z',
+    acknowledgedAt: '2026-09-19T04:15:00.000Z',
+    acknowledgedBy: 'emp-020'
+  }
+]
+
+const exceptionsByRun: Record<string, PayRunException[]> = {
+  'run-sg-2026-09': sgOpenExceptions,
+  'run-mfg-2026-09': mfgOpenExceptions,
+  'run-vn-2026-09': vnOpenExceptions
+}
+
+/**
+ * Where each entity stands on the open month.
+ *
+ * Chosen so the group surface has every state it must be able to prove: one approved and ready,
+ * two that cannot advance, one under review, and one that has not calculated at all. Two blocked
+ * entities is not a shortfall — Singapore's blocker was already in the seed, and a run that
+ * cannot advance is blocked whatever has been signed on it.
+ */
+type OpenState = { status: PayRun['status']; calculationVersion: number; reviewed: boolean; approved: boolean }
+
+const OPEN_STATE: Record<string, OpenState> = {
+  'ent-sg': { status: 'pending_approval', calculationVersion: 8, reviewed: true, approved: false },
+  'ent-my': { status: 'approved', calculationVersion: 3, reviewed: true, approved: true },
+  'ent-mfg': { status: 'calculated', calculationVersion: 2, reviewed: false, approved: false },
+  'ent-vn': { status: 'pending_approval', calculationVersion: 3, reviewed: true, approved: false }
+}
+
+const profileByEntity = new Map<string, StatutoryProfile>(
+  legalEntities.map((entity: LegalEntity) => [entity.id, statutoryProfileFor(entity)])
+)
+
+const allPayslips: Payslip[] = periods.flatMap(period =>
+  employees
+    .filter(e => isPaidIn(e, period))
+    .map(e => calculatePayslip(e, period, profileByEntity.get(period.entityId)!))
 )
 
 export const payslips = allPayslips
 
-export const payRuns: PayRun[] = periods.map((period, index) => {
+export const payRuns: PayRun[] = periods.map(period => {
   const slips = allPayslips.filter(s => s.payRunId === period.id)
-  const isOpen = index === periods.length - 1
+  const isOpen = period.monthIndex === MONTHS.length - 1
+  const open = OPEN_STATE[period.entityId]
+  const exceptions = isOpen ? (exceptionsByRun[period.id] ?? []) : []
+  const version = isOpen && open ? open.calculationVersion : 3
+
+  const findings = {
+    blocking: exceptions.filter(e => e.severity === 'blocking' && !e.resolvedAt).length,
+    error: exceptions.filter(e => e.severity === 'error' && !e.resolvedAt).length,
+    warning: exceptions.filter(e => e.severity === 'warning' && !e.resolvedAt).length
+  }
+
+  const reviewed = isOpen ? Boolean(open?.reviewed) : true
+  const approved = isOpen ? Boolean(open?.approved) : true
 
   return {
-    ...period,
+    id: period.id,
+    reference: period.reference,
+    entityId: period.entityId,
+    periodStart: period.periodStart,
+    periodEnd: period.periodEnd,
+    payDate: period.payDate,
+    cutoffAt: period.cutoffAt,
     frequency: 'monthly' as const,
-    status: isOpen ? ('pending_approval' as const) : ('closed' as const),
-    payGroup: 'SG Monthly',
+    status: isOpen && open ? open.status : ('closed' as const),
+    payGroup: period.payGroup,
 
-    // Closed runs settled on their third calculation; the open one has been re-run each time an
+    // Closed runs settled on their third calculation; an open one has been re-run each time an
     // exception was cleared or a timesheet landed.
-    calculationVersion: isOpen ? 8 : 3,
-    lastCalculatedAt: isOpen ? '2026-09-18T01:00:00.000Z' : `${period.cutoffAt}`,
-    currency: CURRENCY,
+    calculationVersion: version,
+    lastCalculatedAt: isOpen ? '2026-09-20T01:00:00.000Z' : period.cutoffAt,
+    currency: period.currency,
     employeeCount: slips.length,
-    totals: totalsFor(slips),
-    exceptions: isOpen ? openRunExceptions : [],
-    approvals: isOpen
-      ? []
-      : [{ approvedBy: 'emp-020', approvedAt: `${period.payDate}T02:00:00.000Z`, note: 'Reviewed and approved' }],
+    totals: totalsFor(slips, period.currency),
+    exceptions,
+    approvals: approved
+      ? [
+          {
+            approvedBy: 'emp-020',
+            approvedAt: `${period.payDate}T02:00:00.000Z`,
+            note: 'Reviewed and approved'
+          }
+        ]
+      : [],
 
     // A run in Pending approval has, by definition, been reviewed: the payroll specialist signed
-    // off calculation #8 with the blocker still open, which is what the approver now reads.
-    // Closed runs were reviewed on their final calculation the morning they were approved.
-    review: isOpen
+    // off a specific calculation, which is what the approver now reads. A run in Calculated has
+    // not, and the interface must not imply otherwise.
+    review: reviewed
       ? {
-          calculationVersion: 8,
+          calculationVersion: version,
           reviewedBy: 'emp-022',
-          reviewedAt: '2026-09-18T02:10:00.000Z',
-          findingsAtReview: {
-            blocking: openRunExceptions.filter(e => e.severity === 'blocking' && !e.resolvedAt).length,
-            error: openRunExceptions.filter(e => e.severity === 'error' && !e.resolvedAt).length,
-            warning: openRunExceptions.filter(e => e.severity === 'warning' && !e.resolvedAt).length
-          },
-          acknowledgedWarnings: openRunExceptions.filter(e => e.severity === 'warning' && e.acknowledgedAt).length,
-          note: 'Overtime spike in Operations checked against timesheets.'
+          reviewedAt: isOpen ? '2026-09-20T02:10:00.000Z' : `${period.payDate}T00:30:00.000Z`,
+          findingsAtReview: findings,
+          acknowledgedWarnings: exceptions.filter(e => e.severity === 'warning' && e.acknowledgedAt).length,
+          note:
+            isOpen && period.entityId === 'ent-sg'
+              ? 'Overtime spike in Operations checked against timesheets.'
+              : undefined
         }
-      : {
-          calculationVersion: 3,
-          reviewedBy: 'emp-022',
-          reviewedAt: `${period.payDate}T00:30:00.000Z`,
-          findingsAtReview: { blocking: 0, error: 0, warning: 0 },
-          acknowledgedWarnings: 0
-        },
+      : undefined,
     createdAt: `${period.periodStart}T00:30:00.000Z`,
     createdBy: 'emp-022',
     updatedAt: `${period.payDate}T02:00:00.000Z`
   }
 })
 
-/** The run currently being worked on — what the dashboard opens to. */
-export const currentPayRun = payRuns[payRuns.length - 1]
+export const runsForEntity = (entityId: string) => payRuns.filter(run => run.entityId === entityId)
+
+/** The run currently being worked on for an entity — what that entity's overview opens to. */
+export const latestRunFor = (entityId: string) => {
+  const own = runsForEntity(entityId)
+
+  return own[own.length - 1]
+}
+
+/** The home entity's open run, which is what the single-entity screens still default to. */
+export const currentPayRun = latestRunFor('ent-sg')

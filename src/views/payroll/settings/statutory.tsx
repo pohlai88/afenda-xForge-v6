@@ -7,7 +7,6 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 // Type Imports
-import type { CurrencyCode } from '@/types/common/primitive-types'
 import type { StatutoryRule } from '@/types/payroll/settings-types'
 
 // Component Imports
@@ -24,21 +23,19 @@ import SettingsSection from './settings-section'
 import { savePayrollSettingsSection } from '@/app/server/actions'
 
 // Util Imports
-import { currencySymbol, formatMoney } from '@/utils/money'
+import { currencySymbol, formatMoney, fromMajorUnits, toMajorUnits } from '@/utils/money'
+import { COUNTRY_LABELS } from '@/utils/payroll-group'
 import { formatDate } from '@/utils/payroll-workspace'
 
 type Props = {
   rules: StatutoryRule[]
-
-  /** The entity's currency, for ceilings that do not yet have one. */
-  currency: CurrencyCode
 }
 
 /**
  * Rates and ceilings. Edited in place with a single save, because a change to one rate is
  * usually a change to its pair (employee and employer move together at each budget).
  */
-const StatutorySettings = ({ rules: initial, currency }: Props) => {
+const StatutorySettings = ({ rules: initial }: Props) => {
   const [rules, setRules] = useState(initial)
   const [saved, setSaved] = useState(initial)
   const [dirty, setDirty] = useState(false)
@@ -69,10 +66,7 @@ const StatutorySettings = ({ rules: initial, currency }: Props) => {
         rule.id === id
           ? {
               ...rule,
-              ceiling:
-                major === null
-                  ? null
-                  : { amount: Math.round(major * 100), currency: rule.ceiling?.currency ?? currency }
+              ceiling: major === null ? null : fromMajorUnits(major, rule.ceiling?.currency ?? rule.currency)
             }
           : rule
       )
@@ -83,7 +77,7 @@ const StatutorySettings = ({ rules: initial, currency }: Props) => {
   return (
     <SettingsSection
       title='Statutory contributions'
-      description='The rates the calculation applies. A change here re-flags every open run for recalculation; closed runs keep the rates they were paid under.'
+      description='The rates the calculation applies, per country. A change here re-flags every open run for recalculation; closed runs keep the rates they were paid under.'
       wide
       footer={
         <>
@@ -105,10 +99,11 @@ const StatutorySettings = ({ rules: initial, currency }: Props) => {
     >
       <div className='px-6'>
         <Alert>
-          <AlertTitle>Rates are effective from a date, not immediately.</AlertTitle>
+          <AlertTitle>These are simplified illustrative rates, not managed law.</AlertTitle>
           <AlertDescription>
-            The engine picks the rule in force on the period end date, so a rate for next year can be entered now
-            without touching this year&apos;s runs.
+            Real contribution schemes are banded by age, wage and residency, and withholding follows a published
+            table. Managed statutory packs, effective dates and governed overrides arrive with the Statutory Pack
+            Center. Until then a rate entered here is a number someone typed.
           </AlertDescription>
         </Alert>
       </div>
@@ -117,6 +112,7 @@ const StatutorySettings = ({ rules: initial, currency }: Props) => {
         <TableHeader>
           <TableRow>
             <TableHead className='h-9 pl-6 text-xs'>Rule</TableHead>
+            <TableHead className='h-9 text-xs'>Country</TableHead>
             <TableHead className='h-9 text-xs'>Paid by</TableHead>
             <TableHead className='h-9 text-xs'>Rate</TableHead>
             <TableHead className='h-9 text-xs'>Wage ceiling</TableHead>
@@ -127,6 +123,9 @@ const StatutorySettings = ({ rules: initial, currency }: Props) => {
           {rules.map(rule => (
             <TableRow key={rule.id}>
               <TableCell className='py-2 pl-6 font-medium whitespace-normal'>{rule.name}</TableCell>
+              <TableCell className='text-muted-foreground py-2 text-sm'>
+                {COUNTRY_LABELS[rule.countryCode]}
+              </TableCell>
               <TableCell className='py-2'>
                 <Badge variant='outline' className='text-xs capitalize'>
                   {rule.party}
@@ -167,7 +166,7 @@ const StatutorySettings = ({ rules: initial, currency }: Props) => {
                         type='number'
                         min={0}
                         step='100'
-                        value={rule.ceiling.amount / 100}
+                        value={toMajorUnits(rule.ceiling)}
                         onChange={event => updateCeiling(rule.id, Number(event.target.value))}
                         className='tabular-nums'
                       />

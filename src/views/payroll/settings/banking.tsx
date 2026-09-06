@@ -11,7 +11,9 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 // Type Imports
+import { CURRENCY_CODES } from '@/types/common/primitive-types'
 import type { FundingAccount } from '@/types/payroll/settlement-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 
 // Component Imports
 import { Badge } from '@/components/ui/badge'
@@ -28,38 +30,53 @@ import { addFundingAccount, setDefaultFundingAccount } from '@/app/server/action
 // Util Imports
 import { formatMoney } from '@/utils/money'
 
-const CURRENCIES = ['SGD', 'MYR', 'USD', 'EUR', 'GBP', 'AUD', 'INR'] as const
 
 const schema = z.object({
+  entityId: z.string().min(1, 'Choose the company that holds this account'),
   name: z.string().min(1, 'Give the account a name people will recognise'),
   bankName: z.string().min(1, 'Bank is required'),
   accountLast4: z.string().regex(/^\d{4}$/, 'Enter the last four digits only'),
-  currency: z.enum(CURRENCIES)
+  currency: z.enum(CURRENCY_CODES)
 })
 
 type Values = z.infer<typeof schema>
 
 type Props = {
   accounts: FundingAccount[]
+  entities: LegalEntity[]
 }
 
 /**
  * Where payroll is drawn from. Only the last four digits are ever shown or stored here; the full
  * account number lives behind the server boundary with its own access control.
  */
-const BankingSettings = ({ accounts: initial }: Props) => {
+const BankingSettings = ({ accounts: initial, entities }: Props) => {
   const [accounts, setAccounts] = useState(initial)
   const [adding, setAdding] = useState(false)
+  const entityById = new Map(entities.map(entity => [entity.id, entity]))
+  const homeEntity = entities[0]
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', bankName: '', accountLast4: '', currency: 'SGD' }
+    defaultValues: {
+      entityId: homeEntity?.id ?? '',
+      name: '',
+      bankName: '',
+      accountLast4: '',
+      currency: homeEntity?.currency ?? 'SGD'
+    }
   })
 
   const makeDefault = async (id: string) => {
     const snapshot = accounts
 
-    setAccounts(current => current.map(account => ({ ...account, isDefault: account.id === id })))
+    const target = accounts.find(account => account.id === id)
+
+    setAccounts(current =>
+      current.map(account =>
+        account.entityId === target?.entityId ? { ...account, isDefault: account.id === id } : account
+      )
+    )
 
     const result = await setDefaultFundingAccount(id)
 
@@ -112,7 +129,7 @@ const BankingSettings = ({ accounts: initial }: Props) => {
                   {account.isDefault && <Badge className='bg-success/15 text-success text-xs'>Default</Badge>}
                 </span>
                 <span className='text-muted-foreground text-xs'>
-                  {account.bankName} ···· {account.accountLast4} · {account.currency}
+                  {entityById.get(account.entityId)?.name ?? 'Unknown entity'} · {account.bankName} ···· {account.accountLast4} · {account.currency}
                 </span>
               </div>
               <span className='text-sm font-medium tabular-nums'>{formatMoney(account.balance)}</span>
@@ -139,6 +156,42 @@ const BankingSettings = ({ accounts: initial }: Props) => {
             className='flex flex-col gap-4 px-4 pb-4'
           >
             <FieldGroup className='gap-4'>
+              <Controller
+                name='entityId'
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid} className='gap-2'>
+                    <FieldLabel htmlFor={field.name}>Company</FieldLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={value => {
+                        if (!value) return
+
+                        field.onChange(value)
+
+                        // An account holds the currency its company pays in. Choosing the company
+                        // settles it, so nobody can register a ringgit account for a dong payroll.
+                        const entity = entityById.get(value)
+
+                        if (entity) form.setValue('currency', entity.currency, { shouldDirty: true })
+                      }}
+                      items={entities.map(entity => ({ value: entity.id, label: entity.name }))}
+                    >
+                      <SelectTrigger id={field.name} className='w-full' aria-invalid={fieldState.invalid}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {entities.map(entity => (
+                          <SelectItem key={entity.id} value={entity.id}>
+                            {entity.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
               <Controller
                 name='name'
                 control={form.control}
@@ -197,7 +250,7 @@ const BankingSettings = ({ accounts: initial }: Props) => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {CURRENCIES.map(currency => (
+                          {CURRENCY_CODES.map(currency => (
                             <SelectItem key={currency} value={currency}>
                               {currency}
                             </SelectItem>

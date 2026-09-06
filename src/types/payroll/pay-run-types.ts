@@ -38,7 +38,6 @@ export type PayComponentKind = 'earning' | 'deduction' | 'employer_contribution'
  * cost on top of gross. Summing them together overstates take-home and understates cost.
  */
 export interface PayComponent {
-
   /** Stable code for reporting and GL mapping, e.g. 'BASE', 'OT15', 'PENSION_EE'. */
   code: string
   label: string
@@ -144,7 +143,6 @@ export interface PayRunTotals {
 }
 
 export interface PayRunApproval {
-
   /** Employee id of the approver. */
   approvedBy: string
   approvedAt: IsoDateTime
@@ -213,7 +211,7 @@ export interface CalculationDiff {
 export interface PayRun {
   id: string
 
-  /** Human-readable, e.g. 'PR-2026-09'. What people call the run in conversation. */
+  /** Human-readable, e.g. 'PR-SG-2026-09'. What people call the run in conversation. */
   reference: string
 
   /** The period being paid for — inclusive of both ends. */
@@ -231,6 +229,13 @@ export interface PayRun {
 
   frequency: PayFrequency
   status: PayRunStatus
+
+  /**
+   * The legal entity this run belongs to. A run is always one entity's payroll: the entity fixes
+   * the currency, the statutory rules and who is liable, so a run that spanned two would have no
+   * single answer to any of those.
+   */
+  entityId: string
 
   /** Which population this run pays, e.g. 'SG Monthly'. One pay group per run. */
   payGroup: string

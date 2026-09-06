@@ -55,7 +55,7 @@ export const recalculatePayslips = (
 
   if (!located) throw new Error(`No period for ${run.id}`)
 
-  const { period, index } = located
+  const { period, profile } = located
   const currency = run.currency
   const inputs = inputsForRun(run.id)
   const subset = employeeIds ? new Set(employeeIds) : null
@@ -82,7 +82,7 @@ export const recalculatePayslips = (
       if (input.employeeId === slip.employeeId) overrides.set(input.code, { code: input.code, amount: input.amount })
     }
 
-    const next: Payslip = { ...calculatePayslip(employee, period, index, [...overrides.values()]), status: slip.status }
+    const next: Payslip = { ...calculatePayslip(employee, period, profile, [...overrides.values()]), status: slip.status }
 
     count += 1
 
@@ -110,7 +110,7 @@ export const recalculatePayslips = (
 
   const runSlips = payslips.filter(slip => slip.payRunId === run.id)
   const previousTotals = run.totals
-  const totals = totalsFor(runSlips)
+  const totals = totalsFor(runSlips, currency)
 
   run.totals = totals
   run.employeeCount = runSlips.length

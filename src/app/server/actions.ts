@@ -11,6 +11,9 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 // Type Imports
+import { CURRENCY_CODES } from '@/types/common/primitive-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
+import type { PayrollGroup } from '@/types/payroll/group-types'
 import type { PayRun, PayRunException } from '@/types/payroll/pay-run-types'
 import type { StatutoryFiling } from '@/types/payroll/compliance-types'
 import type { PayrollActor, PayrollPermission } from '@/types/payroll/permission-types'
@@ -32,7 +35,10 @@ import { db as mailDb } from '@/fake-db/apps/mail'
 import { db as userSettingsDb } from '@/fake-db/pages/user-settings'
 import { db as userProfileDb } from '@/fake-db/pages/user-profile'
 import { activeEmployees, departments, employees, locations } from '@/fake-db/hrm/employees'
-import { currentPayRun, payRuns, payslips } from '@/fake-db/payroll/pay-runs'
+import { legalEntities } from '@/fake-db/hrm/entities'
+import { currentPayRun, latestRunFor, payRuns, payslips } from '@/fake-db/payroll/pay-runs'
+import { BUDGET_YEAR, budgetRates, fxRates } from '@/fake-db/payroll/fx-rates'
+import { statutoryProfiles } from '@/fake-db/payroll/statutory-profiles'
 import { recalculatePayslips, storeInputs, unappliedInputs } from '@/fake-db/payroll/inputs'
 import { fundingAccounts, settlementBatches, settlements } from '@/fake-db/payroll/settlements'
 import { payrollSettings } from '@/fake-db/payroll/settings'
@@ -76,12 +82,48 @@ export const getDepartments = async () => departments
 
 export const getLocations = async () => locations
 
+// Payroll Group Actions
+export const getLegalEntities = async () => legalEntities
+
+export const getLegalEntity = async (entityId: string) => legalEntities.find(entity => entity.id === entityId)
+
+export const getFxRates = async () => fxRates
+
+export const getStatutoryProfiles = async () => statutoryProfiles
+
+/**
+ * The group, composed from settings and the rate table rather than stored twice.
+ *
+ * Its name, home entity, reporting currency and basis are all settings someone can change on
+ * screen; keeping a second copy here is how the settings page and the group page would start
+ * disagreeing about what the group is.
+ */
+export const getPayrollGroup = async (): Promise<PayrollGroup> => ({
+  id: 'grp-afenda',
+  name: payrollSettings.general.groupName,
+  homeEntityId: payrollSettings.general.homeEntityId,
+  entityIds: payrollSettings.entities.map(entity => entity.id),
+  reportingCurrency: payrollSettings.general.reportingCurrency,
+  fxBasis: payrollSettings.general.fxBasis,
+  budgetRates,
+  budgetYear: BUDGET_YEAR
+})
+
 // Payroll Actions
 export const getPayRuns = async () => payRuns
 
-export const getCurrentPayRun = async () => currentPayRun
+export const getPayRunsForEntity = async (entityId: string) => payRuns.filter(run => run.entityId === entityId)
 
-/** By id ('run-2026-09') or by reference ('PR-2026-09') — both appear in URLs people share. */
+/**
+ * The open run for an entity, defaulting to the group's home entity.
+ *
+ * "The current run" stopped being a single thing once there was more than one company, so the
+ * caller says whose. Screens that are still single-entity get the home entity, which is what
+ * they showed before.
+ */
+export const getCurrentPayRun = async (entityId?: string) => (entityId ? latestRunFor(entityId) : currentPayRun)
+
+/** By id ('run-sg-2026-09') or by reference ('PR-SG-2026-09') — both appear in URLs people share. */
 export const getPayRun = async (runIdOrReference: string) =>
   payRuns.find(run => run.id === runIdOrReference || run.reference === runIdOrReference)
 
@@ -148,6 +190,7 @@ const findRun = (runId: string) => payRuns.find(run => run.id === runId || run.r
 
 const revalidateRun = (run: PayRun) => {
   revalidatePath('/payroll')
+  revalidatePath(`/payroll/entities/${run.entityId}`)
   revalidatePath('/payroll/runs')
   revalidatePath(`/payroll/runs/${run.id}`)
   revalidatePath('/payroll/payments')
@@ -558,6 +601,12 @@ const revalidateBatch = (batch: SettlementBatch) => {
   revalidatePath('/payroll')
   revalidatePath(`/payroll/runs/${batch.payRunId}`)
   revalidatePath('/payroll/runs')
+
+  // The batch knows its run, and the run knows whose payroll it is. Without this the entity
+  // overview keeps showing a run as unpaid after its file has settled.
+  const run = payRuns.find(candidate => candidate.id === batch.payRunId)
+
+  if (run) revalidatePath(`/payroll/entities/${run.entityId}`)
 }
 
 /** The batch, its run, its settlements and its funding position — what every batch step reads. */
@@ -733,7 +782,7 @@ const sectionSchemas = {
   general: z.object({
     entityName: z.string().trim().min(1, 'The entity needs a name.'),
     registrationNumber: z.string().trim().min(1, 'The registration number is required.'),
-    defaultCurrency: z.enum(['USD', 'EUR', 'GBP', 'SGD', 'MYR', 'AUD', 'INR']),
+    defaultCurrency: z.enum(CURRENCY_CODES),
     timezone: z.string().trim().min(1),
     payslipSender: z.string().trim().email('The payslip sender must be an email address.'),
     rounding: z.enum(['nearest_cent', 'nearest_dollar'])
@@ -807,11 +856,57 @@ export const savePayrollSettingsSection = async <S extends SettingsSection>(
   return ok(payrollSettings[section])
 }
 
+const legalEntityInput = z.object({
+  id: idSchema,
+  name: z.string().trim().min(1, 'The company needs its registered name.'),
+  registrationNumber: z.string().trim().min(1, 'Registration number is required.'),
+  timezone: z.string().trim().min(1, 'Choose a timezone.')
+})
+
+/**
+ * Correct a company's paperwork.
+ *
+ * Country and currency are deliberately not editable. They decide which statutory rules priced
+ * every payslip the company has ever produced, so changing one would re-interpret history rather
+ * than correct it. A company that needs a different currency is a different company.
+ */
+export const saveLegalEntity = async (
+  values: Pick<LegalEntity, 'id' | 'name' | 'registrationNumber' | 'timezone'>
+): Promise<ActionResult<LegalEntity>> => {
+  const parsed = legalEntityInput.safeParse(values)
+
+  if (!parsed.success) return invalid(parsed.error)
+
+  const refusal = denied('payroll.settings.manage')
+
+  if (refusal) return refuse(refusal)
+
+  const entity = payrollSettings.entities.find(candidate => candidate.id === parsed.data.id)
+
+  if (!entity) return refuse('That legal entity no longer exists.')
+
+  const duplicate = payrollSettings.entities.find(
+    candidate => candidate.name.toLowerCase() === parsed.data.name.toLowerCase() && candidate.id !== entity.id
+  )
+
+  if (duplicate) return refuse(`A company called ${duplicate.name} already exists.`)
+
+  entity.name = parsed.data.name
+  entity.registrationNumber = parsed.data.registrationNumber
+  entity.timezone = parsed.data.timezone
+
+  revalidatePath('/payroll/settings')
+  revalidatePath('/payroll')
+  revalidatePath(`/payroll/entities/${entity.id}`)
+
+  return ok(entity)
+}
+
 const payGroupInput = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(1, 'The pay group needs a name.'),
-  entity: z.string().trim().min(1),
-  currency: z.enum(['USD', 'EUR', 'GBP', 'SGD', 'MYR', 'AUD', 'INR']),
+  entityId: z.string().trim().min(1),
+  currency: z.enum(CURRENCY_CODES),
   frequency: z.enum(['weekly', 'biweekly', 'semi_monthly', 'monthly']),
   paydayRule: z.string().trim().min(1, 'Say when payday is.'),
   cutoffDaysBeforePayday: z.number().int().min(0).max(31),
@@ -839,10 +934,20 @@ export const savePayGroup = async (values: Partial<PayGroup>): Promise<ActionRes
 
   if (duplicate) return refuse(`A pay group called ${duplicate.name} already exists.`)
 
+  const entity = payrollSettings.entities.find(item => item.id === parsed.data.entityId)
+
+  if (!entity) return refuse('That legal entity no longer exists.')
+
+  // The entity decides the currency it pays in. A pay group claiming otherwise would price a
+  // run in a currency its own company does not hold an account in.
+  if (parsed.data.currency !== entity.currency) {
+    return refuse(`${entity.name} pays in ${entity.currency}, so this pay group cannot be ${parsed.data.currency}.`)
+  }
+
   const saved: PayGroup = {
     id: existing?.id ?? `pg-${parsed.data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
     name: parsed.data.name,
-    entity: parsed.data.entity,
+    entityId: parsed.data.entityId,
     currency: parsed.data.currency,
     frequency: parsed.data.frequency,
     paydayRule: parsed.data.paydayRule,
@@ -860,14 +965,15 @@ export const savePayGroup = async (values: Partial<PayGroup>): Promise<ActionRes
 }
 
 const fundingAccountInput = z.object({
+  entityId: z.string().trim().min(1),
   name: z.string().trim().min(1, 'The account needs a name.'),
   bankName: z.string().trim().min(1, 'Which bank?'),
   accountLast4: z.string().regex(/^\d{4}$/, 'Enter the last four digits only.'),
-  currency: z.enum(['USD', 'EUR', 'GBP', 'SGD', 'MYR', 'AUD', 'INR'])
+  currency: z.enum(CURRENCY_CODES)
 })
 
 export const addFundingAccount = async (
-  values: Pick<FundingAccount, 'name' | 'bankName' | 'accountLast4' | 'currency'>
+  values: Pick<FundingAccount, 'entityId' | 'name' | 'bankName' | 'accountLast4' | 'currency'>
 ): Promise<ActionResult<FundingAccount>> => {
   const parsed = fundingAccountInput.safeParse(values)
 
@@ -877,11 +983,23 @@ export const addFundingAccount = async (
 
   if (refusal) return refuse(refusal)
 
+  const entity = payrollSettings.entities.find(item => item.id === parsed.data.entityId)
+
+  if (!entity) return refuse('That legal entity no longer exists.')
+
+  if (parsed.data.currency !== entity.currency) {
+    return refuse(
+      `${entity.name} pays in ${entity.currency}, so it cannot fund payroll from a ${parsed.data.currency} account.`
+    )
+  }
+
   const account: FundingAccount = {
     id: `acct-${fundingAccounts.length + 1}`,
     ...parsed.data,
     balance: { amount: 0, currency: parsed.data.currency },
-    isDefault: fundingAccounts.length === 0
+
+    // Default is per entity: the first account a company opens is the one it pays from.
+    isDefault: !fundingAccounts.some(item => item.entityId === parsed.data.entityId)
   }
 
   fundingAccounts.push(account)
@@ -904,7 +1022,12 @@ export const setDefaultFundingAccount = async (accountId: string): Promise<Actio
 
   if (!account) return refuse('That funding account no longer exists.')
 
-  for (const candidate of fundingAccounts) candidate.isDefault = candidate.id === account.id
+  // Scoped to the account's own entity. Clearing the flag across every account would mean
+  // choosing Malaysia's default silently left Singapore with no account to pay from.
+  for (const candidate of fundingAccounts) {
+    if (candidate.entityId !== account.entityId) continue
+    candidate.isDefault = candidate.id === account.id
+  }
 
   revalidatePath('/payroll/settings')
   revalidatePath('/payroll/payments')

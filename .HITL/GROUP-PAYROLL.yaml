@@ -1,0 +1,595 @@
+schema_version: '1.0'
+
+document:
+  id: afenda-group-payroll-acceptance
+  title: 'Group Payroll Control — Surface Acceptance'
+  status: normative
+  scope: payroll_frontend_surface
+  surface: group_payroll_control
+  purpose: >
+    Bind the parent frontend Definition of Done to one surface, with concrete
+    expected values drawn from the seed, so a check is decidable rather than
+    interpretive. A generic gate says "missing data must never render as zero";
+    this document says which entity, in which period, in which cells.
+
+authority:
+  parent: 'AFENDA-PAYROLL-FRONTEND-DOD.yaml'
+  ux_specification: 'GROUP-PAYROLL-UX.md'
+  engineering_plan: 'group-payroll-plan.md'
+  precedence:
+    - 'GROUP-PAYROLL-UX.md'
+    - 'AFENDA-PAYROLL-FRONTEND-DOD.yaml'
+    - 'group-payroll-plan.md'
+  inheritance: >
+    Every gate in the parent applies. This document adds surface bindings and
+    surface-only checks. It never relaxes a parent gate; where it differs, it
+    narrows.
+
+# ---------------------------------------------------------------------------
+# Divergences from the parent, declared rather than silently implemented.
+# ---------------------------------------------------------------------------
+
+divergences:
+  - parent_check: STATE-002
+    parent_models: 3
+    surface_models: 4
+    reason: >
+      The parent models calculated / advancement / completion. This surface adds
+      finality as a fourth orthogonal dimension, because "included" does not mean
+      "settled" and a reader who conflates them has been misled by omission. The
+      parent already carries finality as its own gate (FINAL-001); this makes it
+      a dimension of the row rather than a separate concern.
+    resolution: additive_only
+
+  - parent_check: surface_profiles.group_payroll_control.hero.required_truths
+    parent_models: [value, completeness, readiness]
+    surface_models: [value, completeness, finality, readiness]
+    reason: 'Consistent with the STATE-002 divergence above.'
+    resolution: additive_only
+
+  - parent_check: FINAL-001
+    narrowing: >
+      The parent requires provisional contribution to be "explicitly visible".
+      This surface requires it as an amount, not only a count: a count answers
+      how many, but only an amount answers how much of the total can still move.
+    resolution: narrower
+
+# ---------------------------------------------------------------------------
+# The fixture this surface is checked against.
+# ---------------------------------------------------------------------------
+
+fixture:
+  period: '2026-09'
+  reporting_currency_default: SGD
+  fx_basis_default: pay_date_spot
+  comparison_default: previous_period
+  currencies: [SGD, MYR, VND]
+  countries: [SG, MY, VN]
+
+  entities:
+    - id: ent-sg
+      name: 'Afenda Pte. Ltd.'
+      country: SG
+      currency: SGD
+      state: blocked
+      included: true
+      finality: provisional
+      note: 'Open blocking exception; blocked outranks review.'
+    - id: ent-my
+      name: 'Afenda Malaysia Sdn. Bhd.'
+      country: MY
+      currency: MYR
+      state: ready
+      included: true
+      finality: final
+    - id: ent-mfg
+      name: 'Afenda Manufacturing Sdn. Bhd.'
+      country: MY
+      currency: MYR
+      state: blocked
+      included: true
+      finality: provisional
+    - id: ent-vn
+      name: 'Afenda Vietnam Co. Ltd.'
+      country: VN
+      currency: VND
+      state: review
+      included: true
+      finality: provisional
+    - id: ent-feed
+      name: 'Afenda Feed Vietnam'
+      country: VN
+      currency: VND
+      state: awaiting_data
+      included: false
+      finality: not_applicable
+      note: 'No September run exists. Absence, not a zeroed draft.'
+
+  expected_coverage:
+    entities: '4 of 5'
+    complete: false
+    missing: [ent-feed]
+    employees: 'percentage of previous-period headcount'
+    expected_cost: 'percentage of previous-period cost'
+
+  expected_readiness:
+    ready: 1
+    blocked: 2
+    review: 1
+    awaiting_data: 1
+
+  states_that_must_be_seen_on_screen:
+    - awaiting_data
+    - blocked
+    - review
+    - ready
+    - closed
+  states_not_reachable_in_this_fixture:
+    - in_progress
+    - paid
+  note_on_unreachable: >
+    A state absent from the fixture is not exempt from STATE-003; it is either
+    demonstrated by a temporary seed edit during acceptance, or recorded as a
+    known deficiency with the reason.
+
+# ---------------------------------------------------------------------------
+# Surface-specific checks. Parent gates are referenced, not restated.
+# ---------------------------------------------------------------------------
+
+checks:
+  coverage:
+    - id: GP-COV-001
+      severity: P0
+      binds: [COV-001, GROUP-001]
+      requirement: 'The headline states its coverage beside the number.'
+      verify: [browser, screenshot]
+      pass_when:
+        - "hero renders '4 of 5 entities included'"
+        - 'coverage text is a sibling of the figure, not below the card'
+        - 'ent-feed is named in the hero, not counted anonymously'
+        - 'the missing entity name is a link to its entity page'
+
+    - id: GP-COV-002
+      severity: P0
+      binds: [COV-002, GROUP-002]
+      requirement: 'ent-feed contributes nothing anywhere.'
+      verify: [arithmetic_reconciliation, semantic_assertion]
+      pass_when:
+        - 'headline excludes ent-feed'
+        - 'unique headcount excludes ent-feed employees'
+        - 'every dimension share denominator excludes ent-feed'
+        - 'readiness counts ent-feed only as awaiting_data, never as blocked or review'
+
+    - id: GP-COV-003
+      severity: P1
+      binds: [COV-003]
+      requirement: 'Three coverage measures, so materiality is answerable.'
+      verify: [browser]
+      pass_when:
+        - 'entity coverage is shown as a count'
+        - 'employee coverage is shown as a percentage'
+        - 'expected-cost coverage is shown as a percentage'
+        - 'each states that expectation derives from the previous period'
+
+  finality:
+    - id: GP-FIN-001
+      severity: P0
+      binds: [FINAL-001, GROUP-014]
+      requirement: 'Provisional contribution is visible in money.'
+      verify: [browser, semantic_assertion]
+      pass_when:
+        - 'hero states the provisional amount, not only a count'
+        - 'provisional amount equals the sum of ent-sg, ent-mfg and ent-vn reporting cost'
+        - 'ent-my is the only entity marked final'
+        - 'no included-but-unapproved entity is presented as settled'
+
+    - id: GP-FIN-002
+      severity: P1
+      requirement: 'Finality is derived, never stored twice.'
+      verify: [code_check]
+      pass_when: >
+        Finality is computed from run status in the semantic layer; no component
+        and no seed record carries a second copy of it.
+
+  state:
+    - id: GP-STATE-001
+      severity: P0
+      binds: [STATE-002, GROUP-003]
+      requirement: 'One row states four orthogonal facts at once.'
+      verify: [browser, screenshot]
+      pass_when: >
+        The ent-sg row simultaneously communicates included, blocked, provisional
+        and not-ready, without any of the four contradicting another.
+
+    - id: GP-STATE-002
+      severity: P2
+      binds: [STATE-004, VIS-003]
+      requirement: 'Four visual tiers, not seven badges.'
+      verify: [visual_review, screenshot]
+      pass_when:
+        - 'state is the badge; coverage and finality are icon plus text'
+        - 'a settled row carries plain text rather than a badge'
+        - 'no row displays four saturated badges'
+
+    - id: GP-STATE-003
+      severity: P1
+      binds: [STATE-003, GROUP-011]
+      requirement: 'Every fixture state has been seen, not inferred.'
+      verify: [screenshot]
+      evidence_required:
+        - 'awaiting_data row rendering em dashes'
+        - 'blocked row with its blocking count'
+        - 'review row'
+        - 'ready row'
+      pass_when: 'A screenshot exists per state listed in fixture.states_that_must_be_seen_on_screen.'
+
+  financial_truth:
+    - id: GP-FIN-ZERO-001
+      severity: P0
+      binds: [FIN-002, LOAD-001, GROUP-004]
+      requirement: 'ent-feed never renders a zero.'
+      verify: [browser, semantic_assertion, screenshot]
+      pass_when:
+        - 'employees cell renders an em dash'
+        - 'employer cost cell renders an em dash'
+        - 'net pay cell renders an em dash'
+        - 'variance cell renders an em dash'
+        - "no cell in the ent-feed row matches /^(S\\$|RM|₫)\\s?0([.,]00)?$/"
+
+    - id: GP-EXACT-001
+      severity: P0
+      binds: [FIN-003]
+      requirement: 'Consequential surfaces show exact money.'
+      verify: [browser]
+      pass_when: >
+        The lineage drawer, the matrix and the selection bar show exact amounts.
+        Compact notation is permitted only on chart axes and bar labels.
+
+  reconciliation:
+    - id: GP-REC-001
+      severity: P0
+      binds: [REC-001, GROUP-007]
+      requirement: 'Headline equals composition equals dimension breakdown.'
+      verify: [arithmetic_reconciliation]
+      pass_when: >
+        For every dimension in consolidate_by, the sum of its rows equals the
+        headline exactly, to the minor unit, with no tolerance.
+
+    - id: GP-REC-002
+      severity: P0
+      binds: [REC-002]
+      requirement: 'A surviving residual is named, never absorbed.'
+      verify: [arithmetic_reconciliation, browser]
+      pass_when: >
+        Allocation places the rounding residual deterministically; if any residual
+        survives it renders as its own line labelled as an FX rounding adjustment.
+
+    - id: GP-REC-003
+      severity: P0
+      binds: [REC-003, GROUP-010]
+      requirement: 'The bridge adds up on every measure.'
+      verify: [arithmetic_reconciliation]
+      pass_when: >
+        Local at budget rates plus FX movement equals the reporting total, to the
+        minor unit, for employer cost, net pay and gross pay.
+
+  currency:
+    - id: GP-CUR-001
+      severity: P0
+      binds: [CUR-001, GROUP-005]
+      requirement: 'Reporting currency changes denomination only.'
+      verify: [browser, semantic_assertion]
+      pass_when: >
+        Switching SGD to MYR changes every reporting figure and the rate column,
+        and leaves every local amount byte-identical.
+
+    - id: GP-CUR-002
+      severity: P0
+      binds: [CUR-002, GROUP-006]
+      requirement: 'FX basis changes conversion only.'
+      verify: [browser, semantic_assertion]
+      pass_when:
+        - 'reporting total changes'
+        - 'FX movement changes'
+        - 'local payroll amounts do not change'
+        - 'the budget-rate line does not change'
+
+    - id: GP-CUR-003
+      severity: P0
+      binds: [CUR-003, GROUP-008]
+      requirement: 'No raw sum across currencies.'
+      verify: [browser, arithmetic_reconciliation]
+      pass_when: >
+        With mixed currencies in view the matrix footer refuses to total and says
+        why. It never prints a figure whose currency is taken from the first row.
+
+    - id: GP-CUR-004
+      severity: P1
+      requirement: 'VND is formatted without minor units.'
+      verify: [screenshot]
+      pass_when:
+        - 'VND amounts render with no decimal separator'
+        - "no VND figure matches /₫[\\d,]+\\.00/"
+        - 'chart axes carrying VND do not read as thousands of thousands'
+
+  freshness:
+    - id: GP-FRESH-001
+      severity: P1
+      requirement: 'Freshness is provable, not the render clock.'
+      verify: [browser, semantic_assertion]
+      rationale: >
+        A render timestamp reports when the page was opened, not when payroll was
+        calculated. It would also read the clock during render, which this
+        codebase forbids for hydration reasons.
+      pass_when:
+        - 'the header states the newest calculation among included runs'
+        - 'the header states the date of the rates in use'
+        - 'reloading the page does not change either value'
+        - 'excluding an entity by filter does not silently change the stated freshness basis'
+
+  explainability:
+    - id: GP-EXP-001
+      severity: P0
+      binds: [EXPLAIN-001]
+      requirement: 'Four layers, in order, from every origin.'
+      verify: [browser, keyboard]
+      origins: [hero, entity_row, selection, movement_row, dimension_subtotal]
+      pass_when: >
+        Each origin opens the same drawer with identity, bridge, composition and
+        evidence in that order.
+
+    - id: GP-EXP-002
+      severity: P1
+      binds: [EXPLAIN-002]
+      requirement: 'One lineage interaction, not five.'
+      verify: [code_check, browser]
+      pass_when: >
+        All five origins render from one shared explanation structure. Five
+        bespoke panels fail this check even if each is individually correct.
+
+    - id: GP-EXP-003
+      severity: P0
+      binds: [EXPLAIN-003, RESP-003, GROUP-009]
+      requirement: 'Coverage is never hover-only.'
+      verify: [browser, responsive]
+      pass_when: >
+        At 1280 wide, coverage, incompleteness, FX basis and blocking conditions
+        are readable without hovering or opening anything.
+
+    - id: GP-EXP-004
+      severity: P1
+      requirement: 'Evidence lists the entity that has nothing to prove.'
+      verify: [browser]
+      pass_when: >
+        ent-feed appears in the evidence layer as having no calculation, with no
+        reference, no calculation number and no state badge.
+
+  movement:
+    - id: GP-MOVE-001
+      severity: P1
+      binds: [MOVE-001]
+      requirement: 'Movement is decomposed and drillable.'
+      verify: [browser, screenshot]
+      pass_when:
+        - 'total movement names its comparison basis'
+        - 'contributors are ranked by absolute impact'
+        - 'sign, direction and bar direction all carry meaning'
+        - 'colour is not the only carrier'
+        - 'every row opens the lineage drawer'
+        - 'a row that cannot drill shows no hover affordance'
+
+    - id: GP-MOVE-002
+      severity: P1
+      binds: [COMP-002, COMP-003]
+      requirement: 'A movement between differently covered periods says so.'
+      verify: [browser, semantic_assertion]
+      pass_when: >
+        Because September is incomplete and August is not, the block discloses the
+        mismatch and, where computable, states the like-for-like figure over the
+        entities present in both periods.
+
+  matrix:
+    - id: GP-TAB-001
+      severity: P1
+      binds: [TABLE-002]
+      requirement: 'Money sorts by value, not by string.'
+      verify: [browser]
+      pass_when: >
+        Sorting employer cost orders by the reporting minor-unit amount. A
+        VND row does not sort above an SGD row by digit count.
+
+    - id: GP-TAB-002
+      severity: P0
+      binds: [SEL-001]
+      requirement: "A selection total obeys the page's truth rules."
+      verify: [browser]
+      pass_when:
+        - 'the bar names the selected population'
+        - 'it states measure, amount, coverage and currency'
+        - 'it states the FX basis used for conversion'
+        - 'a selection containing ent-feed is marked incomplete beside the amount'
+        - 'it never renders as a bare count and figure'
+
+    - id: GP-TAB-003
+      severity: P1
+      binds: [TABLE-004, RESP-002]
+      requirement: "Overflow is the table's, never the page's."
+      verify: [responsive]
+      pass_when: 'At 390 wide the document does not scroll horizontally.'
+
+  urls:
+    - id: GP-URL-001
+      severity: P1
+      binds: [URL-001]
+      requirement: 'Analytical state survives reload.'
+      verify: [url_reload]
+      state: [period, reporting_currency, fx_basis, comparison_basis, dimension, facets]
+      pass_when:
+        - 'every control reflects the URL after reload'
+        - 'an unknown value falls back to a default and returns 200'
+        - 'an unknown entity id returns 404'
+
+    - id: GP-URL-002
+      severity: P1
+      binds: [URL-002, GROUP-015]
+      requirement: 'The drill preserves and restores analytical context.'
+      verify: [browser]
+      pass_when: >
+        Opening an entity from a view built on period, currency, basis, dimension
+        and comparison, then returning, restores all five exactly.
+
+    - id: GP-URL-003
+      severity: P0
+      requirement: 'A return path is untrusted input.'
+      verify: [code_check, browser]
+      rationale: >
+        A navigation target read from a query parameter is an open redirect. This
+        is the only place in the change where the pattern could be introduced.
+      pass_when:
+        - 'a return path is accepted only as a same-origin path under the payroll routes'
+        - 'an absolute URL to another origin is discarded for the fallback'
+        - 'a protocol-relative or scheme-bearing value is discarded'
+        - 'discarding is silent and the back link still works'
+
+  overlays:
+    - id: GP-OVL-001
+      severity: P1
+      binds: [OVERLAY-001, OVERLAY-002]
+      requirement: 'Direction carries meaning.'
+      verify: [browser]
+      rule: 'Bottom drawer for a number or a selection; right sheet for one record.'
+      pass_when: >
+        The lineage drawer opens from the bottom. Existing single-record inspectors
+        remain right-hand sheets and are not converted.
+
+    - id: GP-OVL-002
+      severity: P1
+      binds: [OVERLAY-003, GROUP-013]
+      requirement: 'Focus returns to the exact origin.'
+      verify: [keyboard]
+      pass_when: >
+        Closing by keyboard returns focus to the specific figure, row or subtotal
+        that opened it, not to the page or the first focusable element.
+
+  consistency:
+    - id: GP-CONSIST-001
+      severity: P1
+      binds: [CONSIST-001]
+      requirement: 'Precedent before catalogue before invention.'
+      verify: [code_check]
+      search_order:
+        - current_payroll_implementation
+        - existing_admincn_precedent
+        - shadcn_studio_if_no_precedent
+        - new_pattern_only_for_proven_gap
+      surface_findings:
+        reused_from_repo:
+          - 'dense sortable table: run queue table'
+          - 'ranked contribution list: cost by department'
+          - 'diverging bars on a zero baseline: overtime trend'
+          - 'lineage field rows and source-trace table: exception inspector'
+          - 'count-of-total with progress: run queue year'
+          - 'faceted filter bar: run workspace toolbar'
+        taken_from_catalogue:
+          - 'contribution row with fill behind text, scaled to the largest contributor, with a minimum visible width'
+          - 'row becomes a control only when it can drill'
+          - 'bridge in its own bordered well, muted labels with plain figures, separator as the rule, whole total row promoted'
+        invented_because_absent:
+          - 'bottom-anchored lineage drawer'
+          - 'count-of-total rendering'
+          - 'inline caveat beside a hero figure'
+          - 'floating selection bar'
+          - 'missing-value convention'
+      pass_when: >
+        No new component duplicates a listed repo precedent, and no catalogue
+        block was fetched for a pattern the repo already solves.
+
+# ---------------------------------------------------------------------------
+# Evidence matrix.
+# ---------------------------------------------------------------------------
+
+evidence:
+  inherits: 'AFENDA-PAYROLL-FRONTEND-DOD.yaml#evidence_requirements'
+
+  surface_specific:
+    - id: GP-EVID-001
+      type: screenshot
+      viewport: 1280
+      state: 'default view, coverage incomplete'
+    - id: GP-EVID-002
+      type: screenshot
+      viewport: 1280
+      state: 'lineage drawer open from the hero'
+    - id: GP-EVID-003
+      type: screenshot
+      viewport: 1280
+      state: 'reporting currency switched to MYR'
+    - id: GP-EVID-004
+      type: screenshot
+      viewport: 1280
+      state: 'FX basis switched, showing changed movement and unchanged local'
+    - id: GP-EVID-005
+      type: screenshot
+      viewport: 1280
+      state: 'selection of three entities including ent-feed, marked incomplete'
+    - id: GP-EVID-006
+      type: screenshot
+      viewport: 1280
+      state: 'ent-feed row rendering em dashes'
+    - id: GP-EVID-007
+      type: screenshot
+      viewport: 390
+      state: 'matrix scrolled horizontally inside its container'
+    - id: GP-EVID-008
+      type: arithmetic_reconciliation
+      state: 'bridge, composition and every dimension reconciling to the headline'
+    - id: GP-EVID-009
+      type: keyboard
+      state: 'hero to drawer to close, focus restored to the figure'
+    - id: GP-EVID-010
+      type: url_reload
+      state: 'full analytical state, and drill-and-return context'
+    - id: GP-EVID-011
+      type: peer_visual_comparison
+      state: 'against two peer dashboards at the same viewport'
+
+  metrics_to_capture:
+    - name: largest_font_size
+      expect: 'exactly one element at the dominant size'
+    - name: tinted_element_count
+      expect: 'between 8 and 15'
+    - name: document_scroll_width_at_390
+      expect: 'equal to viewport width'
+
+# ---------------------------------------------------------------------------
+# Report.
+# ---------------------------------------------------------------------------
+
+acceptance_report:
+  conforms_to: 'AFENDA-PAYROLL-FRONTEND-DOD.yaml#acceptance_report_schema'
+  surface: 'Group Payroll Control'
+  authority: 'GROUP-PAYROLL-UX.md'
+  required_checks:
+    - 'all GP-* checks in this document'
+    - 'all applicable parent gates'
+    - 'all GROUP-001 through GROUP-015 assertions in the parent surface profile'
+
+machine_instruction:
+  implementation_agent: >
+    Passing typecheck, lint and build is necessary and not sufficient. Evaluate
+    every GP- check against the running interface, produce the acceptance report,
+    and return NOT_DONE on any failed P0 or P1. Where a fixture state is not
+    reachable, either produce it temporarily and screenshot it, or record it as a
+    known deficiency with the reason. Do not mark a check passed on the strength
+    of reading the code that implements it.
+
+  reviewer: >
+    Reject the surface if a consolidated figure appears without its coverage, if
+    any figure cannot be explained, if an excluded entity contributes anywhere, if
+    a missing value renders as zero, if a dimension breakdown does not reconcile
+    to the headline, or if freshness moves on reload alone.
+
+final_rule: >
+  This surface is Done when the rendered interface proves the consolidation:
+  what was included, what was left out, how much can still move, how the total
+  was built, and where the change came from.

@@ -9,52 +9,113 @@
  */
 
 // Type Imports
-import type { Money } from '@/types/common/primitive-types'
+import type { CurrencyCode, Money } from '@/types/common/primitive-types'
 import type { FundingAccount, Settlement, SettlementBatch } from '@/types/payroll/settlement-types'
 
 // Data Imports
 import { employees } from '@/fake-db/hrm/employees'
+import { entityFor } from '@/fake-db/hrm/entities'
 import { payRuns, payslips } from '@/fake-db/payroll/pay-runs'
 
-const CURRENCY = 'SGD' as const
+const at = (amount: number, currency: CurrencyCode): Money => ({ amount, currency })
 
-const sgd = (amount: number): Money => ({ amount, currency: CURRENCY })
-
+/**
+ * One operating account per entity, plus a Singapore reserve.
+ *
+ * An account belongs to a company and holds that company's currency: Malaysia cannot pay its
+ * people out of a Singapore dollar account, and the funding check has to be able to say so
+ * rather than compare two unrelated numbers.
+ */
 export const fundingAccounts: FundingAccount[] = [
   {
-    id: 'fund-ops',
+    id: 'fund-sg-ops',
+    entityId: 'ent-sg',
     name: 'Payroll operating account',
     bankName: 'DBS Bank',
     accountLast4: '4471',
-    currency: CURRENCY,
-    balance: sgd(24_186_400),
+    currency: 'SGD',
+    balance: at(24_186_400, 'SGD'),
     isDefault: true
   },
   {
-    id: 'fund-reserve',
+    id: 'fund-sg-reserve',
+    entityId: 'ent-sg',
     name: 'Payroll reserve',
     bankName: 'OCBC Bank',
     accountLast4: '9012',
-    currency: CURRENCY,
-    balance: sgd(15_000_000),
+    currency: 'SGD',
+    balance: at(15_000_000, 'SGD'),
     isDefault: false
+  },
+  {
+    id: 'fund-my-ops',
+    entityId: 'ent-my',
+    name: 'Payroll operating account',
+    bankName: 'Maybank',
+    accountLast4: '2208',
+    currency: 'MYR',
+    balance: at(185_000_000, 'MYR'),
+    isDefault: true
+  },
+  {
+    id: 'fund-mfg-ops',
+    entityId: 'ent-mfg',
+    name: 'Plant payroll account',
+    bankName: 'CIMB Bank',
+    accountLast4: '7734',
+    currency: 'MYR',
+    balance: at(210_000_000, 'MYR'),
+    isDefault: true
+  },
+  {
+    id: 'fund-vn-ops',
+    entityId: 'ent-vn',
+    name: 'Payroll operating account',
+    bankName: 'Vietcombank',
+    accountLast4: '5190',
+    currency: 'VND',
+    balance: at(12_400_000_000, 'VND'),
+    isDefault: true
+  },
+  {
+    id: 'fund-feed-ops',
+    entityId: 'ent-feed',
+    name: 'Payroll operating account',
+    bankName: 'BIDV',
+    accountLast4: '3066',
+    currency: 'VND',
+    balance: at(9_800_000_000, 'VND'),
+    isDefault: true
   }
 ]
 
-/** 'run-2026-09' -> 'SEP26', for the bank reference. */
-const shortPeriod = (payRunId: string) => {
-  const [, year, month] = payRunId.split('-')
+const defaultAccountFor = (entityId: string) =>
+  fundingAccounts.find(account => account.entityId === entityId && account.isDefault) ??
+  fundingAccounts.find(account => account.entityId === entityId)
+
+/** '2026-09-01' -> 'SEP26', for the bank reference. Read from the period, never from the run id. */
+const shortPeriod = (periodStart: string) => {
+  const [year, month] = periodStart.split('-')
   const name = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][Number(month) - 1]
 
   return `${name}${year.slice(2)}`
 }
 
+/** The bank each entity's file goes to, for a reference that looks like the real thing. */
+const BANK_PREFIX: Record<string, string> = {
+  'ent-sg': 'DBS-GIRO',
+  'ent-my': 'MBB-IBG',
+  'ent-mfg': 'CIMB-IBG',
+  'ent-vn': 'VCB-ACH',
+  'ent-feed': 'BIDV-ACH'
+}
+
 /** Payments that came back or never went, keyed by run then employee. */
 const incidents: Record<string, Record<string, { kind: 'returned' | 'failed'; reason: string; daysLater: number }>> = {
-  'run-2026-08': {
+  'run-sg-2026-08': {
     'emp-012': { kind: 'returned', reason: 'Account closed at receiving bank', daysLater: 2 }
   },
-  'run-2026-07': {
+  'run-sg-2026-07': {
     'emp-019': { kind: 'failed', reason: 'Beneficiary name does not match account', daysLater: 0 }
   }
 }
@@ -78,6 +139,9 @@ for (const run of payRuns) {
   const releasedAt = `${addDays(run.payDate, -2)}T03:00:00.000Z`
   const settledAt = `${run.payDate}T01:00:00.000Z`
   const runIncidents = incidents[run.id] ?? {}
+  const entity = entityFor(run.entityId)
+  const account = defaultAccountFor(run.entityId)
+  const stamp = shortPeriod(run.periodStart)
 
   for (const slip of slips) {
     const employee = employeeById.get(slip.employeeId)
@@ -107,7 +171,7 @@ for (const run of payRuns) {
     }
 
     const incident = runIncidents[employee.id]
-    const reference = `GIRO-${shortPeriod(run.id)}-${employee.employeeNumber.replace('EMP-', '')}`
+    const reference = `${BANK_PREFIX[run.entityId] ?? 'GIRO'}-${stamp}-${employee.employeeNumber.replace('EMP-', '')}`
 
     if (!incident) {
       allSettlements.push({ ...base, status: 'paid', reference, releasedAt, settledAt })
@@ -162,7 +226,11 @@ for (const run of payRuns) {
   const runSettlements = allSettlements.filter(s => s.batchId === batchId)
   const hasReturn = runSettlements.some(s => s.status === 'returned')
 
-  const total = sgd(runSettlements.filter(s => !s.retryOfId).reduce((sum, s) => sum + s.amount.amount, 0))
+  const total = at(
+    runSettlements.filter(s => !s.retryOfId).reduce((sum, s) => sum + s.amount.amount, 0),
+    run.currency
+  )
+
   const count = runSettlements.filter(s => !s.retryOfId).length
   const preparedAt = `${addDays(run.payDate, -3)}T08:00:00.000Z`
 
@@ -171,8 +239,8 @@ for (const run of payRuns) {
   batches.push({
     id: batchId,
     payRunId: run.id,
-    fundingAccountId: 'fund-ops',
-    reference: `AFENDA PAYROLL ${shortPeriod(run.id)}`,
+    fundingAccountId: account?.id ?? 'fund-sg-ops',
+    reference: `AFENDA ${entity.code} PAYROLL ${stamp}`,
     total,
     count,
     status: isOpen ? 'draft' : hasReturn ? 'partially_returned' : 'settled',
@@ -185,7 +253,7 @@ for (const run of payRuns) {
           validation: { checkedAt: preparedAt, payments: count, total, issues: [], excludedEmployeeIds: [] },
           releasedAt,
           releasedBy: 'emp-020',
-          bankReference: `DBS-GIRO-${shortPeriod(run.id)}-${run.id.slice(-2)}7`,
+          bankReference: `${BANK_PREFIX[run.entityId] ?? 'GIRO'}-${stamp}-${run.periodStart.slice(5, 7)}7`,
           acceptedAt: `${addDays(run.payDate, -2)}T04:05:00.000Z`,
           settledAt
         })

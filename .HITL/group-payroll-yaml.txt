@@ -1,0 +1,1225 @@
+```yaml
+schema_version: "1.0"
+
+document:
+  id: afenda-payroll-frontend-dod
+  title: "Afenda Payroll Frontend Definition of Done"
+  status: normative
+  scope: payroll_frontend
+  purpose: >
+    Define the mandatory shipping criteria for every Afenda Payroll frontend
+    surface. A feature is complete only when the rendered interface proves
+    the payroll meaning, not merely when the code builds.
+
+authority:
+  visual_system:
+    - "Shadcn Studio AdminCN Pro"
+    - "shadcn/ui"
+    - "existing Afenda/AdminCN precedents"
+  acceptance:
+    parent: "AFENDA-PAYROLL-FRONTEND-DOD.yaml"
+    surface: "*-UX.md"
+  precedence:
+    - "surface UX specification"
+    - "parent frontend DoD"
+    - "engineering implementation plan"
+  conflict_rule: >
+    When implementation and UX specifications disagree about what the user
+    sees or experiences, the UX specification wins.
+
+principles:
+  - id: P-FINANCIAL-EXPLAIN
+    text: "No financial number without explanation."
+
+  - id: P-CONSOLIDATION-COVERAGE
+    text: "No consolidated number without coverage."
+
+  - id: P-ABSENCE-NOT-ZERO
+    text: "Absence is not zero."
+
+  - id: P-PROVABLE-STATE
+    text: "Never display a state the product cannot prove."
+
+  - id: P-SEMANTIC-WORDING
+    text: "Different payroll facts must use different words."
+
+  - id: P-RECONCILIATION
+    text: "Every cent must reconcile."
+
+  - id: P-VISIBLE-ARCHITECTURE
+    text: >
+      If a material payroll concept cannot be represented clearly in the
+      interface, the concept is not fully designed.
+
+  - id: P-PIXEL-VALUE
+    text: "Every pixel must earn its place."
+
+severity:
+  P0:
+    label: truth_or_control_failure
+    ship_allowed: false
+    description: >
+      May misrepresent payroll, hide incompleteness, corrupt financial meaning,
+      imply an unproven state, or permit unsafe action.
+
+  P1:
+    label: product_or_ux_failure
+    ship_allowed: false
+    description: >
+      Financial truth may remain correct, but workflow, hierarchy,
+      accessibility, interaction, or comprehension is materially deficient.
+
+  P2:
+    label: polish_deficiency
+    ship_allowed: conditional
+    description: >
+      Does not change payroll truth or prevent task completion but lowers
+      visual quality, refinement, consistency, or premium feel.
+    waiver_required: true
+
+result_policy:
+  DONE:
+    conditions:
+      - "P0_failed == 0"
+      - "P1_failed == 0"
+      - "P2_failed == 0"
+
+  DONE_WITH_WAIVER:
+    conditions:
+      - "P0_failed == 0"
+      - "P1_failed == 0"
+      - "all_P2_failures_have_explicit_waiver == true"
+
+  NOT_DONE:
+    conditions_any:
+      - "P0_failed > 0"
+      - "P1_failed > 0"
+      - "P2_failed > 0 and missing_P2_waiver == true"
+
+check_schema:
+  required_fields:
+    - id
+    - severity
+    - requirement
+    - verify
+    - pass_when
+
+  allowed_verification_methods:
+    - browser
+    - screenshot
+    - keyboard
+    - semantic_assertion
+    - visual_review
+    - code_check
+    - build
+    - lint
+    - typecheck
+    - accessibility
+    - responsive
+    - arithmetic_reconciliation
+    - url_reload
+
+gates:
+
+  context:
+    - id: CTX-001
+      severity: P1
+      requirement: >
+        The user can identify the payroll context without reconstructing it
+        from multiple unrelated components.
+      required_when_applicable:
+        - group
+        - entity
+        - country
+        - pay_group
+        - payroll_period
+        - calculation
+        - reporting_currency
+        - fx_basis
+        - comparison_basis
+      verify:
+        - browser
+        - screenshot
+      pass_when: >
+        All context required to interpret the visible payroll numbers is
+        directly readable on the rendered screen.
+
+  hierarchy:
+    - id: HIER-001
+      severity: P1
+      requirement: "Every major page has one visually dominant purpose."
+      verify:
+        - screenshot
+        - visual_review
+      pass_when: >
+        A reviewer can identify the primary purpose or primary financial truth
+        within several seconds without reading every element.
+
+    - id: HIER-002
+      severity: P2
+      requirement: >
+        Secondary analytics, charts, controls, and supporting metrics do not
+        compete visually with the primary purpose.
+      verify:
+        - screenshot
+        - visual_review
+      pass_when: "Visual hierarchy is unambiguous."
+
+  financial_truth:
+    - id: FIN-001
+      severity: P0
+      requirement: "Every material financial number has an explanation path."
+      verify:
+        - browser
+        - keyboard
+      pass_when: >
+        The user can reach applicable composition, population, source,
+        calculation, rule/context, coverage, and evidence.
+
+    - id: FIN-002
+      severity: P0
+      requirement: "Missing financial data must never render as zero."
+      verify:
+        - browser
+        - semantic_assertion
+      pass_when: >
+        Missing or uncalculated values render as an em dash or an explicit
+        absence state rather than 0, RM0, SGD0, VND0, or equivalent.
+
+    - id: FIN-003
+      severity: P0
+      requirement: "Exact money is shown where financial decisions are made."
+      verify:
+        - browser
+      pass_when: >
+        Approval, reconciliation, settlement, lineage, and equivalent
+        consequential surfaces do not replace exact amounts with compact
+        notation.
+
+    - id: FIN-004
+      severity: P1
+      requirement: "Money uses stable financial typography."
+      verify:
+        - screenshot
+      pass_when:
+        - "money is right_aligned"
+        - "tabular_numerals are used"
+        - "currency context is unambiguous"
+        - "decimal precision follows currency rules"
+
+  coverage:
+    - id: COV-001
+      severity: P0
+      requirement: "No consolidated amount may appear without coverage."
+      verify:
+        - browser
+        - semantic_assertion
+      pass_when: >
+        The rendered number visibly communicates completeness and allows
+        inspection of what is included and excluded.
+
+    - id: COV-002
+      severity: P0
+      requirement: "Excluded populations contribute nothing."
+      verify:
+        - arithmetic_reconciliation
+        - semantic_assertion
+      pass_when: >
+        Excluded entities or records contribute zero to amount, headcount,
+        denominator, share, readiness, and derived values unless explicitly
+        defined otherwise.
+
+    - id: COV-003
+      severity: P1
+      requirement: "Material completeness is distinguishable from entity count."
+      applicable_to:
+        - group_payroll
+      verify:
+        - browser
+      required_measures:
+        - entity_coverage
+        - employee_coverage
+        - expected_cost_coverage
+      pass_when: >
+        Users can determine whether missing payroll populations are financially
+        material.
+
+  state:
+    - id: STATE-001
+      severity: P0
+      requirement: "Visible state must equal provable state."
+      forbidden_false_claims:
+        - ready
+        - reviewed
+        - approved
+        - paid
+        - closed
+        - included
+        - complete
+      verify:
+        - semantic_assertion
+        - browser
+      pass_when: "Every rendered status accurately describes the represented state."
+
+    - id: STATE-002
+      severity: P0
+      requirement: "Orthogonal payroll facts must never be collapsed."
+      applicable_to:
+        - group_payroll
+      dimensions:
+        calculated:
+          values:
+            - included
+            - missing
+        advancement:
+          values:
+            - blocked
+            - review
+            - ready
+        completion:
+          values:
+            - paid
+            - closed
+      pass_when: >
+        One entity can simultaneously communicate, for example,
+        included + blocked + not-ready.
+
+    - id: STATE-003
+      severity: P1
+      requirement: "Every supported material state is visually exercised."
+      verify:
+        - browser
+        - screenshot
+      pass_when: >
+        Acceptance evidence contains every significant state, not merely code
+        branches proving the state could theoretically render.
+
+    - id: STATE-004
+      severity: P2
+      requirement: "Status presentation uses semantic tiers, not a rainbow."
+      verify:
+        - visual_review
+      pass_when: >
+        Color hierarchy is restrained and every status retains a text label.
+
+  finality:
+    - id: FINAL-001
+      severity: P0
+      requirement: >
+        Included amounts that are provisional must not visually imply finality.
+      verify:
+        - browser
+      pass_when: >
+        Provisional/unapproved contribution is explicitly visible wherever it
+        materially affects interpretation of a consolidated amount.
+
+  explainability:
+    - id: EXPLAIN-001
+      severity: P0
+      requirement: >
+        Financial explanation uses the standard Afenda Payroll lineage model.
+      layers:
+        - identity
+        - bridge
+        - composition
+        - evidence
+      verify:
+        - browser
+        - keyboard
+      pass_when: "All applicable layers are reachable in a predictable order."
+
+    - id: EXPLAIN-002
+      severity: P1
+      requirement: >
+        The same financial explanation interaction is reused across equivalent
+        financial contexts.
+      contexts:
+        - headline_measure
+        - entity_row
+        - selection
+        - movement_row
+        - dimension_subtotal
+        - report_cell
+      pass_when: >
+        Users do not have to learn a different lineage interaction for each
+        surface.
+
+    - id: EXPLAIN-003
+      severity: P1
+      requirement: "Material truth cannot exist only inside a tooltip."
+      forbidden_tooltip_only_content:
+        - coverage_warning
+        - blocking_condition
+        - incompleteness
+        - fx_basis
+        - approval_consequence
+        - material_variance
+      verify:
+        - browser
+
+  reconciliation:
+    - id: REC-001
+      severity: P0
+      requirement: "Financial hierarchy reconciles exactly."
+      verify:
+        - arithmetic_reconciliation
+      pass_when: >
+        headline == sum(included_entity_amounts) ==
+        sum(active_dimension_breakdown)
+
+    - id: REC-002
+      severity: P0
+      requirement: "Rounding residuals may not disappear silently."
+      verify:
+        - arithmetic_reconciliation
+        - browser
+      pass_when: >
+        Any surviving residual is explicitly identified as a rounding or FX
+        adjustment.
+
+    - id: REC-003
+      severity: P0
+      requirement: "Every Explain bridge reconciles to the displayed amount."
+      verify:
+        - arithmetic_reconciliation
+
+  currency:
+    - id: CUR-001
+      severity: P0
+      requirement: "Changing reporting currency never changes source-local truth."
+      verify:
+        - browser
+        - semantic_assertion
+
+    - id: CUR-002
+      severity: P0
+      requirement: "Changing FX basis changes conversion only."
+      verify:
+        - browser
+        - semantic_assertion
+      pass_when: >
+        Reporting amount and FX movement may change; local payroll source values
+        remain unchanged.
+
+    - id: CUR-003
+      severity: P0
+      requirement: "Mixed currencies must never be summed raw."
+      verify:
+        - browser
+        - arithmetic_reconciliation
+      pass_when: >
+        Mixed-currency totals are converted, scoped, or explicitly refused.
+
+    - id: CUR-004
+      severity: P1
+      requirement: "Local and reporting amounts are visually distinguishable."
+      verify:
+        - screenshot
+      pass_when: >
+        Reporting amount has primary emphasis and local amount is available as
+        subordinate context where applicable.
+
+  comparison:
+    - id: COMP-001
+      severity: P0
+      requirement: "Every variance identifies its comparison basis."
+      verify:
+        - browser
+      good_example: "+3.8% vs August 2026"
+      bad_example: "+3.8%"
+
+    - id: COMP-002
+      severity: P0
+      requirement: "Incomplete comparisons disclose coverage mismatch."
+      verify:
+        - browser
+        - semantic_assertion
+
+    - id: COMP-003
+      severity: P1
+      requirement: >
+        Like-for-like movement is shown where population mismatch would
+        materially distort interpretation.
+      verify:
+        - browser
+
+  movement:
+    - id: MOVE-001
+      severity: P1
+      requirement: "Movement analysis explains where change came from."
+      verify:
+        - browser
+      pass_when:
+        - "total movement is visible"
+        - "contributors are ranked by absolute impact"
+        - "positive and negative contributions are distinguishable"
+        - "color is not the only semantic carrier"
+        - "every contributor can be explained"
+
+  tables:
+    - id: TABLE-001
+      severity: P1
+      requirement: "Operational tables use the standard sortable/filterable table pattern."
+      verify:
+        - browser
+
+    - id: TABLE-002
+      severity: P1
+      requirement: "Financial columns sort by raw numeric value."
+      verify:
+        - browser
+
+    - id: TABLE-003
+      severity: P1
+      requirement: "Selection describes the exact selected population."
+      verify:
+        - browser
+
+    - id: TABLE-004
+      severity: P1
+      requirement: >
+        Horizontal overflow is contained by the table/workspace, not the page.
+      verify:
+        - responsive
+
+    - id: TABLE-005
+      severity: P1
+      requirement: >
+        Row click may be a convenience but cannot be the sole keyboard or
+        assistive-technology affordance.
+      verify:
+        - keyboard
+        - accessibility
+
+  selection:
+    - id: SEL-001
+      severity: P0
+      requirement: "Selection totals obey the same truth rules as page totals."
+      verify:
+        - browser
+      required_context:
+        - selected_population
+        - measure
+        - amount
+        - coverage
+        - currency
+        - fx_basis_when_applicable
+        - incompleteness_warning_when_applicable
+
+  actions:
+    - id: ACTION-001
+      severity: P0
+      requirement: "Consequential actions reveal their consequence before execution."
+      examples:
+        - approve_payroll
+        - release_payment
+        - reissue_payment
+        - apply_statutory_pack
+        - override_rule
+        - close_payroll
+      verify:
+        - browser
+
+    - id: ACTION-002
+      severity: P1
+      requirement: "The next valid action is discoverable."
+      verify:
+        - browser
+
+  loading:
+    - id: LOAD-001
+      severity: P0
+      requirement: "Loading states must not render fake financial certainty."
+      forbidden_placeholders:
+        - "0"
+        - "RM0"
+        - "SGD0"
+        - "MYR0"
+        - "VND0"
+      preferred:
+        - skeleton
+
+    - id: LOAD-002
+      severity: P2
+      requirement: "Loading does not cause material layout shift."
+      verify:
+        - browser
+
+  empty_states:
+    - id: EMPTY-001
+      severity: P1
+      requirement: "Empty-state wording describes the actual condition."
+      distinguish:
+        - nothing_exists
+        - nothing_matches
+        - nothing_required
+        - nothing_wrong
+        - unavailable
+        - missing_calculation
+      forbidden_generic:
+        - "No data"
+        - "N/A"
+
+  errors:
+    - id: ERR-001
+      severity: P0
+      requirement: "Errors state consequence."
+      required_content:
+        - what_failed
+        - what_is_affected
+        - what_is_excluded_or_blocked
+        - what_user_can_do
+      verify:
+        - browser
+
+  wording:
+    - id: WORD-001
+      severity: P1
+      requirement: "One concept has one name across the payroll product."
+      verify:
+        - visual_review
+
+    - id: WORD-002
+      severity: P1
+      requirement: "Sentence case is the default."
+      verify:
+        - screenshot
+
+    - id: WORD-003
+      severity: P1
+      requirement: >
+        Absence, incompleteness, and errors are stated explicitly rather than
+        implied.
+      verify:
+        - browser
+
+  urls:
+    - id: URL-001
+      severity: P1
+      requirement: "Shareable analytical state survives reload."
+      verify:
+        - url_reload
+      applicable_state:
+        - period
+        - reporting_currency
+        - fx_basis
+        - comparison_basis
+        - dimension
+        - relevant_facets
+
+    - id: URL-002
+      severity: P1
+      requirement: "Drilldown preserves a clear route back to parent context."
+      hierarchy:
+        - group
+        - entity
+        - run
+        - employee
+      verify:
+        - browser
+
+  overlays:
+    - id: OVERLAY-001
+      severity: P1
+      requirement: "Number or selection uses bottom lineage drawer."
+      verify:
+        - browser
+
+    - id: OVERLAY-002
+      severity: P1
+      requirement: "Single-record work uses right sheet where appropriate."
+      verify:
+        - browser
+
+    - id: OVERLAY-003
+      severity: P1
+      requirement: "Closing an overlay restores focus to its origin."
+      verify:
+        - keyboard
+
+  accessibility:
+    - id: A11Y-001
+      severity: P1
+      requirement: "Every supported workflow is operable by keyboard."
+      verify:
+        - keyboard
+
+    - id: A11Y-002
+      severity: P1
+      requirement: "Visible focus is never removed."
+      verify:
+        - keyboard
+
+    - id: A11Y-003
+      severity: P1
+      requirement: "Status meaning is never carried by color alone."
+      verify:
+        - accessibility
+
+    - id: A11Y-004
+      severity: P1
+      requirement: "Sortable columns expose sort state."
+      verify:
+        - accessibility
+
+    - id: A11Y-005
+      severity: P1
+      requirement: "Charts have equivalent textual/numeric interpretation."
+      verify:
+        - accessibility
+
+    - id: A11Y-006
+      severity: P1
+      requirement: "200% zoom remains usable."
+      verify:
+        - responsive
+
+    - id: A11Y-007
+      severity: P1
+      requirement: "Focused elements are never obscured by sticky chrome."
+      verify:
+        - keyboard
+
+  responsive:
+    - id: RESP-001
+      severity: P1
+      requirement: "Major surfaces are explicitly reviewed at required widths."
+      required_viewports:
+        - 1920
+        - 1600
+        - 1440
+        - 1280
+        - tablet
+        - 390
+
+    - id: RESP-002
+      severity: P1
+      requirement: "The page itself never gains uncontrolled horizontal scroll."
+      verify:
+        - responsive
+
+    - id: RESP-003
+      severity: P1
+      requirement: "No material payroll truth depends on hover at 1280px."
+      verify:
+        - responsive
+
+    - id: RESP-004
+      severity: P1
+      requirement: >
+        Mobile preserves the correct mobile task hierarchy rather than squeezing
+        the desktop workstation.
+      verify:
+        - responsive
+
+  visual_quality:
+    - id: VIS-001
+      severity: P2
+      requirement: "The screen feels intentionally designed, not assembled."
+      expected_attributes:
+        - quiet
+        - precise
+        - financial
+        - mature
+        - premium
+        - dense
+        - trustworthy
+        - long_session_friendly
+      verify:
+        - screenshot
+        - visual_review
+
+    - id: VIS-002
+      severity: P2
+      requirement: "Avoid card soup."
+      verify:
+        - visual_review
+
+    - id: VIS-003
+      severity: P2
+      requirement: "Avoid uncontrolled visual decoration."
+      forbidden_unless_justified:
+        - gradients
+        - decorative_shadows
+        - status_rainbow
+        - decorative_large_icons
+        - hero_illustrations
+        - tinted_card_backgrounds
+
+    - id: VIS-004
+      severity: P2
+      requirement: "Use hierarchy tools in preferred order."
+      preferred_order:
+        - typography
+        - alignment
+        - spacing
+        - grouping
+        - separator
+        - contrast
+        - color
+        - border
+        - shadow
+
+    - id: VIS-005
+      severity: P2
+      requirement: "Run a subtraction pass before acceptance."
+      prompt:
+        - "Can one card be removed?"
+        - "Can one badge become text?"
+        - "Can one divider disappear?"
+        - "Can one repeated label disappear?"
+        - "Can one decorative color disappear?"
+        - "Can one permanent button become contextual?"
+
+  charts:
+    - id: CHART-001
+      severity: P1
+      requirement: "A chart must answer one explicit analytical question."
+      verify:
+        - visual_review
+
+    - id: CHART-002
+      severity: P1
+      requirement: "Exact financial values cannot exist only on hover."
+      verify:
+        - browser
+
+    - id: CHART-003
+      severity: P2
+      requirement: "Charts remain secondary where precise table comparison matters."
+      verify:
+        - screenshot
+
+    - id: CHART-004
+      severity: P1
+      requirement: "Chart and table may not contradict."
+      verify:
+        - semantic_assertion
+
+  performance:
+    - id: PERF-001
+      severity: P1
+      requirement: "Core working interactions feel immediate."
+      interactions:
+        - sorting
+        - filtering
+        - selection
+        - opening_inspector
+        - changing_dimension
+        - switching_tabs
+      verify:
+        - browser
+
+    - id: PERF-002
+      severity: P2
+      requirement: "Financial layout remains visually stable during interaction."
+      verify:
+        - browser
+
+  consistency:
+    - id: CONSIST-001
+      severity: P1
+      requirement: "Reuse established patterns before creating new ones."
+      required_search_order:
+        - current_payroll_implementation
+        - existing_admincn_precedent
+        - shadcn_studio_if_no_precedent
+        - new_pattern_only_for_proven_gap
+
+    - id: CONSIST-002
+      severity: P2
+      requirement: "Do not create wrapper components that merely rename primitives."
+
+  components:
+    - id: COMPONENT-001
+      severity: P1
+      requirement: "A component has one clear product purpose."
+
+    - id: COMPONENT-002
+      severity: P1
+      requirement: "Relevant component states are defined."
+      expected_when_applicable:
+        - normal
+        - loading
+        - empty
+        - error
+        - disabled
+        - selected
+        - responsive
+
+    - id: COMPONENT-003
+      severity: P2
+      requirement: "Do not split files merely for structural symmetry."
+
+evidence_requirements:
+
+  mandatory:
+    - id: EVID-001
+      type: typecheck
+
+    - id: EVID-002
+      type: lint
+
+    - id: EVID-003
+      type: production_build
+
+    - id: EVID-004
+      type: screenshot
+      viewport: 1280
+
+    - id: EVID-005
+      type: screenshot
+      viewport: desktop_wide
+
+    - id: EVID-006
+      type: responsive
+      viewport: mobile
+
+    - id: EVID-007
+      type: keyboard
+
+    - id: EVID-008
+      type: normal_state
+
+    - id: EVID-009
+      type: missing_or_empty_state
+
+    - id: EVID-010
+      type: blocked_or_error_state
+
+    - id: EVID-011
+      type: explain_interaction
+
+    - id: EVID-012
+      type: reconciliation_proof
+
+  conditional:
+    - id: EVID-013
+      type: url_reload
+      required_when: "surface_has_shareable_state"
+
+    - id: EVID-014
+      type: peer_visual_comparison
+      required_when: "major_surface == true"
+
+surface_profiles:
+
+  group_payroll_control:
+
+    route: "/payroll"
+
+    hierarchy:
+      - group_header
+      - group_hero
+      - group_readiness
+      - entity_control_matrix
+      - group_movement
+      - consolidate_by
+      - group_trend
+      - lineage_drawer
+
+    dominant_measure:
+      key: employer_cost
+      maximum_dominant_figures: 1
+
+    required_header_context:
+      - group
+      - period
+      - reporting_currency
+      - fx_basis
+      - view
+      - comparison_basis
+
+    hero:
+      required_truths:
+        - value
+        - completeness
+        - readiness
+      required_content:
+        - employer_cost
+        - comparison_delta
+        - entity_coverage
+        - named_missing_entities
+        - ready_entity_count
+        - provisionality_when_applicable
+        - explain_action
+
+    required_coverage:
+      - entity
+      - employee
+      - expected_cost
+
+    matrix:
+      role: primary_working_surface
+      required_columns:
+        - entity
+        - country
+        - currency
+        - employees
+        - employer_cost
+        - variance
+        - state
+        - coverage
+
+      required_filters:
+        - country
+        - currency
+        - state
+        - coverage
+
+      required_selection: true
+      select_all_matching_filter: true
+
+    movement:
+      required: true
+      ranking: absolute_contribution_desc
+      lineage_enabled: true
+
+    consolidate_by:
+      required_dimensions:
+        - entity
+        - country
+        - currency
+        - department
+        - cost_centre
+        - component
+      table_primary: true
+      chart_secondary: true
+      lineage_enabled: true
+
+    lineage_drawer:
+      side: bottom
+      required_layers:
+        - identity
+        - bridge
+        - composition
+        - evidence
+      supported_origins:
+        - hero
+        - entity_row
+        - selection
+        - movement_row
+        - dimension_subtotal
+
+    state_model:
+      tiers:
+        incomplete:
+          - awaiting_data
+          - in_progress
+        attention:
+          - blocked
+          - review
+        proceed:
+          - ready
+        complete:
+          - paid
+          - closed
+
+    acceptance_assertions:
+      - id: GROUP-001
+        severity: P0
+        assert: "every_consolidated_amount_equals_entity_composition"
+
+      - id: GROUP-002
+        severity: P0
+        assert: "excluded_entity_contributes_nothing"
+
+      - id: GROUP-003
+        severity: P0
+        assert: "blocked_entity_may_be_included_but_never_ready"
+
+      - id: GROUP-004
+        severity: P0
+        assert: "awaiting_data_never_displays_zero"
+
+      - id: GROUP-005
+        severity: P0
+        assert: "reporting_currency_change_does_not_change_local_source_value"
+
+      - id: GROUP-006
+        severity: P0
+        assert: "fx_basis_change_does_not_change_local_payroll"
+
+      - id: GROUP-007
+        severity: P0
+        assert: "dimension_subtotal_reconciles_to_headline"
+
+      - id: GROUP-008
+        severity: P0
+        assert: "mixed_currency_footer_never_raw_sums"
+
+      - id: GROUP-009
+        severity: P1
+        assert: "coverage_visible_at_1280_without_hover"
+
+      - id: GROUP-010
+        severity: P0
+        assert: "lineage_bridge_reconciles_to_cent"
+
+      - id: GROUP-011
+        severity: P1
+        assert: "every_material_state_seen_on_screen"
+
+      - id: GROUP-012
+        severity: P1
+        assert: "keyboard_can_explain_every_material_figure"
+
+      - id: GROUP-013
+        severity: P1
+        assert: "closing_lineage_restores_focus_to_origin"
+
+      - id: GROUP-014
+        severity: P0
+        assert: "provisional_amount_never_implies_finality"
+
+      - id: GROUP-015
+        severity: P1
+        assert: "drilldown_preserves_return_context"
+
+acceptance_report_schema:
+
+  surface:
+    type: string
+    required: true
+
+  authority:
+    type: string
+    required: true
+
+  commit:
+    type: string
+    required: false
+
+  checked_at:
+    type: datetime
+    required: true
+
+  verdict:
+    enum:
+      - DONE
+      - DONE_WITH_WAIVER
+      - NOT_DONE
+
+  summary:
+    required:
+      - total_checks
+      - passed
+      - failed
+      - waived
+      - P0_failed
+      - P1_failed
+      - P2_failed
+
+  checks:
+    item_schema:
+      id: string
+      severity:
+        enum:
+          - P0
+          - P1
+          - P2
+      result:
+        enum:
+          - pass
+          - fail
+          - waived
+          - not_applicable
+      evidence:
+        type: array
+      note:
+        type: string
+        optional: true
+
+  waivers:
+    item_schema:
+      check_id: string
+      allowed_severity:
+        enum:
+          - P2
+      reason: string
+      approved_by: string
+      expiry_or_followup: string
+
+  known_deficiencies:
+    type: array
+
+  screenshots:
+    item_schema:
+      viewport: string
+      state: string
+      path_or_reference: string
+
+  final_statement:
+    required: true
+
+example_acceptance_report:
+
+  surface: "Group Payroll Control"
+  authority: "GROUP-PAYROLL-UX.md"
+  checked_at: "2026-09-06T00:00:00Z"
+
+  verdict: DONE
+
+  summary:
+    total_checks: 15
+    passed: 15
+    failed: 0
+    waived: 0
+    P0_failed: 0
+    P1_failed: 0
+    P2_failed: 0
+
+  checks:
+    - id: GROUP-001
+      severity: P0
+      result: pass
+      evidence:
+        - "browser: headline reconciled to entity matrix"
+
+    - id: GROUP-004
+      severity: P0
+      result: pass
+      evidence:
+        - "screenshot: awaiting-data entity renders em dash"
+
+    - id: GROUP-009
+      severity: P1
+      result: pass
+      evidence:
+        - "screenshot: 1280px hero coverage visible"
+
+    - id: GROUP-012
+      severity: P1
+      result: pass
+      evidence:
+        - "keyboard: hero, matrix, movement and dimension figures explainable"
+
+  waivers: []
+
+  known_deficiencies: []
+
+  final_statement: >
+    READY FOR FRONTEND ACCEPTANCE. The rendered surface proves consolidation
+    coverage, financial lineage, state semantics, reconciliation and
+    interaction requirements without unresolved P0 or P1 failures.
+
+machine_instruction:
+  implementation_agent: >
+    Do not declare frontend work complete merely because code, lint, typecheck
+    or build passes. Evaluate every applicable check in this document and the
+    surface-specific UX authority. Produce an acceptance report conforming to
+    acceptance_report_schema. Any failed P0 or P1 check requires verdict
+    NOT_DONE. P2 may be waived only with an explicit documented waiver.
+
+  reviewer: >
+    Reject any surface whose rendered UI cannot prove the payroll meaning,
+    whose financial values cannot be explained, whose consolidated values do
+    not show coverage, whose material states have not been rendered, or whose
+    financial hierarchy does not reconcile.
+
+final_rule: >
+  A Payroll frontend is Done only when the rendered experience itself proves
+  the payroll meaning: every cent reconciles, every material number explains
+  itself, every material state is visible, every consequential action reveals
+  its consequence, and every pixel earns its place.
+```

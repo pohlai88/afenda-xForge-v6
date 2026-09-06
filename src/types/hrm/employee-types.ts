@@ -1,5 +1,5 @@
 // Type Imports
-import type { IsoDate, IsoDateTime, Money } from '@/types/common/primitive-types'
+import type { CountryCode, IsoDate, IsoDateTime, Money } from '@/types/common/primitive-types'
 
 /**
  * The HRM domain model.
@@ -48,7 +48,12 @@ export interface Department {
 export interface WorkLocation {
   id: string
   name: string
+
+  /** Display name, e.g. 'Singapore'. For reading; group and compare on `countryCode`. */
   country: string
+
+  /** ISO 3166-1 alpha-2. The key statutory rules and consolidation group by. */
+  countryCode: CountryCode
 
   /** IANA zone, e.g. 'Asia/Singapore'. Drives cut-off times and local holidays. */
   timezone?: string
@@ -115,6 +120,13 @@ export interface Employee {
    * employees are 2 headcount and 1.0 FTE, and cost reporting needs the second number.
    */
   fte: number
+
+  /**
+   * The legal employer. Distinct from `locationId`: someone can work in the Kuala Lumpur office
+   * while being employed, paid and taxed by the Singapore company. Payroll, statutory liability
+   * and consolidation follow the entity; desks and time zones follow the location.
+   */
+  entityId: string
 
   departmentId: string
   positionTitle: string

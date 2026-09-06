@@ -2,105 +2,192 @@
  * ! Seed data for payroll configuration. Swap these exports for real queries when the database
  * ! lands — src/app/server/actions.ts is the only place that reads them.
  *
- * The statutory rates and component codes here are the same ones `pay-runs.ts` calculates
- * with, so the settings screen describes the calculation the workspace actually shows.
+ * The statutory rules and component codes here are DERIVED from the statutory profiles that
+ * `pay-runs.ts` calculates with, rather than retyped beside them. The two used to be written out
+ * separately and agreed only by hand; a settings screen that describes a calculation the engine
+ * is not performing is worse than no settings screen.
  */
 
 // Type Imports
-import type { PayrollSettings } from '@/types/payroll/settings-types'
+import type {
+  PayComponentDefinition,
+  PayGroup,
+  PaySchedule,
+  PayrollSettings,
+  StatutoryRule
+} from '@/types/payroll/settings-types'
 
 // Data Imports
 import { activeEmployees } from '@/fake-db/hrm/employees'
+import { legalEntities } from '@/fake-db/hrm/entities'
+import { statutoryProfiles } from '@/fake-db/payroll/statutory-profiles'
+
+const countOf = (entityId: string) => activeEmployees.filter(e => e.entityId === entityId).length
+
+/** Payday wording per entity, matching the rule `pay-runs.ts` actually applies. */
+const PAYDAY_RULE: Record<string, string> = {
+  'ent-sg': '28th, or the previous working day',
+  'ent-my': 'Last working day',
+  'ent-mfg': 'Last working day',
+  'ent-vn': '5th of the following month',
+  'ent-feed': '5th of the following month'
+}
+
+const CUTOFF_DAYS: Record<string, number> = { 'ent-sg': 4, 'ent-my': 5, 'ent-mfg': 5, 'ent-vn': 7, 'ent-feed': 7 }
+
+const payGroups: PayGroup[] = legalEntities.map(entity => ({
+  id: `pg-${entity.code.toLowerCase()}-monthly`,
+  name: `${entity.code} Monthly`,
+  entityId: entity.id,
+  currency: entity.currency,
+  frequency: 'monthly' as const,
+  paydayRule: PAYDAY_RULE[entity.id],
+  cutoffDaysBeforePayday: CUTOFF_DAYS[entity.id],
+  employeeCount: countOf(entity.id),
+  active: true
+}))
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December'
+]
+
+const lastDayOf = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate()
+
+const isoDate = (year: number, month: number, day: number) =>
+  `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+const minusDays = (date: string, days: number) => {
+  const at = new Date(`${date}T00:00:00.000Z`)
+
+  at.setUTCDate(at.getUTCDate() - days)
+
+  return at.toISOString().slice(0, 10)
+}
+
+const SG_PAY_DAY: Record<number, number> = { 8: 28, 9: 28, 10: 28, 11: 27, 12: 24 }
+
+const paydayFor = (entityId: string, year: number, month: number) => {
+  if (entityId === 'ent-sg') return isoDate(year, month, SG_PAY_DAY[month] ?? 28)
+
+  if (entityId === 'ent-vn' || entityId === 'ent-feed') {
+    return month === 12 ? isoDate(year + 1, 1, 5) : isoDate(year, month + 1, 5)
+  }
+
+  return isoDate(year, month, lastDayOf(year, month))
+}
+
+/**
+ * Schedules for the rest of the year, one series per pay group.
+ *
+ * September matters more than it looks. Afenda Feed Vietnam has no September run, and without a
+ * schedule there would be nothing to separate "the period is open and nobody has run it" from
+ * "there is no September". The open schedule is what lets the group surface say the first.
+ */
+const buildSchedules = (): PaySchedule[] => {
+  const built: PaySchedule[] = []
+
+  for (const group of payGroups) {
+    for (const month of [8, 9, 10, 11, 12]) {
+      const payDate = paydayFor(group.entityId, 2026, month)
+
+      built.push({
+        id: `sch-${group.entityId.replace('ent-', '')}-2026-${String(month).padStart(2, '0')}`,
+        payGroupId: group.id,
+        label: `${MONTH_NAMES[month - 1]} 2026`,
+        periodStart: isoDate(2026, month, 1),
+        periodEnd: isoDate(2026, month, lastDayOf(2026, month)),
+        cutoff: minusDays(payDate, group.cutoffDaysBeforePayday),
+        payDate,
+        status: month < 9 ? 'closed' : month === 9 ? 'open' : 'upcoming'
+      })
+    }
+  }
+
+  return built
+}
+
+/**
+ * Statutory rules, flattened from the profiles the engine calculates with.
+ *
+ * Singapore's ids are pinned to their original values because the compliance inspector selects
+ * the rules behind a filing by id prefix. Renaming them would silently empty that panel.
+ */
+const SG_RULE_ID: Record<string, string> = { CPF_EE: 'stat-cpf-ee', CPF_ER: 'stat-cpf-er' }
+
+const ruleId = (countryCode: string, code: string) =>
+  countryCode === 'SG' ? SG_RULE_ID[code] : `stat-${countryCode.toLowerCase()}-${code.toLowerCase().replace(/_/g, '-')}`
+
+const buildStatutoryRules = (): StatutoryRule[] =>
+  statutoryProfiles.flatMap(profile => [
+    ...profile.contributions.map(rule => ({
+      id: ruleId(profile.countryCode, rule.code),
+      name: rule.label,
+      countryCode: profile.countryCode,
+      currency: profile.currency,
+      componentCode: rule.code,
+      profileId: profile.id,
+      party: rule.party,
+      rate: rule.rate,
+      ceiling: rule.ceiling,
+      effectiveFrom: profile.effectiveFrom
+    })),
+    {
+      id: profile.countryCode === 'SG' ? 'stat-tax' : `stat-${profile.countryCode.toLowerCase()}-tax`,
+      name: profile.tax.label,
+      countryCode: profile.countryCode,
+      currency: profile.currency,
+      componentCode: profile.tax.code,
+      profileId: profile.id,
+      party: 'employee' as const,
+      rate: profile.tax.rate,
+      ceiling: null,
+      effectiveFrom: profile.effectiveFrom
+    }
+  ])
+
+/** Statutory components for every country, so a rule always has a component to post to. */
+const statutoryComponents: PayComponentDefinition[] = statutoryProfiles.flatMap(profile =>
+  profile.contributions.map(rule => ({
+    code: rule.code,
+    label: rule.label,
+    kind: rule.party === 'employee' ? ('deduction' as const) : ('employer_contribution' as const),
+    taxable: false,
+    contributable: false,
+    glAccount: rule.party === 'employee' ? '2310' : '2330',
+    countryCode: profile.countryCode,
+    active: true
+  }))
+)
 
 export const payrollSettings: PayrollSettings = {
   general: {
-    entityName: 'Afenda Pte. Ltd.',
-    registrationNumber: '201912345K',
-    defaultCurrency: 'SGD',
-    timezone: 'Asia/Singapore',
+    groupName: 'Afenda Group',
+    homeEntityId: 'ent-sg',
+    reportingCurrency: 'SGD',
+    fxBasis: 'pay_date_spot',
     payslipSender: 'payroll@afenda.com',
     rounding: 'nearest_cent'
   },
 
-  payGroups: [
-    {
-      id: 'pg-sg-monthly',
-      name: 'SG Monthly',
-      entity: 'Afenda Pte. Ltd.',
-      currency: 'SGD',
-      frequency: 'monthly',
-      paydayRule: '28th, or the previous working day',
-      cutoffDaysBeforePayday: 4,
-      employeeCount: activeEmployees.length,
-      active: true
-    },
-    {
-      id: 'pg-my-monthly',
-      name: 'MY Monthly',
-      entity: 'Afenda Malaysia Sdn. Bhd.',
-      currency: 'MYR',
-      frequency: 'monthly',
-      paydayRule: 'Last working day',
-      cutoffDaysBeforePayday: 5,
-      employeeCount: 0,
-      active: false
-    }
-  ],
+  entities: legalEntities,
 
-  schedules: [
-    {
-      id: 'sch-2026-08',
-      payGroupId: 'pg-sg-monthly',
-      label: 'August 2026',
-      periodStart: '2026-08-01',
-      periodEnd: '2026-08-31',
-      cutoff: '2026-08-25',
-      payDate: '2026-08-28',
-      status: 'closed'
-    },
-    {
-      id: 'sch-2026-09',
-      payGroupId: 'pg-sg-monthly',
-      label: 'September 2026',
-      periodStart: '2026-09-01',
-      periodEnd: '2026-09-30',
-      cutoff: '2026-09-24',
-      payDate: '2026-09-28',
-      status: 'open'
-    },
-    {
-      id: 'sch-2026-10',
-      payGroupId: 'pg-sg-monthly',
-      label: 'October 2026',
-      periodStart: '2026-10-01',
-      periodEnd: '2026-10-31',
-      cutoff: '2026-10-23',
-      payDate: '2026-10-28',
-      status: 'upcoming'
-    },
-    {
-      id: 'sch-2026-11',
-      payGroupId: 'pg-sg-monthly',
-      label: 'November 2026',
-      periodStart: '2026-11-01',
-      periodEnd: '2026-11-30',
-      cutoff: '2026-11-24',
-      payDate: '2026-11-27',
-      status: 'upcoming'
-    },
-    {
-      id: 'sch-2026-12',
-      payGroupId: 'pg-sg-monthly',
-      label: 'December 2026',
-      periodStart: '2026-12-01',
-      periodEnd: '2026-12-31',
-      cutoff: '2026-12-22',
-      payDate: '2026-12-24',
-      status: 'upcoming'
-    }
-  ],
+  payGroups,
+
+  schedules: buildSchedules(),
 
   components: [
+    ...statutoryComponents,
     {
       code: 'BASE',
       label: 'Base salary',
@@ -145,53 +232,14 @@ export const payrollSettings: PayrollSettings = {
       contributable: false,
       glAccount: '2310',
       active: true
-    },
-    {
-      code: 'CPF_EE',
-      label: 'CPF (employee)',
-      kind: 'deduction',
-      taxable: false,
-      contributable: false,
-      glAccount: '2320',
-      active: true
-    },
-    {
-      code: 'CPF_ER',
-      label: 'CPF (employer)',
-      kind: 'employer_contribution',
-      taxable: false,
-      contributable: false,
-      glAccount: '6200',
-      active: true
     }
+
+    // CPF, EPF, SOCSO, EIS and the Vietnamese insurances are not listed here: they come from
+    // `statutoryComponents` above, derived from the same profiles the engine calculates with.
+    // Listing them twice is how a settings screen starts describing a calculation nobody runs.
   ],
 
-  statutory: [
-    {
-      id: 'stat-cpf-ee',
-      name: 'CPF — employee contribution',
-      party: 'employee',
-      rate: 20,
-      ceiling: { amount: 680000, currency: 'SGD' },
-      effectiveFrom: '2026-01-01'
-    },
-    {
-      id: 'stat-cpf-er',
-      name: 'CPF — employer contribution',
-      party: 'employer',
-      rate: 17,
-      ceiling: { amount: 680000, currency: 'SGD' },
-      effectiveFrom: '2026-01-01'
-    },
-    {
-      id: 'stat-tax',
-      name: 'Income tax withholding (standard rate)',
-      party: 'employee',
-      rate: 15,
-      ceiling: null,
-      effectiveFrom: '2026-01-01'
-    }
-  ],
+  statutory: buildStatutoryRules(),
 
   accounting: [
     {

@@ -7,6 +7,19 @@ import type { FilingLine, FilingStatus, StatutoryFiling } from '@/types/payroll/
 import { payRuns, payslips } from '@/fake-db/payroll/pay-runs'
 
 /**
+ * Filings are built for the Singapore entity only.
+ *
+ * CPF and IRAS are Singapore institutions, and the filing kinds in the domain name them
+ * directly. Generating a "CPF contribution" for a Malaysian or Vietnamese run would be a
+ * fabricated obligation, which is exactly the sort of unprovable state this module refuses
+ * to render. The other countries get their filings when the Statutory Pack Center lands and
+ * the domain can say what each authority actually requires.
+ */
+const FILING_ENTITY_ID = 'ent-sg'
+
+const filingRuns = payRuns.filter(run => run.entityId === FILING_ENTITY_ID)
+
+/**
  * Statutory filings, computed from the payslips the same way the runs are computed from the
  * employees. Nothing here is typed in: every amount is a sum of payslip components, so the
  * compliance page reconciles to the register by construction.
@@ -88,10 +101,10 @@ const progress = (run: PayRun, status: FilingStatus, prefix: string) => {
   }
 }
 
-const runFilings = payRuns.flatMap((run, index): StatutoryFiling[] => {
+const runFilings = filingRuns.flatMap((run, index): StatutoryFiling[] => {
   const slips = payslips.filter(slip => slip.payRunId === run.id)
-  const isOpen = index === payRuns.length - 1
-  const isLatestClosed = index === payRuns.length - 2
+  const isOpen = index === filingRuns.length - 1
+  const isLatestClosed = index === filingRuns.length - 2
 
   // Closed runs are filed and accepted, except June's tax file, which IRAS bounced. The most
   // recently closed run has its CPF prepared but not yet sent — that is the filing due next.
@@ -108,6 +121,7 @@ const runFilings = payRuns.flatMap((run, index): StatutoryFiling[] => {
   return [
     {
       id: `filing-${run.id}-cpf`,
+      entityId: run.entityId,
       kind: 'cpf_contribution',
       payRunId: run.id,
       runReference: run.reference,
@@ -123,6 +137,7 @@ const runFilings = payRuns.flatMap((run, index): StatutoryFiling[] => {
     },
     {
       id: `filing-${run.id}-tax`,
+      entityId: run.entityId,
       kind: 'tax_withholding',
       payRunId: run.id,
       runReference: run.reference,
@@ -142,13 +157,15 @@ const runFilings = payRuns.flatMap((run, index): StatutoryFiling[] => {
   ]
 })
 
-const year = payRuns[0].periodStart.slice(0, 4)
-const yearSlips = payslips.filter(slip => slip.payRunId.includes(`-${year}-`))
+const year = filingRuns[0].periodStart.slice(0, 4)
+const filingRunIds = new Set(filingRuns.filter(run => run.periodStart.startsWith(year)).map(run => run.id))
+const yearSlips = payslips.filter(slip => filingRunIds.has(slip.payRunId))
 
 const annualLines = [lineFor(yearSlips, 'BASE', 'Base salary'), lineFor(yearSlips, 'OT15', 'Overtime')]
 
 const annualReturn: StatutoryFiling = {
   id: `filing-${year}-annual`,
+  entityId: FILING_ENTITY_ID,
   kind: 'annual_return',
   periodStart: `${year}-01-01`,
   periodEnd: `${year}-12-31`,

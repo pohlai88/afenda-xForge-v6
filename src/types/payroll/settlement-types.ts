@@ -14,6 +14,10 @@ import type { EmployeePaymentStatus } from '@/types/payroll/run-workspace-types'
 
 export interface FundingAccount {
   id: string
+
+  /** The entity that owns the account. A company pays its own people from its own bank. */
+  entityId: string
+
   name: string
   bankName: string
 
