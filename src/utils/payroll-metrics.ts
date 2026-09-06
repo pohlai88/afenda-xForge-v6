@@ -189,6 +189,24 @@ export const PAY_RUN_STATUS_LABELS: Record<PayRunStatus, string> = {
   failed: 'Failed'
 }
 
+/**
+ * Status -> badge colour. Shared for the same reason the labels are: the status card and the run
+ * table both render a status, and when each owned its own mapping they disagreed — the card
+ * coloured by whether the run had blocking issues, so a run in Approval with one blocker showed
+ * a red badge reading "Approval". A badge reports one fact; the blocking count has its own tile.
+ */
+export const PAY_RUN_STATUS_STYLES: Record<PayRunStatus, string> = {
+  draft: 'bg-muted text-muted-foreground',
+  calculating: 'bg-muted text-muted-foreground',
+  calculated: 'bg-primary/10 text-primary',
+  pending_approval: 'bg-warning/15 text-warning',
+  approved: 'bg-success/15 text-success',
+  paid: 'bg-primary/10 text-primary',
+  closed: 'bg-muted text-muted-foreground',
+  cancelled: 'bg-destructive/10 text-destructive',
+  failed: 'bg-destructive/10 text-destructive'
+}
+
 export const stageIndexFor = (run: PayRun): number => {
   // 'calculating' is a transient state of the same step; 'closed' is past the end.
   if (run.status === 'calculating') return RUN_STAGES.indexOf('draft')

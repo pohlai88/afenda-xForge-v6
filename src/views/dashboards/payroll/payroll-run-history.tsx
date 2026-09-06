@@ -20,7 +20,7 @@ import {
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, SearchIcon } from 'lucide-react'
 
 // Type Imports
-import type { PayRun, PayRunStatus } from '@/types/payroll/pay-run-types'
+import type { PayRun } from '@/types/payroll/pay-run-types'
 
 // Component Imports
 import { Badge } from '@/components/ui/badge'
@@ -33,17 +33,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
-import { PAY_RUN_STATUS_LABELS } from '@/utils/payroll-metrics'
+import { PAY_RUN_STATUS_LABELS, PAY_RUN_STATUS_STYLES } from '@/utils/payroll-metrics'
 import { ariaSortFor } from '@/utils/table-utils'
-
-const STATUS_STYLES: Partial<Record<PayRunStatus, string>> = {
-  pending_approval: 'bg-chart-5/15 text-chart-5',
-  approved: 'bg-chart-2/15 text-chart-2',
-  paid: 'bg-primary/10 text-primary',
-  closed: 'bg-muted text-muted-foreground',
-  cancelled: 'bg-destructive/10 text-destructive',
-  failed: 'bg-destructive/10 text-destructive'
-}
 
 /** Numeric columns, right-aligned so digits line up under one another. */
 const RIGHT_ALIGNED = new Set(['employeeCount', 'gross', 'net', 'employerCost'])
@@ -111,7 +102,7 @@ const columns: ColumnDef<PayRun>[] = [
     header: 'Status',
     accessorKey: 'status',
     cell: ({ row }) => (
-      <Badge className={cn('text-xs whitespace-nowrap', STATUS_STYLES[row.original.status])}>
+      <Badge className={cn('text-xs whitespace-nowrap', PAY_RUN_STATUS_STYLES[row.original.status])}>
         {PAY_RUN_STATUS_LABELS[row.original.status]}
       </Badge>
     )

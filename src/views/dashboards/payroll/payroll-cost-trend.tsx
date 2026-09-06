@@ -51,8 +51,8 @@ const PayrollCostTrend = ({ points, currencySymbol, className }: Props) => {
         <CardDescription>Last six runs</CardDescription>
       </CardHeader>
       <CardContent>
-        {/* The chart is a set of unlabelled paths to a screen reader, so it is hidden from the
-            accessibility tree and the same figures are stated in text beside it. */}
+        {/* The summary states the whole series at once; accessibilityLayer below then lets a
+            keyboard user walk the points individually. Summary for the gist, layer for the detail. */}
         <p className='sr-only'>
           Employer cost and headcount over the last {points.length} pay runs.{' '}
           {points
@@ -62,13 +62,20 @@ const PayrollCostTrend = ({ points, currencySymbol, className }: Props) => {
             )
             .join(' ')}
         </p>
-        <ChartContainer config={chartConfig} className='h-72 w-full' aria-hidden='true'>
-          <ComposedChart data={points} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
-            <CartesianGrid vertical={false} strokeDasharray='3 3' />
+        <ChartContainer config={chartConfig} className='max-h-85 min-h-60 w-full'>
+          <ComposedChart accessibilityLayer data={points} margin={{ top: 20, right: 8, left: -8 }}>
+            <CartesianGrid vertical={false} strokeDasharray='4' stroke='var(--border)' />
             <XAxis dataKey='reference' tickLine={false} axisLine={false} tickMargin={10} />
-            <YAxis yAxisId='cost' hide />
+            <YAxis
+              yAxisId='cost'
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={value => `${currencySymbol}${Math.round(Number(value) / 1000)}K`}
+            />
             <YAxis yAxisId='employees' orientation='right' hide />
             <ChartTooltip
+              cursor={false}
               content={
                 <ChartTooltipContent
                   formatter={(value, name) =>

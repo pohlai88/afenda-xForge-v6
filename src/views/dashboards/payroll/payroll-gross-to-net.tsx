@@ -1,7 +1,7 @@
 'use client'
 
 // Third-party Imports
-import { Bar, BarChart, Cell, XAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts'
 
 // Type Imports
 import type { BridgeStep } from '@/utils/payroll-metrics'
@@ -39,18 +39,28 @@ const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
         <CardDescription>Where this run&apos;s pay goes</CardDescription>
       </CardHeader>
       <CardContent>
-        {/* The waterfall is built from stacked bars with a transparent spacer, which carries no
-            meaning at all in the accessibility tree. Hide it and state the steps instead. */}
+        {/* No accessibilityLayer here, unlike the trend chart. This waterfall is two stacked
+            bars per column and the lower one is a transparent spacer, so point-by-point
+            navigation would announce the spacer as data. The chart stays hidden and the
+            sr-only summary below is the accessible version. */}
         <p className='sr-only'>
           How gross pay reduces to net for this run.{' '}
           {steps
             .map(step => `${step.label}: ${formatMajorUnits(step.value, currencySymbol)}.`)
             .join(' ')}
         </p>
-        <ChartContainer config={chartConfig} className='h-72 w-full' aria-hidden='true'>
-          <BarChart data={steps} margin={{ top: 12, right: 8, left: 8, bottom: 0 }}>
+        <ChartContainer config={chartConfig} className='max-h-85 min-h-60 w-full' aria-hidden='true'>
+          <BarChart data={steps} margin={{ top: 20, right: 8, left: -8 }}>
+            <CartesianGrid vertical={false} strokeDasharray='4' stroke='var(--border)' />
             <XAxis dataKey='label' tickLine={false} axisLine={false} tickMargin={10} />
+            <YAxis
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tickFormatter={value => `${currencySymbol}${Math.round(Number(value) / 1000)}K`}
+            />
             <ChartTooltip
+              cursor={false}
               content={
                 <ChartTooltipContent
                   hideLabel={false}

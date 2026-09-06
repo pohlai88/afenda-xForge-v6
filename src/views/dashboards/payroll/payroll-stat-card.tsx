@@ -95,7 +95,7 @@ const PayrollStatCard = ({
     flat || polarity === 'neutral' ? 'neutral' : rising === (polarity === 'higher-is-better') ? 'good' : 'bad'
 
   const toneClass = {
-    good: 'text-chart-2',
+    good: 'text-success',
     bad: 'text-destructive',
     neutral: 'text-muted-foreground'
   }[tone]

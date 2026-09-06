@@ -17,7 +17,7 @@ export type ExceptionRow = PayRunException & { subject?: string }
 
 const SEVERITY_STYLES: Record<PayRunExceptionSeverity, string> = {
   blocking: 'bg-destructive/10 text-destructive',
-  warning: 'bg-chart-5/15 text-chart-5',
+  warning: 'bg-warning/15 text-warning',
   info: 'bg-muted text-muted-foreground'
 }
 

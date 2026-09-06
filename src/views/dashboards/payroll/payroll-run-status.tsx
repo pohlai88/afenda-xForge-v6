@@ -11,7 +11,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
-import { PAY_RUN_STATUS_LABELS, RUN_STAGES, stageIndexFor } from '@/utils/payroll-metrics'
+import { PAY_RUN_STATUS_LABELS, PAY_RUN_STATUS_STYLES, RUN_STAGES, stageIndexFor } from '@/utils/payroll-metrics'
 
 /**
  * Shorter labels used throughout this card.
@@ -46,9 +46,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
       <CardHeader>
         <CardTitle className='flex items-center gap-2 text-lg font-semibold'>
           {run.reference}
-          <Badge
-            className={cn(blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary')}
-          >
+          <Badge className={PAY_RUN_STATUS_STYLES[run.status]}>
             {cardLabel(run.status)}
           </Badge>
         </CardTitle>
@@ -112,7 +110,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             <span
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-sm',
-                overdue ? 'bg-destructive/10 text-destructive' : 'bg-chart-2/10 text-chart-2'
+                overdue ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
               )}
             >
               <CalendarClockIcon className='size-4.5' />
@@ -135,7 +133,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             <span
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-sm',
-                blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-chart-2/10 text-chart-2'
+                blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
               )}
             >
               <AlertTriangleIcon className='size-4.5' />
