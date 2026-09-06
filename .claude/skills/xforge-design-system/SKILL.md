@@ -107,7 +107,12 @@ card-action slot is present.
 
 ## Other primitives
 
-- `<Button>` not `<button>`; `<Input>`/`<InputGroup>` not `<input>`.
+- `<Button>` not `<button>`; `<Input>`/`<InputGroup>` not `<input>`. A raw `<button>` gets none of
+  the app's focus ring, which is visible the moment it sits beside a real `Button`.
+- **Exception: hidden file inputs.** A native file picker cannot be styled, so the pattern is a
+  hidden `<input type='file'>` clicked programmatically by a `Button`, or one owned by a library
+  through `getInputProps`. Those five stay raw — wrapping them in `<Input>` would style an element
+  nobody sees and break the library's prop spreading.
 - Tables that sort, filter or paginate use TanStack Table following
   `src/views/datatables/datatable-invoice.tsx`, including its
   `// eslint-disable-next-line react-hooks/incompatible-library` on `useReactTable`.
@@ -283,8 +288,9 @@ for d, _, fs in os.walk('src/views'):
             if T.search(A.sub('', m.group(1))): print(p)
 EOF
 
-# raw elements that have primitives
-grep -rnE "<(button|input)[ >]" src/views src/app --include=*.tsx
+# raw elements where a primitive exists. Exclude hidden and library-owned file inputs — see the
+# exception below; without the filter this reports 6 and 5 of them are correct.
+grep -rnE "<(button|input)[ >]" src/views src/app --include=*.tsx | grep -vE "type='file'|getInputProps"
 ```
 
 Then the real gates:

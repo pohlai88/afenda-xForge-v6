@@ -443,9 +443,14 @@ export const MailCompose = ({ open, onOpenChange, onSend, onSaveDraft }: MailCom
 
       {open && isMinimized && (
         <div className='border-border bg-background fixed right-6 bottom-6 z-50 flex w-80 items-center justify-between rounded-lg border px-4 py-3 shadow-lg'>
-          <button type='button' className='flex-1 truncate text-left text-sm font-medium' onClick={handleRestore}>
+          <Button
+            type='button'
+            variant='ghost'
+            onClick={handleRestore}
+            className='h-auto flex-1 justify-start truncate px-0 text-sm font-medium hover:bg-transparent'
+          >
             Compose Mail — {minimizedWindowLabel}
-          </button>
+          </Button>
           <div className='flex items-center gap-0.5'>
             <Button type='button' variant='ghost' size='icon-sm' onClick={handleRestore}>
               <MinusIcon className='size-4 rotate-180' />
