@@ -101,9 +101,7 @@ const buildColumns = (onSelect: (row: SettlementRow) => void): ColumnDef<Settlem
     id: 'amount',
     header: 'Amount',
     accessorFn: row => row.amount.amount,
-    cell: ({ row }) => (
-      <span className='block text-right font-medium tabular-nums'>{formatMoney(row.original.amount)}</span>
-    )
+    cell: ({ row }) => <span className='font-medium'>{formatMoney(row.original.amount)}</span>
   },
   {
     id: 'account',

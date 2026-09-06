@@ -122,13 +122,13 @@ const columns: ColumnDef<PayRunQueueRow>[] = [
     id: 'employeeCount',
     header: 'Employees',
     accessorKey: 'employeeCount',
-    cell: ({ row }) => <span className='block text-right tabular-nums'>{row.original.employeeCount}</span>
+    cell: ({ row }) => row.original.employeeCount
   },
   {
     id: 'gross',
     header: 'Gross',
     accessorFn: row => row.gross.amount,
-    cell: ({ row }) => <span className='block text-right tabular-nums'>{formatMoney(row.original.gross)}</span>
+    cell: ({ row }) => formatMoney(row.original.gross)
   },
   {
     id: 'net',
@@ -141,7 +141,7 @@ const columns: ColumnDef<PayRunQueueRow>[] = [
       const change = row.original.netChangePercent
 
       return (
-        <span className='flex flex-col items-end tabular-nums'>
+        <span className='flex flex-col items-end'>
           <span>{formatMoney(row.original.net)}</span>
           <span
             className={cn(
@@ -163,9 +163,7 @@ const columns: ColumnDef<PayRunQueueRow>[] = [
     id: 'employerCost',
     header: 'Employer cost',
     accessorFn: row => row.employerCost.amount,
-    cell: ({ row }) => (
-      <span className='block text-right font-medium tabular-nums'>{formatMoney(row.original.employerCost)}</span>
-    )
+    cell: ({ row }) => <span className='font-medium'>{formatMoney(row.original.employerCost)}</span>
   },
   {
     id: 'exceptions',
@@ -243,6 +241,11 @@ const columns: ColumnDef<PayRunQueueRow>[] = [
  * What each column means. The engine reads these to decide alignment, sorting, filter kind and
  * whether a column's values can honestly drive a faceted count — none of which the table has to
  * restate for itself.
+ *
+ * `exceptions` is a `signal` and not a `quantity`, though its accessor is a count. What the column
+ * shows is a severity breakdown as badges, and what its number is for is ordering the runs that
+ * need attention to the top — not a figure anyone would total. Calling it a quantity right-aligned
+ * its header over left-packed badges, which is the exact mismatch the semantic exists to prevent.
  */
 const RUN_QUEUE_COLUMNS: TableColumn[] = [
   { id: 'reference', label: 'Run', semantic: 'identity', isAnchor: true },
@@ -252,7 +255,7 @@ const RUN_QUEUE_COLUMNS: TableColumn[] = [
   { id: 'gross', label: 'Gross', semantic: 'money' },
   { id: 'net', label: 'Net', semantic: 'money' },
   { id: 'employerCost', label: 'Employer cost', semantic: 'money' },
-  { id: 'exceptions', label: 'Exceptions', semantic: 'quantity' },
+  { id: 'exceptions', label: 'Exceptions', semantic: 'signal' },
   { id: 'status', label: 'Status', semantic: 'status' },
   { id: 'open', label: 'Open', semantic: 'text', capabilities: { sortable: false, filter: 'none', searchable: false } }
 ]

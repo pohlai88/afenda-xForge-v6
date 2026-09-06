@@ -60,9 +60,8 @@ const hasOpenException: FilterFn<PayrollRunRow> = (row, _columnId, filterValue: 
 /* Columns                                                                                      */
 /* -------------------------------------------------------------------------------------------- */
 
-const moneyCell = (value: PayrollRunRow['gross'], emphasis?: boolean) => (
-  <span className={cn('block text-right tabular-nums', emphasis && 'font-medium')}>{formatMoney(value)}</span>
-)
+const moneyCell = (value: PayrollRunRow['gross'], emphasis?: boolean) =>
+  emphasis ? <span className='font-medium'>{formatMoney(value)}</span> : formatMoney(value)
 
 /**
  * What each column *is*. The engine reads these to decide alignment, sort behaviour, which filters
@@ -153,7 +152,7 @@ export const buildPayrollColumns = (onSelectEmployee: (employeeId: string) => vo
     cell: ({ row }) => {
       const { variance, variancePercent } = row.original
 
-      return <VarianceValue value={variance} percent={variancePercent} emptyLabel='New' className='block text-right' />
+      return <VarianceValue value={variance} percent={variancePercent} emptyLabel='New' />
     }
   },
   {

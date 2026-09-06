@@ -119,15 +119,13 @@ const buildColumns = (onOpen: (id: string) => void): ColumnDef<FilingRow>[] => [
     id: 'employeeCount',
     header: 'Employees',
     accessorKey: 'employeeCount',
-    cell: ({ row }) => <span className='block text-right tabular-nums'>{row.original.employeeCount}</span>
+    cell: ({ row }) => row.original.employeeCount
   },
   {
     id: 'amount',
     header: 'Amount',
     accessorFn: row => row.amount.amount,
-    cell: ({ row }) => (
-      <span className='block text-right font-medium tabular-nums'>{formatMoney(row.original.amount)}</span>
-    )
+    cell: ({ row }) => <span className='font-medium'>{formatMoney(row.original.amount)}</span>
   },
   {
     id: 'submitter',

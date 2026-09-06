@@ -116,28 +116,32 @@ const DataTable = <TRow,>({
   const interactive = active && capabilities.rowCommands && definition.getObject && definition.getCommands
 
   /*
-   * Whether the overflow column is worth a column of the table's width.
+   * Whether *this row's* menu would say anything the row's own activation does not.
    *
    * A menu whose only item is the command a click already runs offers nothing: the row activates,
    * the identity control activates, and the menu repeats them. That is chrome under
-   * `capability_without_chrome`, so a table whose whole command vocabulary is its own activation
-   * renders no overflow column at all. Right-click still works — it costs no space, and everything
-   * in it remains reachable without a pointer through the row's identity control.
-   *
-   * Asked of every row rather than the page, so the column cannot appear and disappear as someone
-   * pages or filters. `some` stops at the first row that earns it, which is every table that has a
-   * real menu.
+   * `capability_without_chrome`. So the question is asked of a row against three things it knows
+   * about itself — what it activates with, what else it can do, and whether Properties is on offer
+   * — and never against a flag a domain sets.
    */
-  const offersMenu =
-    capabilities.rowCommands &&
-    (definition.onOpenProperties !== undefined ||
-      table
-        .getCoreRowModel()
-        .rows.some(row =>
-          definition.getCommands!(row.original).some(
-            command => command.id !== definition.getDefaultCommandId?.(row.original)
-          )
-        ))
+  const rowOffersMenu = (row: TRow) =>
+    definition.onOpenProperties !== undefined ||
+    (definition.getCommands?.(row) ?? []).some(command => command.id !== definition.getDefaultCommandId?.(row))
+
+  /*
+   * Whether the overflow column is worth a column of the table's width.
+   *
+   * The column and the trigger are two decisions, and separating them is the point. The column is
+   * settled once over the whole dataset — `getCoreRowModel`, not the filtered or paged rows — so
+   * paging and filtering can never shift the table's geometry. The trigger is settled per row, so a
+   * row whose whole vocabulary is its own activation shows an empty cell rather than a button that
+   * opens a menu repeating the click.
+   *
+   * A table where no row earns it renders no column at all. Right-click is unaffected either way:
+   * it costs no space, and everything in it stays reachable without a pointer through the row's
+   * identity control.
+   */
+  const offersMenu = capabilities.rowCommands && table.getCoreRowModel().rows.some(row => rowOffersMenu(row.original))
 
   /*
    * The sequence of columns the engine actually renders, structural ones included. `null` marks a
@@ -154,9 +158,19 @@ const DataTable = <TRow,>({
 
   const columnCount = sequence.length
 
-  // Alignment is read from meaning, not from a per-table list of column ids. Money, counts and
-  // percentages are the figures a reader scans down, so the engine right-aligns them everywhere
-  // rather than each table remembering which of its own columns are numeric.
+  /*
+   * Alignment is read from meaning, not from a per-table list of column ids. Money, counts and
+   * percentages are the figures a reader scans down, so the engine right-aligns them everywhere
+   * rather than each table remembering which of its own columns are numeric.
+   *
+   * Header, body and footer are aligned from this one answer, so a column cannot have a
+   * right-aligned header over left-packed values. That means a domain never writes `text-right` or
+   * `tabular-nums` for a figure — if it has to, the column's semantic is wrong, which is the real
+   * defect. `signal` is deliberately not numeric: it sorts by a rank and renders as badges.
+   *
+   * It aligns the cell, never the content. A cell that lays its own children out — a figure with a
+   * delta stacked under it — still decides that for itself.
+   */
   const declared = new Map(definition.columns.map(column => [column.id, column]))
   const isNumeric = (columnId: string) => isNumericSemantic(declared.get(columnId)?.semantic)
 
@@ -481,14 +495,18 @@ const DataTable = <TRow,>({
                       <TableCell
                         key={cell.id}
                         style={pinnedStyle(cell.column.id)}
-                        className={cn(bodyCellClass, pinnedClass(cell.column.id))}
+                        className={cn(
+                          bodyCellClass,
+                          isNumeric(cell.column.id) && 'text-right tabular-nums',
+                          pinnedClass(cell.column.id)
+                        )}
                       >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
                     {offersMenu ? (
                       <TableCell className={cn(bodyCellClass, 'w-12')}>
-                        {interactive ? (
+                        {interactive && rowOffersMenu(row.original) ? (
                           <ObjectCommandsButton
                             object={definition.getObject!(row.original)}
                             commands={definition.getCommands!(row.original)}
