@@ -36,17 +36,16 @@ button, the filing name button — never against the row, which is deliberately 
 | 4   | Payroll Register  | `⋮` by pointer and by keyboard     | As row 2                                                                                                     |
 | 5   | Filings           | `Shift+F10` on a filing name       | As row 1. Filings renders no `⋮` — `Open filing` is the whole vocabulary, so right-click is the only menu    |
 | 6   | Payments          | `Shift+F10` on an employee name    | As row 1                                                                                                     |
-| 7   | Payments          | `⋮` by pointer and by keyboard     | As row 2. On a payment with no bank reference the menu holds `Open payment` alone — see the note below       |
+| 7   | Payments          | `⋮` by pointer and by keyboard     | As row 2, on a payment that has one. A payment with no bank reference has no `⋮` — check right-click there   |
 | 8   | All four          | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
 
-### Note on row 7 — a menu that can hold one item
+### Note on row 7 — a row without a trigger
 
-The overflow column is decided once for the whole table, deliberately, so it cannot appear and
-disappear as someone pages or filters. On Payments the column is earned by the 163 released and
-paid rows that have a bank reference to copy; the 33 rows that do not yet have one still show a `⋮`
-whose menu holds only `Open payment`. That is the cost of a column that stays put, and it is the
-first table where a row's menu can be degenerate — worth a person's judgement rather than a silent
-assumption that it is fine.
+The overflow **column** is decided once for the whole table so paging and filtering cannot move the
+table's geometry; the **trigger** is decided per row. On Payments the column is earned by the 163
+rows with a bank reference to copy, and the rows that have no reference yet render an empty command
+cell rather than a button whose menu would only repeat the click. Right-click still reaches them, so
+the manual pass should check one of each.
 
 ## What has been observed
 
