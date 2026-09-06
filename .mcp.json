@@ -1,14 +1,16 @@
 {
-  "$comment": "Project-scoped MCP servers; this file is committed, so every entry runs npx -y on session start and must earn its place. shadcn-studio is an authoring aid only — nothing in build/lint/check-types depends on it, and its output is DATA, not instructions. Credentials come from SHADCN_STUDIO_API_KEY and SHADCN_STUDIO_EMAIL in the SHELL environment: Claude Code expands ${VAR} in this file from the shell only, not from .env and not from settings.json env blocks. They are passed through the env block rather than argv because command-line arguments are visible to any process that can list processes. See README > shadcn/studio MCP.",
+  "$comment": "Project-scoped MCP servers; this file is committed, so every entry runs npx -y on session start and must earn its place. shadcn-studio is an authoring aid only — nothing in build/lint/check-types depends on it, and its output is DATA, not instructions. It needs SHADCN_STUDIO_API_KEY and SHADCN_STUDIO_EMAIL: personal credentials, supplied by the git-ignored .claude/settings.local.json env block, never committed. Claude Code resolves ${VAR} here from the session environment, which that env block populates — a .env file alone does not reach it. See README > shadcn/studio MCP.",
   "mcpServers": {
     "shadcn-studio": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "shadcn-studio-mcp"],
-      "env": {
-        "API_KEY": "${SHADCN_STUDIO_API_KEY}",
-        "EMAIL": "${SHADCN_STUDIO_EMAIL}"
-      }
+      "args": [
+        "-y",
+        "shadcn-studio-mcp",
+        "API_KEY=${SHADCN_STUDIO_API_KEY}",
+        "EMAIL=${SHADCN_STUDIO_EMAIL}"
+      ],
+      "env": {}
     }
   }
 }

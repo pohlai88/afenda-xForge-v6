@@ -95,23 +95,25 @@ It needs two credentials, which are **never committed**:
 | `SHADCN_STUDIO_API_KEY` | Licence key from shadcnstudio.com |
 | `SHADCN_STUDIO_EMAIL`   | The account's email address       |
 
-**These must be in the shell environment, not `.env`.** Claude Code expands `${VAR}` in
-`.mcp.json` from the environment of the process that launched it — it does not read `.env`,
-and it does not read `env` blocks in `settings.json`. A `.env` file is still the right place
-to keep them for your own reference (it is git-ignored), but something has to export them
-before `claude` starts. On Windows, setting them once as user environment variables is the
-least fragile option:
+**A `.env` file alone does not reach the MCP server.** Next.js reads `.env`; Claude Code does
+not. It resolves `${VAR}` in `.mcp.json` from the session environment, so the credentials go in
+`.claude/settings.local.json` — personal and git-ignored via the `.claude/` rule:
 
-```bash
-setx SHADCN_STUDIO_API_KEY "your-key"
+```json
+{
+  "enabledMcpjsonServers": ["shadcn-studio"],
+  "env": {
+    "SHADCN_STUDIO_API_KEY": "your-key",
+    "SHADCN_STUDIO_EMAIL": "you@example.com"
+  }
+}
 ```
 
-Then open a new terminal — `setx` does not affect the current one.
+`env` supplies the credentials; `enabledMcpjsonServers` pre-approves the server so it is not
+re-prompted every session. Keeping a copy in `.env` is fine for your own reference, but the
+settings file is what makes it work.
 
-Verify with `claude mcp list`. A resolved variable shows no warning; an unset one is reported
-as missing and the literal `${VAR}` text is passed through, which fails as an auth error later.
-
-Project-scoped servers need approval before first use: run `claude` interactively and accept
-the prompt. Until then the server shows `⏸ Pending approval`. Credentials are passed via the
-`env` block rather than command-line arguments, because arguments are visible to any process
-that can list processes on the machine.
+Project-scoped servers still need approval before first use: run `claude` interactively and
+accept the prompt. Until then `claude mcp list` shows `⏸ Pending approval`, and the server's
+tools are absent — MCP servers load at session start, so configuring one mid-session does not
+make it available until you restart.
