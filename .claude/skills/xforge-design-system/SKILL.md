@@ -272,8 +272,13 @@ A check that has never been seen failing is decoration — run a new check again
 first, watch it go red, then fix.
 
 ```bash
-# palette colours that should be semantic tokens (target: 0 in files you touched)
-grep -rnE "\b(bg|text|border)-(red|green|blue|yellow|orange|purple|pink|gray|slate|zinc|sky|emerald)-[0-9]{2,3}" src/views src/app src/components/shared --include=*.tsx
+# palette colours that should be semantic tokens (target: 0).
+# Cover every colour-utility prefix, not just bg/text/border: a narrower version of this reported
+# clean while ring-sky-600/20 and fill-sky-500 were still in the tree.
+# The trailing filter drops line comments and JSDoc, so a file documenting *why* it avoided a
+# palette colour is not reported for naming one. A class name inside a block comment that starts
+# mid-line still matches — the check is deliberately not a parser.
+grep -rnE "\b(bg|text|border|ring|fill|stroke|from|via|to|divide|outline|shadow|accent|caret|decoration|placeholder)-(red|green|blue|yellow|orange|purple|pink|gray|slate|zinc|sky|emerald|amber|teal|indigo|violet|rose|lime|cyan|fuchsia|stone|neutral)-[0-9]{2,3}" src/views src/app src/components/shared --include=*.tsx | grep -vE "^[^:]+:[0-9]+: *(\*|//)"
 
 # hardcoded hex
 grep -rnE "#[0-9a-fA-F]{6}\b" src/views src/app src/components/shared --include=*.tsx
