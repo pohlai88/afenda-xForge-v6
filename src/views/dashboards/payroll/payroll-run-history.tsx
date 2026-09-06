@@ -3,6 +3,10 @@
 // React Imports
 import { useMemo, useState } from 'react'
 
+// Next Imports
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+
 // Third-party Imports
 import type { ColumnDef, PaginationState, SortingState } from '@tanstack/react-table'
 import {
@@ -29,6 +33,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
+import { PAY_RUN_STATUS_LABELS } from '@/utils/payroll-metrics'
 
 const STATUS_STYLES: Partial<Record<PayRunStatus, string>> = {
   pending_approval: 'bg-chart-5/15 text-chart-5',
@@ -37,18 +42,6 @@ const STATUS_STYLES: Partial<Record<PayRunStatus, string>> = {
   closed: 'bg-muted text-muted-foreground',
   cancelled: 'bg-destructive/10 text-destructive',
   failed: 'bg-destructive/10 text-destructive'
-}
-
-const STATUS_LABELS: Partial<Record<PayRunStatus, string>> = {
-  draft: 'Draft',
-  calculating: 'Calculating',
-  calculated: 'Calculated',
-  pending_approval: 'Pending approval',
-  approved: 'Approved',
-  paid: 'Paid',
-  closed: 'Closed',
-  cancelled: 'Cancelled',
-  failed: 'Failed'
 }
 
 /** Numeric columns, right-aligned so digits line up under one another. */
@@ -64,7 +57,15 @@ const columns: ColumnDef<PayRun>[] = [
   {
     header: 'Run',
     accessorKey: 'reference',
-    cell: ({ row }) => <span className='font-medium'>{row.original.reference}</span>
+    cell: ({ row }) => (
+      <Link
+        href={`/dashboard/payroll?run=${encodeURIComponent(row.original.reference)}`}
+        scroll={false}
+        className='font-medium underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none'
+      >
+        {row.original.reference}
+      </Link>
+    )
   },
   {
     header: 'Period',
@@ -110,7 +111,7 @@ const columns: ColumnDef<PayRun>[] = [
     accessorKey: 'status',
     cell: ({ row }) => (
       <Badge className={cn('text-xs whitespace-nowrap', STATUS_STYLES[row.original.status])}>
-        {STATUS_LABELS[row.original.status] ?? row.original.status}
+        {PAY_RUN_STATUS_LABELS[row.original.status]}
       </Badge>
     )
   }
@@ -118,10 +119,14 @@ const columns: ColumnDef<PayRun>[] = [
 
 type Props = {
   runs: PayRun[]
+
+  /** Reference of the run the dashboard is currently showing, highlighted in the table. */
+  selectedReference?: string
   className?: string
 }
 
-const PayrollRunHistory = ({ runs, className }: Props) => {
+const PayrollRunHistory = ({ runs, selectedReference, className }: Props) => {
+  const router = useRouter()
   const [sorting, setSorting] = useState<SortingState>([])
   const [globalFilter, setGlobalFilter] = useState('')
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 5 })
@@ -219,13 +224,30 @@ const PayrollRunHistory = ({ runs, className }: Props) => {
                   </TableCell>
                 </TableRow>
               ) : (
-                table.getRowModel().rows.map(row => (
-                  <TableRow key={row.id}>
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                table.getRowModel().rows.map(row => {
+                  const selected = row.original.reference === selectedReference
+
+                  return (
+                    <TableRow
+                      key={row.id}
+                      data-state={selected ? 'selected' : undefined}
+                      aria-current={selected ? 'true' : undefined}
+                      className='hover:bg-muted/50 cursor-pointer'
+
+                      // Mouse convenience only. The reference cell holds the real link, so
+                      // keyboard and assistive-tech users never depend on this handler.
+                      onClick={() =>
+                        router.push(`/dashboard/payroll?run=${encodeURIComponent(row.original.reference)}`, {
+                          scroll: false
+                        })
+                      }
+                    >
+                      {row.getVisibleCells().map(cell => (
+                        <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                      ))}
+                    </TableRow>
+                  )
+                })
               )}
             </TableBody>
           </Table>

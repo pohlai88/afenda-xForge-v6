@@ -7,7 +7,7 @@
 // Type Imports
 import type { Money } from '@/types/common/primitive-types'
 import type { Department, Employee } from '@/types/hrm/employee-types'
-import type { PayRun, PayRunException, Payslip } from '@/types/payroll/pay-run-types'
+import type { PayRun, PayRunStatus, PayRunException, Payslip } from '@/types/payroll/pay-run-types'
 
 const sum = (values: Money[], currency: Money['currency']): Money => ({
   amount: values.reduce((total, v) => total + v.amount, 0),
@@ -169,6 +169,25 @@ export const countExceptions = (exceptions: PayRunException[]): ExceptionCounts 
 export const RUN_STAGES = ['draft', 'calculated', 'pending_approval', 'approved', 'paid'] as const
 
 export type RunStage = (typeof RUN_STAGES)[number]
+
+/**
+ * Display labels for every run status, including the terminal ones that are not stages.
+ *
+ * Shared rather than per-component: the dashboard shows historical runs, so the status card
+ * and the run table both have to render statuses like 'closed'. Two maps drifted apart once
+ * already, with the card falling through to the raw 'closed' while the table said 'Closed'.
+ */
+export const PAY_RUN_STATUS_LABELS: Record<PayRunStatus, string> = {
+  draft: 'Draft',
+  calculating: 'Calculating',
+  calculated: 'Calculated',
+  pending_approval: 'Pending approval',
+  approved: 'Approved',
+  paid: 'Paid',
+  closed: 'Closed',
+  cancelled: 'Cancelled',
+  failed: 'Failed'
+}
 
 export const stageIndexFor = (run: PayRun): number => {
   // 'calculating' is a transient state of the same step; 'closed' is past the end.

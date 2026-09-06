@@ -26,19 +26,47 @@ import {
 
 const CURRENCY_SYMBOL = 'S$'
 
-const PayrollDashboard = async () => {
-  const [runs, employees, departments] = await Promise.all([getPayRuns(), getEmployees(), getDepartments()])
+/** Once a run reaches one of these, the cut-off has passed and counting down to it is noise. */
+const TERMINAL_STATUSES = new Set(['paid', 'closed', 'cancelled', 'failed'])
+
+type Props = {
+
+  /** `?run=PR-2026-08` selects a past run. Absent or unrecognised falls back to the latest. */
+  searchParams: Promise<{ run?: string }>
+}
+
+const PayrollDashboard = async ({ searchParams }: Props) => {
+  const [{ run: requestedReference }, runs, employees, departments] = await Promise.all([
+    searchParams,
+    getPayRuns(),
+    getEmployees(),
+    getDepartments()
+  ])
 
   // Runs come oldest-first from the source; the open one is the last.
-  const currentRun = runs[runs.length - 1]
-  const previousRun = runs[runs.length - 2]
+  // An unknown reference falls back to the latest rather than 404ing, so a stale bookmark
+  // still lands somewhere useful.
+  const selectedIndex = requestedReference
+    ? runs.findIndex(run => run.reference === requestedReference)
+    : runs.length - 1
+
+  const currentIndex = selectedIndex === -1 ? runs.length - 1 : selectedIndex
+
+  const currentRun = runs[currentIndex]
+
+  // The comparison baseline is the run before the *selected* one, not before the latest.
+  const previousRun = runs[currentIndex - 1]
   const slips = await getPayslipsForRun(currentRun.id)
 
   const exceptionCounts = countExceptions(currentRun.exceptions)
 
   // The clock is read once, here, and the result passed down as a number. Components that read
   // it themselves render differently on the server and the client, which is a hydration bug.
-  const daysToCutoff = daysBetween(new Date().toISOString(), currentRun.cutoffAt)
+  // A finished run has no countdown: '83 days overdue' on a run that was paid in June is
+  // technically true and completely useless, so it is suppressed rather than rendered.
+  const daysToCutoff = TERMINAL_STATUSES.has(currentRun.status)
+    ? null
+    : daysBetween(new Date().toISOString(), currentRun.cutoffAt)
 
   const employeeNames = new Map(employees.map(e => [e.id, `${e.firstName} ${e.lastName}`]))
   const departmentNames = new Map(departments.map(d => [d.id, d.name]))
@@ -58,8 +86,11 @@ const PayrollDashboard = async () => {
 
   // Sparkline series, oldest first. Overtime has no equivalent: it is derived from payslips,
   // and fetching every run's payslips to draw one 80px line is not a trade worth making.
-  const costSeries = runs.map(run => run.totals.employerCost.amount)
-  const netSeries = runs.map(run => run.totals.netPay.amount)
+  // Truncated at the selected run: a sparkline running past the run you are looking at would
+  // show a delta the headline number does not.
+  const historyToDate = runs.slice(0, currentIndex + 1)
+  const costSeries = historyToDate.map(run => run.totals.employerCost.amount)
+  const netSeries = historyToDate.map(run => run.totals.netPay.amount)
 
   const costTrend = runs.map(run => ({
     reference: run.reference.replace('PR-', ''),
@@ -125,7 +156,11 @@ const PayrollDashboard = async () => {
 
       <PayrollCostTrend points={costTrend} currencySymbol={CURRENCY_SYMBOL} className='col-span-full' />
 
-      <PayrollRunHistory runs={[...runs].reverse()} className='col-span-full' />
+      <PayrollRunHistory
+        runs={[...runs].reverse()}
+        selectedReference={currentRun.reference}
+        className='col-span-full'
+      />
     </div>
   )
 }

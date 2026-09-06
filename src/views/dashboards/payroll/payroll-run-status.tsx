@@ -2,7 +2,7 @@
 import { AlertTriangleIcon, CalendarClockIcon, UsersIcon } from 'lucide-react'
 
 // Type Imports
-import type { PayRun } from '@/types/payroll/pay-run-types'
+import type { PayRun, PayRunStatus } from '@/types/payroll/pay-run-types'
 
 // Component Imports
 import { Badge } from '@/components/ui/badge'
@@ -11,28 +11,28 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
-import { RUN_STAGES, stageIndexFor } from '@/utils/payroll-metrics'
+import { PAY_RUN_STATUS_LABELS, RUN_STAGES, stageIndexFor } from '@/utils/payroll-metrics'
 
-const STAGE_LABELS: Record<string, string> = {
-  draft: 'Draft',
-  calculated: 'Calculated',
-  pending_approval: 'Approval',
-  approved: 'Approved',
-  paid: 'Paid'
-}
+/** The progress track abbreviates one label; everything else comes from the shared map. */
+const STAGE_TRACK_LABELS: Partial<Record<string, string>> = { pending_approval: 'Approval' }
+
+const stageLabel = (status: PayRunStatus) => STAGE_TRACK_LABELS[status] ?? PAY_RUN_STATUS_LABELS[status]
 
 type Props = {
   run: PayRun
 
-  /** Supplied by the caller rather than read from the clock here, so this stays deterministic. */
-  daysToCutoff: number
+  /**
+   * Supplied by the caller rather than read from the clock here, so this stays deterministic.
+   * Null for a finished run, where a countdown to a long-past cut-off says nothing.
+   */
+  daysToCutoff: number | null
   blockingCount: number
   className?: string
 }
 
 const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props) => {
   const currentStage = stageIndexFor(run)
-  const overdue = daysToCutoff < 0
+  const overdue = daysToCutoff !== null && daysToCutoff < 0
 
   return (
     <Card className={className}>
@@ -42,7 +42,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
           <Badge
             className={cn(blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary')}
           >
-            {STAGE_LABELS[run.status] ?? run.status}
+            {PAY_RUN_STATUS_LABELS[run.status]}
           </Badge>
         </CardTitle>
         <CardDescription>
@@ -79,7 +79,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
                       active ? 'text-foreground font-medium' : 'text-muted-foreground'
                     )}
                   >
-                    {STAGE_LABELS[stage]}
+                    {stageLabel(stage)}
                   </span>
                 </div>
                 {index < RUN_STAGES.length - 1 && (
@@ -112,9 +112,15 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             </span>
             <span className='flex flex-col'>
               <span className='font-semibold'>
-                {overdue ? `${Math.abs(daysToCutoff)} days overdue` : `${daysToCutoff} days left`}
+                {daysToCutoff === null
+                  ? run.payDate
+                  : overdue
+                    ? `${Math.abs(daysToCutoff)} days overdue`
+                    : `${daysToCutoff} days left`}
               </span>
-              <span className='text-muted-foreground text-sm'>Until cut-off</span>
+              <span className='text-muted-foreground text-sm'>
+                {daysToCutoff === null ? 'Paid on' : 'Until cut-off'}
+              </span>
             </span>
           </div>
 
