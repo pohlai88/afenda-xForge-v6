@@ -30,6 +30,7 @@ The app runs at http://localhost:3000 and redirects to `/dashboard/sales`.
 | `pnpm lint:fix`     | ESLint with autofix                           |
 | `pnpm format`       | Prettier over `src/`                          |
 | `pnpm check-types`  | `tsc --noEmit`                                |
+| `pnpm icons`        | Regenerate browser icons from the logo mark   |
 
 ## Layout of the code
 
@@ -48,7 +49,11 @@ The app runs at http://localhost:3000 and redirects to `/dashboard/sales`.
 Name and tagline live in `src/configs/themeConfig.ts` (`templateName`, `tagline`) and are
 read by the sidebar header and footer. Page metadata is in `src/app/layout.tsx`.
 
-Still carrying template artwork: `public/images/og-image.png` and `src/app/favicon.ico`.
+The browser icons (`src/app/icon.svg`, `favicon.ico`, `apple-icon.png`) are generated from the
+same geometry as `src/assets/svg/logo.tsx` by `scripts/generate-icons.mjs`. After changing the
+mark, run `pnpm icons` to regenerate them.
+
+Still carrying template artwork: `public/images/og-image.png`.
 
 ## Theme settings
 

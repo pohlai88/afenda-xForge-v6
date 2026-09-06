@@ -1,6 +1,9 @@
 // React Imports
 import type { SVGAttributes } from 'react'
 
+// The browser icons (src/app/icon.svg, favicon.ico, apple-icon.png) are rendered from these
+// same constants by scripts/generate-icons.mjs. Change the geometry here and run `pnpm icons`,
+// or the tab icon will quietly disagree with the one in the sidebar.
 const CENTRE = 16
 const INNER_GAP = 0.35
 
