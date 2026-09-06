@@ -46,8 +46,8 @@ export const metadata: Metadata = {
       {
         url: '/images/og-image.png',
         type: 'image/png',
-        width: 1200,
-        height: 630,
+        width: 1600,
+        height: 840,
         alt: `${APP_NAME} — ${APP_TAGLINE}`
       }
     ]

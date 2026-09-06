@@ -12,6 +12,7 @@
     "check-types": "tsc --noEmit",
     "clean": "rm -rf .next dist",
     "icons": "node scripts/generate-icons.mjs",
+    "og": "node scripts/capture-og.mjs",
     "clean:node_modules": "rm -rf .next dist node_modules"
   },
   "dependencies": {

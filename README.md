@@ -31,6 +31,7 @@ The app runs at http://localhost:3000 and redirects to `/dashboard/sales`.
 | `pnpm format`       | Prettier over `src/`                          |
 | `pnpm check-types`  | `tsc --noEmit`                                |
 | `pnpm icons`        | Regenerate browser icons from the logo mark   |
+| `pnpm og`           | Recapture the social card (needs app running) |
 
 ## Layout of the code
 
@@ -53,7 +54,21 @@ The browser icons (`src/app/icon.svg`, `favicon.ico`, `apple-icon.png`) are gene
 same geometry as `src/assets/svg/logo.tsx` by `scripts/generate-icons.mjs`. After changing the
 mark, run `pnpm icons` to regenerate them.
 
-Still carrying template artwork: `public/images/og-image.png`.
+The social card (`public/images/og-image.png`) is a screenshot of the running dashboard, taken
+by `scripts/capture-og.mjs`. It will go stale as the UI changes — to refresh it, run the
+production build and point the script at it:
+
+```bash
+pnpm build && pnpm start --port 3100   # one terminal
+pnpm og                                # another
+```
+
+Capture at 1600px or wider. Below the 1280px sidebar breakpoint the sidebar collapses and the
+shot loses all branding.
+
+**Before deploying**, set `NEXT_PUBLIC_APP_URL` to the real origin. `metadataBase` in
+`src/app/layout.tsx` falls back to `http://localhost:3000`, and Open Graph image URLs are
+absolute — without it every social card resolves to localhost and renders blank.
 
 ## Theme settings
 
