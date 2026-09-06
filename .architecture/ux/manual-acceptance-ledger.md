@@ -72,6 +72,39 @@ not honoured. Reproduced on both surfaces, against a bundle verified to contain 
 **The `⋮` still does not open** from a synthetic pointer event — the trigger takes focus and stays
 `aria-expanded="false"`, the documented Base UI limitation. Rows 2, 4, 7 and 10 remain NOT VERIFIED.
 
+### Why restoration fails — read from Base UI's source, 2026-09-07
+
+`ContextMenu.Popup` is `MenuPopup`, and `MenuPopup` hands our `finalFocus` straight to floating-ui:
+
+```js
+returnFocus: finalFocus === undefined ? returnFocus : finalFocus,
+initialFocus: parent.type !== 'menu',
+```
+
+Two things follow, and they decide what a real fix looks like.
+
+**There is no `initialFocus` prop.** `MenuPopup` hardcodes it, so a menu cannot be told to open with
+a command focused. Confirmed by experiment as well as by reading: with our handoff disabled, a
+Shift+F10 open leaves focus on the originating link and never enters the menu. The handoff is
+therefore required — it is not duplicating something the primitive already does.
+
+**Restoration is floating-ui's `returnFocus`, and it is conditional.** The focus is applied in a
+`queueMicrotask` inside an unmount cleanup, guarded by `preventReturnFocusRef` and by whether focus
+is still inside the floating tree at unmount. Our `finalFocus` names the right element — the
+function form is supported, `typeof returnFocusValueOrFn === 'function'` — but the guard decides
+whether it is used, and from props alone we cannot make that deterministic.
+
+A hardened classification (only a `contextmenu` event may set the invocation; clear it on close) was
+written and reverted: it type-checked and linted, but it did not improve restoration and could not
+be shown better than what is committed, so it was not shipped on one run's evidence.
+
+**What would actually close this**: `initialFocus` exposed on `Menu.Popup`, upstream. Then the
+handoff and the restoration both become the primitive's own, and this file stops competing with it.
+
+**Also noted while reading**: `ContextMenu.LinkItem` exists. Commands carrying an `href` currently
+render as `<Item render={<Link/>}>`; `LinkItem` is the supported part for that and is worth
+adopting separately.
+
 **Right-click is unaffected** by the keyboard work: it opens for the correct object with the same
 commands and Properties last, focus stays on the document, and no item is highlighted.
 
