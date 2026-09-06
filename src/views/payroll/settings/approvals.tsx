@@ -7,7 +7,8 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 
 // Type Imports
-import type { ApprovalSettings } from '@/types/payroll/settings-types'
+import type { CurrencyCode } from '@/types/common/primitive-types'
+import type { AccessRole, ApprovalSettings } from '@/types/payroll/settings-types'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
@@ -20,7 +21,8 @@ import SettingsSection from './settings-section'
 // Action Imports
 import { savePayrollSettingsSection } from '@/app/server/actions'
 
-const ROLES = ['Finance lead', 'Payroll manager', 'HR director', 'Managing director']
+// Util Imports
+import { currencySymbol } from '@/utils/money'
 
 const schema = z.object({
   thresholdEnabled: z.boolean(),
@@ -35,6 +37,12 @@ type Values = z.infer<typeof schema>
 
 type Props = {
   settings: ApprovalSettings
+
+  /** The Access roles, so "who can approve" offers the roles that exist rather than free text. */
+  roles: AccessRole[]
+
+  /** The entity's currency, for the threshold input. */
+  currency: CurrencyCode
 }
 
 const toValues = (settings: ApprovalSettings): Values => ({
@@ -68,8 +76,12 @@ const Toggle = ({
   </Field>
 )
 
-/** Who can sign a run, and what has to be true before they can. */
-const ApprovalSettingsSection = ({ settings }: Props) => {
+/**
+ * Who can sign a run, and what has to be true before they can. These are the rules
+ * `evaluatePayrollApproval` applies on both the approval dialog and the server, so a change
+ * here changes the gate, not a label.
+ */
+const ApprovalSettingsSection = ({ settings, roles, currency }: Props) => {
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: toValues(settings) })
   const thresholdEnabled = useWatch({ control: form.control, name: 'thresholdEnabled' })
 
@@ -79,7 +91,7 @@ const ApprovalSettingsSection = ({ settings }: Props) => {
       secondApproverAbove: values.thresholdEnabled
         ? {
             amount: Math.round(values.secondApproverAboveMajor * 100),
-            currency: settings.secondApproverAbove?.currency ?? 'SGD'
+            currency: settings.secondApproverAbove?.currency ?? currency
           }
         : null,
       requireWarningsAcknowledged: values.requireWarningsAcknowledged,
@@ -126,20 +138,25 @@ const ApprovalSettingsSection = ({ settings }: Props) => {
               <Field data-invalid={fieldState.invalid} className='gap-2 pb-4'>
                 <FieldLabel>Who can approve</FieldLabel>
                 <div className='grid gap-2 sm:grid-cols-2'>
-                  {ROLES.map(role => {
-                    const id = `approver-${role.toLowerCase().replace(/\s+/g, '-')}`
-                    const checked = field.value.includes(role)
+                  {roles.map(role => {
+                    const id = `approver-${role.id}`
+                    const checked = field.value.includes(role.id)
 
                     return (
-                      <label key={role} htmlFor={id} className='flex items-center gap-2 text-sm'>
+                      <label key={role.id} htmlFor={id} className='flex items-center gap-2 text-sm'>
                         <Checkbox
                           id={id}
                           checked={checked}
                           onCheckedChange={value =>
-                            field.onChange(value ? [...field.value, role] : field.value.filter(r => r !== role))
+                            field.onChange(value ? [...field.value, role.id] : field.value.filter(r => r !== role.id))
                           }
                         />
-                        {role}
+                        <span className='flex flex-col'>
+                          {role.name}
+                          <span className='text-muted-foreground text-xs'>
+                            {role.memberIds.length} {role.memberIds.length === 1 ? 'member' : 'members'}
+                          </span>
+                        </span>
                       </label>
                     )
                   })}
@@ -171,7 +188,9 @@ const ApprovalSettingsSection = ({ settings }: Props) => {
                   <FieldLabel htmlFor={field.name}>Threshold, net pay</FieldLabel>
                   <InputGroup className='w-56'>
                     <InputGroupAddon>
-                      <InputGroupText>S$</InputGroupText>
+                      <InputGroupText>
+                        {currencySymbol(settings.secondApproverAbove?.currency ?? currency)}
+                      </InputGroupText>
                     </InputGroupAddon>
                     <InputGroupInput
                       {...field}

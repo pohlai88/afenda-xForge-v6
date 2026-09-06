@@ -72,7 +72,8 @@ type Props = {
 
 /**
  * Who gets paid together. The list is the settings surface; the Sheet is the form, the way the
- * users list edits a user. Mutations are local until the settings service exists.
+ * users list edits a user. Saving goes through `savePayGroup`; the list adopts the record the
+ * server returns.
  */
 const PayGroupSettings = ({ payGroups: initial }: Props) => {
   const [payGroups, setPayGroups] = useState(initial)

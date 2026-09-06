@@ -41,14 +41,17 @@ type Props = {
   rows: SettlementRow[]
   batches: SettlementBatch[]
   runs: { id: string; reference: string }[]
+
+  /** Whether the signed-in person may re-issue. The server enforces it too. */
+  mayReissue: boolean
 }
 
 /**
  * The working half of the payments page: what needs attention, then every payment. Re-issuing
- * is applied to local state with a toast until the payments service exists; the handler is where
- * that call goes.
+ * adds the new settlement locally at once, then adopts the record `reissueSettlement` returns,
+ * or drops it and shows the refusal.
  */
-const PaymentsWorkspace = ({ rows: initialRows, batches, runs }: Props) => {
+const PaymentsWorkspace = ({ rows: initialRows, batches, runs, mayReissue }: Props) => {
   const [rows, setRows] = useState(initialRows)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
@@ -177,7 +180,7 @@ const PaymentsWorkspace = ({ rows: initialRows, batches, runs }: Props) => {
         batch={selected ? batchById.get(selected.batchId) : undefined}
         open={!!selected}
         onOpenChange={open => !open && setSelectedId(null)}
-        onReissue={handleReissue}
+        onReissue={mayReissue ? handleReissue : undefined}
       />
     </div>
   )

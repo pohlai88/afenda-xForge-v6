@@ -162,17 +162,33 @@ for (const run of payRuns) {
   const runSettlements = allSettlements.filter(s => s.batchId === batchId)
   const hasReturn = runSettlements.some(s => s.status === 'returned')
 
+  const total = sgd(runSettlements.filter(s => !s.retryOfId).reduce((sum, s) => sum + s.amount.amount, 0))
+  const count = runSettlements.filter(s => !s.retryOfId).length
+  const preparedAt = `${addDays(run.payDate, -3)}T08:00:00.000Z`
+
+  // Closed runs carry the whole lifecycle as recorded events: the specialist prepared and
+  // validated the file, the Finance head released it, the bank acknowledged it within the hour.
   batches.push({
     id: batchId,
     payRunId: run.id,
     fundingAccountId: 'fund-ops',
     reference: `AFENDA PAYROLL ${shortPeriod(run.id)}`,
-    total: sgd(runSettlements.filter(s => !s.retryOfId).reduce((total, s) => total + s.amount.amount, 0)),
-    count: runSettlements.filter(s => !s.retryOfId).length,
+    total,
+    count,
     status: isOpen ? 'draft' : hasReturn ? 'partially_returned' : 'settled',
     scheduledFor: run.payDate,
-    releasedAt: isOpen ? undefined : releasedAt,
-    settledAt: isOpen ? undefined : settledAt
+    ...(isOpen
+      ? {}
+      : {
+          preparedAt,
+          preparedBy: 'emp-022',
+          validation: { checkedAt: preparedAt, payments: count, total, issues: [], excludedEmployeeIds: [] },
+          releasedAt,
+          releasedBy: 'emp-020',
+          bankReference: `DBS-GIRO-${shortPeriod(run.id)}-${run.id.slice(-2)}7`,
+          acceptedAt: `${addDays(run.payDate, -2)}T04:05:00.000Z`,
+          settledAt
+        })
   })
 }
 

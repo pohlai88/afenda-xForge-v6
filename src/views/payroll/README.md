@@ -61,8 +61,8 @@ is the obligation, not the balance: `FundingSummary` leads with net pay still to
 current run and shows the account balance against it. `PaymentReadiness` is four gates (bank
 details, approval, funding, file released), each linking to where it gets cleared.
 `SettlementBatches` is one row per run; `PaymentsWorkspace` lists open returns and failures first,
-then every settlement in a TanStack table, with `SettlementInspector` as a Sheet. Re-issue is
-local state with a toast until the payments service exists. Status words are
+then every settlement in a TanStack table, with `SettlementInspector` as a Sheet. Re-issue goes
+through the `reissueSettlement` action, following the pattern under Mutations. Status words are
 `EmployeePaymentStatus` — the same ones the run workspace's Payment column uses.
 
 ## Settings
@@ -101,15 +101,19 @@ PayrollRunWorkspace (client)
 ├── PayrollMetricRow        employees, gross, net, employer cost, net variance, open exceptions
 └── Tabs (URL: ?view=)
     ├── employees           PayrollTableToolbar · PayrollBulkActions · PayrollRunTable
-    │                       + PayrollEmployeeInspector in a Resizable panel (≥1280px) or Sheet
-    │                       (URL: ?employee=)
+    │                       → PayrollEmployeeDrilldown in place of the table (URL: ?employee=):
+    │                         full width, previous/next through the table's order, Back keeps
+    │                         the filters and sort
     ├── exceptions          ExceptionSummary · ExceptionList → ExceptionInspector (Sheet)
     ├── reconciliation      PayrollReconciliation (current vs previous, gross-to-net, by
     │                       department, largest movers) — every figure drills into the table
     └── audit               PayrollAuditTimeline
 ```
 
-The inspector's tabs: Overview (PayVariance), Pay (PayBreakdown), Inputs (PayrollInputs),
+The drill-down's cards, left to right: Pay (headline net, tiles, PayBreakdown), Why it changed
+(PayVariance), Pay history; Exceptions, Inputs (PayrollInputs), Source trace, Activity. It replaced
+a resizable side panel: the panel was capped at the table's height and gave a payslip a third of
+the screen, which is not enough room to read one. The old list was: Overview (PayVariance), Pay (PayBreakdown), Inputs (PayrollInputs),
 Exceptions, History, Audit (PayrollSourceTrace + timeline).
 
 ## Mutations
@@ -129,17 +133,37 @@ One shape, applied everywhere:
 Actors are stamped server-side from `getCurrentUser()`, a stub for the Finance head until a
 session exists. The client's `CURRENT_USER_ID` is only for the optimistic stamp.
 
-| Surface    | Actions                                                                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| workspace  | `acknowledgeException`, `resolveException`, `reopenException`, `acknowledgeWarnings`, `recalculateRun`, `importPayrollInputs`, `approveRun` |
-| payments   | `reissueSettlement`                                                                                                                         |
-| compliance | `applyFilingTransition` (prepare / submit / accept / reject, via `applyFilingAction`)                                                       |
-| reports    | `recordReportExport`                                                                                                                        |
-| settings   | `savePayrollSettingsSection`, `savePayGroup`, `addFundingAccount`, `setDefaultFundingAccount`                                               |
+| Surface    | Actions                                                                                                                                                        |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| workspace  | `acknowledgeException`, `resolveException`, `reopenException`, `acknowledgeWarnings`, `recalculateRun`, `importPayrollInputs`, `markRunReviewed`, `approveRun` |
+| payments   | `prepareBatch`, `releaseBatch`, `acknowledgeBatch`, `settleBatch`, `reissueSettlement`                                                                         |
+| compliance | `applyFilingTransition` (prepare / submit / accept / reject, via `applyFilingAction`)                                                                          |
+| reports    | `recordReportExport`                                                                                                                                           |
+| settings   | `savePayrollSettingsSection`, `savePayGroup`, `addFundingAccount`, `setDefaultFundingAccount`                                                                  |
 
 Against the fake-db a change lives for the dev-server process — enough to prove the wiring, and
 each action body is the one place to swap for a query. Exports stay client-side: they produce a
 file, not a state change.
+
+### One rule: never display a state the domain cannot prove
+
+- **Approval is one policy.** `evaluatePayrollApproval` (`utils/payroll-approval.ts`) reads the run,
+  the actor and the Approval settings and returns every blocking reason. The approval dialog lists
+  them; `approveRun()` refuses with the first. Neither side has its own copy of the rules.
+- **Review is a record.** `PayRun.review` names the calculation it reviewed. `calculated` means
+  "not yet reviewed"; `pending_approval` means reviewed. Any recalculation returns the run to
+  `calculated`.
+- **Stale is a run fact.** Importing inputs sets `PayRun.pendingInputs`; only a calculation clears
+  it. While set, the workspace shows a persistent banner and approval is refused.
+- **Recalculation recalculates.** `fake-db/payroll/inputs.ts` stores imported rows and rebuilds
+  the run's payslips through the same `calculatePayslip` the seed uses, writing a
+  `CalculationDiff` on the run.
+- **Payment states are recorded events.** A batch moves prepared → released → accepted →
+  processing → settled only through its four actions; "paid" on a payslip is the settlement the
+  bank confirmed, never the payday passing.
+- **Permissions are enforced server-side.** Every action checks one `PayrollPermission`; the
+  actor is built from the Access roles in settings. The interface hides what the actor cannot do,
+  which is a courtesy, not the gate.
 
 ## Rules this module follows
 

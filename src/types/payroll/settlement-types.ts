@@ -24,7 +24,34 @@ export interface FundingAccount {
   isDefault: boolean
 }
 
-export type SettlementBatchStatus = 'draft' | 'released' | 'settled' | 'partially_returned'
+/**
+ * A batch's life, in order. 'draft' is a file nobody has built yet; 'prepared' is a file that
+ * has been built and validated; 'released' has gone to the bank; 'accepted' is the bank's
+ * acknowledgement; 'processing' is money in flight; 'settled' is money landed. Every step is a
+ * recorded event with a timestamp, never an assumption from the calendar.
+ * 'partially_returned' is settled with at least one payment back.
+ */
+export type SettlementBatchStatus =
+  | 'draft'
+  | 'prepared'
+  | 'released'
+  | 'accepted'
+  | 'processing'
+  | 'settled'
+  | 'partially_returned'
+
+/** What preparing the file checked, kept so the release screen can show its evidence. */
+export interface BatchValidation {
+  checkedAt: IsoDateTime
+  payments: number
+  total: Money
+
+  /** Problems that stop release, in the interface's voice. Empty means the file is clean. */
+  issues: string[]
+
+  /** Employees left out of the file because they cannot be paid by it yet, e.g. no bank account. */
+  excludedEmployeeIds: string[]
+}
 
 export interface SettlementBatch {
   id: string
@@ -37,7 +64,15 @@ export interface SettlementBatch {
   count: number
   status: SettlementBatchStatus
   scheduledFor: IsoDate
+  preparedAt?: IsoDateTime
+  preparedBy?: string
+  validation?: BatchValidation
   releasedAt?: IsoDateTime
+  releasedBy?: string
+
+  /** The bank's reference for the file, recorded when it acknowledges receipt. */
+  bankReference?: string
+  acceptedAt?: IsoDateTime
   settledAt?: IsoDateTime
 }
 

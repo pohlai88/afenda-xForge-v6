@@ -3,6 +3,9 @@
 // React Imports
 import { useMemo, useState, useTransition } from 'react'
 
+// Next Imports
+import { useRouter } from 'next/navigation'
+
 // Third-party Imports
 import type {
   ColumnFiltersState,
@@ -20,37 +23,38 @@ import {
   getSortedRowModel,
   useReactTable
 } from '@tanstack/react-table'
-import { CheckIcon, DownloadIcon, RefreshCwIcon, UploadIcon } from 'lucide-react'
+import { CheckIcon, ClipboardCheckIcon, DownloadIcon, RefreshCwIcon, UploadIcon } from 'lucide-react'
 import { parseAsString, parseAsStringLiteral, useQueryState } from 'nuqs'
 import { toast } from 'sonner'
 
 // Type Imports
 import type { Department, WorkLocation } from '@/types/hrm/employee-types'
 import type { PayRun, PayRunExceptionSeverity, Payslip } from '@/types/payroll/pay-run-types'
+import type { PayrollActor } from '@/types/payroll/permission-types'
 import type { PayrollRunRow } from '@/types/payroll/run-workspace-types'
+import type { AccessRole, ApprovalSettings } from '@/types/payroll/settings-types'
+import type { ApprovalReason } from '@/utils/payroll-approval'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
-import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import CalculationStaleBanner from './calculation-stale-banner'
 import ExceptionInspector from './exception-inspector'
 import ExceptionList, { type ExceptionListItem } from './exception-list'
 import ExceptionSummary from './exception-summary'
+import InputReadinessSheet from './input-readiness-sheet'
 import PayrollApprovalDialog from './payroll-approval-dialog'
 import PayrollAuditTimeline from './payroll-audit-timeline'
 import PayrollBulkActions from './payroll-bulk-actions'
-import PayrollEmployeeInspector, { type PayHistoryPoint } from './payroll-employee-inspector'
+import PayrollEmployeeDrilldown, { type PayHistoryPoint } from './payroll-employee-drilldown'
 import PayrollMetricRow, { type PayrollMetric } from './payroll-metric-row'
 import PayrollReconciliation from './payroll-reconciliation'
+import PayrollReviewDialog from './payroll-review-dialog'
 import PayrollRunHeader from './payroll-run-header'
 import PayrollRunTable, { buildPayrollColumns } from './payroll-run-table'
 import PayrollStageBar from './payroll-stage-bar'
 import PayrollImport, { type ImportRow } from './payroll-import'
 import PayrollTableToolbar from './payroll-table-toolbar'
-
-// Hook Imports
-import { useIsMobile } from '@/hooks/use-mobile'
 
 // Action Imports
 import {
@@ -58,6 +62,7 @@ import {
   acknowledgeWarnings,
   approveRun,
   importPayrollInputs,
+  markRunReviewed,
   recalculateRun,
   reopenException,
   resolveException
@@ -66,14 +71,17 @@ import {
 // Util Imports
 import { exportPayrollRegisterToCsv } from '@/utils/export-payroll-utils'
 import { formatMoney } from '@/utils/money'
+import { evaluatePayrollApproval } from '@/utils/payroll-approval'
 import { changeVsPrevious, countExceptions, formatChange } from '@/utils/payroll-metrics'
-import { auditEvents, formatPeriod, formatSignedMoney, isLocked, refreshRows } from '@/utils/payroll-workspace'
-
-/**
- * Whoever is signed in. There is no auth in this app yet, so the Finance head stands in; when a
- * session exists this becomes a prop from the page.
- */
-const CURRENT_USER_ID = 'emp-020'
+import { can } from '@/utils/payroll-permissions'
+import {
+  auditEvents,
+  formatPeriod,
+  formatSignedMoney,
+  inputReadiness,
+  isLocked,
+  refreshRows
+} from '@/utils/payroll-workspace'
 
 const VIEWS = ['employees', 'exceptions', 'reconciliation', 'audit'] as const
 
@@ -89,16 +97,23 @@ type Props = {
   employeeNames: Record<string, string>
   historyByEmployee: Record<string, PayHistoryPoint[]>
   daysToPayday: number | null
+
+  /** Whoever is signed in, with the permissions the server will enforce. */
+  actor: PayrollActor
+
+  /** The approval rules and the roles they name, so the dialog reads the same gate as the server. */
+  approvalSettings: ApprovalSettings
+  roles: AccessRole[]
 }
 
 /**
- * The payroll operations workspace. One screen, four views, and a persistent inspector: most of
- * a payroll cycle should be workable without leaving it.
+ * The payroll operations workspace. One screen, four views, and an employee drill-down that takes
+ * the table's place: most of a payroll cycle should be workable without leaving it.
  *
  * State that someone might want to share or come back to — which view, which employee — lives in
- * the URL. Everything else is local. Mutations (acknowledge, resolve, approve, recalculate) are
- * applied to local run state because the data layer is still the fake-db; each handler is the
- * place a server action will be called from when one exists.
+ * the URL. Everything else is local. Every mutation is applied to local run state at once and
+ * then sent to its server action; the server's record replaces the optimistic one, or the
+ * snapshot comes back with the refusal.
  */
 const PayrollRunWorkspace = ({
   run: initialRun,
@@ -109,17 +124,25 @@ const PayrollRunWorkspace = ({
   locations,
   employeeNames,
   historyByEmployee,
-  daysToPayday
+  daysToPayday,
+  actor,
+  approvalSettings,
+  roles
 }: Props) => {
-  const isMobile = useIsMobile()
+  const router = useRouter()
 
   // Run state — status, approvals, exceptions — is what the session mutates.
   const [run, setRun] = useState(initialRun)
-  const [changedSinceReview, setChangedSinceReview] = useState(0)
 
   const rows = useMemo(() => refreshRows(initialRows, run), [initialRows, run])
   const locked = isLocked(run.status)
   const nameOf = (employeeId: string) => employeeNames[employeeId] ?? employeeId
+
+  // What this person may do. The server enforces the same permissions; hiding a control here
+  // spares them a refusal, it does not grant anything.
+  const mayProcess = can(actor, 'payroll.process') && !locked
+  const mayReview = can(actor, 'payroll.review') && !locked
+  const mayApprove = can(actor, 'payroll.approve')
 
   // URL state.
   const [view, setView] = useQueryState('view', parseAsStringLiteral(VIEWS).withDefault('employees'))
@@ -133,6 +156,8 @@ const PayrollRunWorkspace = ({
   const [exceptionId, setExceptionId] = useState<string | null>(null)
   const [exceptionSeverity, setExceptionSeverity] = useState<PayRunExceptionSeverity | null>(null)
   const [approvalOpen, setApprovalOpen] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [readinessOpen, setReadinessOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
 
   // Table state.
@@ -203,9 +228,16 @@ const PayrollRunWorkspace = ({
   const selectedException = exceptionId ? (exceptionItems.find(e => e.id === exceptionId) ?? null) : null
   const counts = countExceptions(run.exceptions)
   const audit = auditEvents(run, nameOf)
+  const feeds = inputReadiness(run, rows)
+
+  // The one approval verdict, from the same function the server runs.
+  const evaluation = evaluatePayrollApproval({ run, actor, settings: approvalSettings, roles })
+  const awaitingApproval = run.status === 'calculated' || run.status === 'pending_approval'
+  const needsReview = awaitingApproval && !evaluation.reviewed && !evaluation.stale
 
   const selectedIds = Object.keys(rowSelection).filter(id => rowSelection[id])
   const selectedRows = rows.filter(row => selectedIds.includes(row.employeeId))
+  const filteredRows = table.getFilteredRowModel().rows
 
   const acknowledgeableCount = selectedRows.reduce(
     (total, row) =>
@@ -305,7 +337,7 @@ const PayrollRunWorkspace = ({
 
   const handleAcknowledge = (id: string) =>
     commit(
-      () => updateException(id, { acknowledgedAt: new Date().toISOString(), acknowledgedBy: CURRENT_USER_ID }),
+      () => updateException(id, { acknowledgedAt: new Date().toISOString(), acknowledgedBy: actor.id }),
       () => acknowledgeException(run.id, id),
       updated => {
         setRun(updated)
@@ -316,7 +348,7 @@ const PayrollRunWorkspace = ({
   const handleResolve = (id: string) =>
     commit(
       () => {
-        updateException(id, { resolvedAt: new Date().toISOString(), resolvedBy: CURRENT_USER_ID })
+        updateException(id, { resolvedAt: new Date().toISOString(), resolvedBy: actor.id })
         setExceptionId(null)
       },
       () => resolveException(run.id, id),
@@ -342,25 +374,33 @@ const PayrollRunWorkspace = ({
       }
     )
 
-  const handleRecalculate = (count: number) => {
-    // A count equal to the selection means "these employees"; anything else means the whole run.
-    const employeeIds = count === selectedIds.length && count < run.employeeCount ? selectedIds : undefined
-
+  /**
+   * A real calculation happens on the server; the rows this screen holds are the old payslips
+   * until the page re-renders, so on success the router is refreshed and the page remounts the
+   * workspace on the new calculation version with fresh rows.
+   */
+  const handleRecalculate = (employeeIds?: string[]) => {
     commit(
       () =>
         setRun(current => ({
           ...current,
+          status: current.status === 'pending_approval' ? 'calculated' : current.status,
           calculationVersion: current.calculationVersion + 1,
           lastCalculatedAt: new Date().toISOString(),
+          pendingInputs: employeeIds ? current.pendingInputs : undefined,
           updatedAt: new Date().toISOString()
         })),
       () => recalculateRun(run.id, employeeIds),
       ({ run: updated, count: recalculated }) => {
+        const diff = updated.lastCalculationDiff
+
         setRun(updated)
-        setChangedSinceReview(total => total + recalculated)
         toast.success(`Calculation #${updated.calculationVersion} complete`, {
-          description: `${recalculated} ${recalculated === 1 ? 'payslip' : 'payslips'} recalculated`
+          description: diff
+            ? `${recalculated} ${recalculated === 1 ? 'payslip' : 'payslips'} recalculated · ${diff.affectedEmployees} changed · net ${formatSignedMoney(diff.netDelta)}${updated.review?.calculationVersion === updated.calculationVersion ? '' : ' · review needed'}`
+            : `${recalculated} ${recalculated === 1 ? 'payslip' : 'payslips'} recalculated`
         })
+        router.refresh()
       }
     )
   }
@@ -375,7 +415,7 @@ const PayrollRunWorkspace = ({
           ...current,
           exceptions: current.exceptions.map(e =>
             e.severity === 'warning' && !e.resolvedAt && !e.acknowledgedAt && e.employeeId && ids.has(e.employeeId)
-              ? { ...e, acknowledgedAt: now, acknowledgedBy: CURRENT_USER_ID }
+              ? { ...e, acknowledgedAt: now, acknowledgedBy: actor.id }
               : e
           ),
           updatedAt: now
@@ -388,15 +428,48 @@ const PayrollRunWorkspace = ({
     )
   }
 
-  const handleApprove = () => {
+  const handleReview = (note?: string) => {
     const now = new Date().toISOString()
 
     commit(
       () => {
         setRun(current => ({
           ...current,
-          status: 'approved',
-          approvals: [...current.approvals, { approvedBy: CURRENT_USER_ID, approvedAt: now }],
+          status: 'pending_approval',
+          review: {
+            calculationVersion: current.calculationVersion,
+            reviewedBy: actor.id,
+            reviewedAt: now,
+            findingsAtReview: { blocking: counts.blocking, error: counts.error, warning: counts.warning },
+            acknowledgedWarnings: counts.acknowledged,
+            note
+          },
+          updatedAt: now
+        }))
+        setReviewOpen(false)
+      },
+      () => markRunReviewed(run.id, run.calculationVersion, note),
+      updated => {
+        setRun(updated)
+        toast.success(`Calculation #${updated.calculationVersion} reviewed`, {
+          description: `${updated.reference} is now awaiting approval`
+        })
+      }
+    )
+  }
+
+  const handleApprove = () => {
+    const now = new Date().toISOString()
+
+    // A run above the second-approver threshold stays Pending approval after the first signature.
+    const complete = run.approvals.length + 1 >= evaluation.signaturesRequired
+
+    commit(
+      () => {
+        setRun(current => ({
+          ...current,
+          status: complete ? 'approved' : current.status,
+          approvals: [...current.approvals, { approvedBy: actor.id, approvedAt: now }],
           updatedAt: now
         }))
         setApprovalOpen(false)
@@ -404,9 +477,16 @@ const PayrollRunWorkspace = ({
       () => approveRun(run.id, run.calculationVersion),
       updated => {
         setRun(updated)
-        toast.success(`${formatPeriod(updated.periodStart, updated.periodEnd)} payroll approved`, {
-          description: `Calculation #${updated.calculationVersion} · ${formatMoney(updated.totals.netPay)} net to ${updated.employeeCount} employees`
-        })
+
+        if (updated.status === 'approved') {
+          toast.success(`${formatPeriod(updated.periodStart, updated.periodEnd)} payroll approved`, {
+            description: `Calculation #${updated.calculationVersion} · ${formatMoney(updated.totals.netPay)} net to ${updated.employeeCount} employees`
+          })
+        } else {
+          toast.success('First signature recorded', {
+            description: `${updated.reference} needs a second approver before it is approved`
+          })
+        }
       }
     )
   }
@@ -417,17 +497,35 @@ const PayrollRunWorkspace = ({
       .map(row => ({ employeeNumber: row.employeeNumber, component: row.component, amount: row.amount as number }))
 
     const employees = new Set(rows.map(row => row.employeeNumber)).size
+    const now = new Date().toISOString()
 
     commit(
-      () => setChangedSinceReview(total => total + employees),
+      () =>
+        setRun(current => ({
+          ...current,
+          pendingInputs: {
+            count: (current.pendingInputs?.count ?? 0) + rows.length,
+            employees: Math.max(current.pendingInputs?.employees ?? 0, employees),
+            importedAt: now,
+            importedBy: actor.id
+          },
+          updatedAt: now
+        })),
       () => importPayrollInputs(run.id, rows),
       ({ run: updated, imported: count, employees: affected }) => {
         setRun(updated)
         toast.success(`${count} ${count === 1 ? 'input' : 'inputs'} imported`, {
-          description: `${affected} ${affected === 1 ? 'employee' : 'employees'} affected · recalculate to apply`
+          description: `${affected} ${affected === 1 ? 'employee' : 'employees'} affected · calculation #${updated.calculationVersion} is now out of date`
         })
       }
     )
+  }
+
+  /** Where the approval dialog sends someone to clear the first thing in the way. */
+  const resolveApprovalReason = (reason: ApprovalReason) => {
+    if (reason.key === 'stale') handleRecalculate()
+    else if (reason.key === 'unreviewed') setReviewOpen(true)
+    else if (reason.view) setView(reason.view)
   }
 
   const handleExport = (subset?: PayrollRunRow[]) => {
@@ -455,8 +553,6 @@ const PayrollRunWorkspace = ({
     setView('employees')
   }
 
-  const canApprove = run.status === 'calculated' || run.status === 'pending_approval'
-
   const filteredExceptions = exceptionSeverity
     ? exceptionItems.filter(e => e.severity === exceptionSeverity && !e.resolvedAt)
     : exceptionItems
@@ -465,8 +561,12 @@ const PayrollRunWorkspace = ({
   /* Render                                                                                   */
   /* ---------------------------------------------------------------------------------------- */
 
-  const inspector = selectedRow && (
-    <PayrollEmployeeInspector
+  // The drill-down walks the table's current order: filtered and sorted, across pages.
+  const orderedIds = table.getSortedRowModel().rows.map(row => row.original.employeeId)
+  const selectedIndex = selectedRow ? orderedIds.indexOf(selectedRow.employeeId) : -1
+
+  const drilldown = selectedRow && (
+    <PayrollEmployeeDrilldown
       row={selectedRow}
       run={run}
       previousReference={previousRun?.reference}
@@ -476,12 +576,23 @@ const PayrollRunWorkspace = ({
         event =>
           event.id.startsWith(`${run.id}-calculated`) || selectedRow.exceptions.some(e => event.id.startsWith(e.id))
       )}
+      previousEmployeeId={selectedIndex > 0 ? orderedIds[selectedIndex - 1] : undefined}
+      nextEmployeeId={
+        selectedIndex >= 0 && selectedIndex < orderedIds.length - 1 ? orderedIds[selectedIndex + 1] : undefined
+      }
+      position={{ index: Math.max(selectedIndex, 0), total: orderedIds.length }}
       onSelectException={exception => setExceptionId(exception.id)}
-      onClose={() => setEmployeeId(null)}
+      onSelectEmployee={setEmployeeId}
+      onFilterDepartment={departmentId => {
+        setEmployeeId(null)
+        filterDepartment(departmentId)
+      }}
+      onRecalculate={mayProcess ? () => handleRecalculate([selectedRow.employeeId]) : undefined}
+      onBack={() => setEmployeeId(null)}
     />
   )
 
-  const employeesView = (
+  const employeesView = drilldown ?? (
     <div className='bg-card flex flex-col overflow-hidden rounded-lg border'>
       <PayrollTableToolbar
         table={table}
@@ -498,70 +609,31 @@ const PayrollRunWorkspace = ({
       {selectedIds.length > 0 && (
         <PayrollBulkActions
           selectedCount={selectedIds.length}
+          filteredCount={filteredRows.length}
           acknowledgeableCount={acknowledgeableCount}
           locked={locked}
-          onRecalculate={() => handleRecalculate(selectedIds.length)}
-          onAcknowledgeWarnings={handleAcknowledgeSelectedWarnings}
+          onRecalculate={mayProcess ? () => handleRecalculate(selectedIds) : undefined}
+          onAcknowledgeWarnings={mayReview ? handleAcknowledgeSelectedWarnings : undefined}
           onExportSelected={() => handleExport(selectedRows)}
+          onSelectAllFiltered={() =>
+            setRowSelection(Object.fromEntries(filteredRows.map(row => [row.original.employeeId, true])))
+          }
           onClearSelection={() => setRowSelection({})}
         />
       )}
 
-      <div className='h-[min(70dvh,56rem)] min-h-[28rem]'>
-        {selectedRow && !isMobile ? (
-          <ResizablePanelGroup orientation='horizontal' className='h-full'>
-            {/* min-w-0 on both panels: a flex item's default minimum is its content width, and a
-                table with nowrap cells would otherwise force the group wider than the page. */}
-            <ResizablePanel defaultSize='68%' minSize='45%' className='flex min-h-0 min-w-0 flex-col overflow-hidden'>
-              <PayrollRunTable
-                table={table}
-                selectedEmployeeId={employeeId}
-                onSelectEmployee={setEmployeeId}
-                emptyMessage={
-                  globalFilter ? `No employees match “${globalFilter}”.` : 'No employees match these filters.'
-                }
-                onClearFilters={() => {
-                  table.resetColumnFilters()
-                  setGlobalFilter('')
-                }}
-              />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel
-              defaultSize='32%'
-              minSize='24%'
-              maxSize='45%'
-              className='flex min-h-0 min-w-0 flex-col overflow-hidden'
-            >
-              {inspector}
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : (
-          <div className='flex h-full min-h-0 flex-col'>
-            <PayrollRunTable
-              table={table}
-              selectedEmployeeId={employeeId}
-              onSelectEmployee={setEmployeeId}
-              emptyMessage={
-                globalFilter ? `No employees match “${globalFilter}”.` : 'No employees match these filters.'
-              }
-              onClearFilters={() => {
-                table.resetColumnFilters()
-                setGlobalFilter('')
-              }}
-            />
-          </div>
-        )}
+      <div className='flex h-[min(70dvh,56rem)] min-h-0 min-h-[28rem] flex-col'>
+        <PayrollRunTable
+          table={table}
+          selectedEmployeeId={employeeId}
+          onSelectEmployee={setEmployeeId}
+          emptyMessage={globalFilter ? `No employees match “${globalFilter}”.` : 'No employees match these filters.'}
+          onClearFilters={() => {
+            table.resetColumnFilters()
+            setGlobalFilter('')
+          }}
+        />
       </div>
-
-      {isMobile && (
-        <Sheet open={!!selectedRow} onOpenChange={open => !open && setEmployeeId(null)}>
-          <SheetContent side='right' showCloseButton={false} className='w-full gap-0 p-0 sm:max-w-lg'>
-            <SheetTitle className='sr-only'>{selectedRow ? `${selectedRow.name} — payslip` : 'Employee'}</SheetTitle>
-            {inspector}
-          </SheetContent>
-        </Sheet>
-      )}
     </div>
   )
 
@@ -572,14 +644,14 @@ const PayrollRunWorkspace = ({
         daysToPayday={daysToPayday}
         actions={
           <>
-            {!locked && (
+            {mayProcess && (
               <Button variant='outline' onClick={() => setImportOpen(true)}>
                 <UploadIcon />
                 Import inputs
               </Button>
             )}
-            {!locked && (
-              <Button variant='outline' onClick={() => handleRecalculate(run.employeeCount)}>
+            {mayProcess && (
+              <Button variant='outline' onClick={() => handleRecalculate()}>
                 <RefreshCwIcon />
                 Recalculate
               </Button>
@@ -588,7 +660,13 @@ const PayrollRunWorkspace = ({
               <DownloadIcon />
               Export
             </Button>
-            {canApprove && (
+            {needsReview && mayReview && (
+              <Button variant={mayApprove ? 'outline' : 'default'} onClick={() => setReviewOpen(true)}>
+                <ClipboardCheckIcon />
+                Mark as reviewed
+              </Button>
+            )}
+            {awaitingApproval && mayApprove && (
               <Button onClick={() => setApprovalOpen(true)}>
                 <CheckIcon />
                 Approve payroll
@@ -598,7 +676,17 @@ const PayrollRunWorkspace = ({
         }
       />
 
-      <PayrollStageBar status={run.status} />
+      <PayrollStageBar
+        status={run.status}
+        inputsPending={!!run.pendingInputs}
+        onInputsClick={() => setReadinessOpen(true)}
+      />
+
+      <CalculationStaleBanner
+        run={run}
+        onRecalculate={mayProcess ? () => handleRecalculate() : undefined}
+        onShowInputs={() => setReadinessOpen(true)}
+      />
 
       <PayrollMetricRow metrics={metrics} />
 
@@ -675,7 +763,7 @@ const PayrollRunWorkspace = ({
         open={!!selectedException}
         onOpenChange={open => !open && setExceptionId(null)}
         nameOf={nameOf}
-        locked={locked}
+        locked={!mayReview}
         onAcknowledge={handleAcknowledge}
         onResolve={handleResolve}
         onReopen={handleReopen}
@@ -694,20 +782,27 @@ const PayrollRunWorkspace = ({
         onImport={handleImport}
       />
 
+      <PayrollReviewDialog open={reviewOpen} onOpenChange={setReviewOpen} run={run} onConfirm={handleReview} />
+
+      <InputReadinessSheet
+        open={readinessOpen}
+        onOpenChange={setReadinessOpen}
+        run={run}
+        feeds={feeds}
+        onImport={mayProcess ? () => setImportOpen(true) : undefined}
+        onRecalculate={mayProcess ? () => handleRecalculate() : undefined}
+        onShowExceptions={() => setView('exceptions')}
+      />
+
       <PayrollApprovalDialog
         open={approvalOpen}
         onOpenChange={setApprovalOpen}
         run={run}
-        exceptions={run.exceptions}
-        changedSinceReview={changedSinceReview}
+        evaluation={evaluation}
         preparedBy={nameOf(run.createdBy)}
-        reviewedBy={
-          run.exceptions.some(e => e.acknowledgedBy)
-            ? nameOf(run.exceptions.find(e => e.acknowledgedBy)!.acknowledgedBy!)
-            : undefined
-        }
+        reviewedBy={run.review ? nameOf(run.review.reviewedBy) : undefined}
         onApprove={handleApprove}
-        onReviewExceptions={() => setView('exceptions')}
+        onResolve={resolveApprovalReason}
       />
     </div>
   )

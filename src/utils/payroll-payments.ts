@@ -17,24 +17,160 @@ import type {
 
 // Util Imports
 import { formatMoney } from '@/utils/money'
-import { formatDate } from '@/utils/payroll-workspace'
+import { formatDate, formatInstant } from '@/utils/payroll-workspace'
 
 /* -------------------------------------------------------------------------------------------- */
 /* Vocabularies                                                                                 */
 /* -------------------------------------------------------------------------------------------- */
 
 export const BATCH_STATUS_LABELS: Record<SettlementBatchStatus, string> = {
-  draft: 'Not released',
+  draft: 'Not prepared',
+  prepared: 'Prepared',
   released: 'Released',
+  accepted: 'Accepted by bank',
+  processing: 'Processing',
   settled: 'Settled',
   partially_returned: 'Settled · returns'
 }
 
 export const BATCH_STATUS_STYLES: Record<SettlementBatchStatus, string> = {
   draft: 'bg-muted text-foreground',
+  prepared: 'bg-primary/10 text-primary',
   released: 'bg-info/10 text-info',
+  accepted: 'bg-info/10 text-info',
+  processing: 'bg-info/10 text-info',
   settled: 'bg-success/15 text-success',
   partially_returned: 'bg-warning/15 text-warning'
+}
+
+/** The batch lifecycle as stages, for the rail. 'draft' is before the first stage. */
+export const BATCH_STAGES = ['prepared', 'released', 'accepted', 'processing', 'settled'] as const
+
+export type BatchStage = (typeof BATCH_STAGES)[number]
+
+export const BATCH_STAGE_LABELS: Record<BatchStage, string> = {
+  prepared: 'Prepared',
+  released: 'Released',
+  accepted: 'Accepted by bank',
+  processing: 'Processing',
+  settled: 'Settled'
+}
+
+/** How many stages are done. Everything before the index is done; the index is current. */
+export const batchStageIndex = (status: SettlementBatchStatus): number => {
+  switch (status) {
+    case 'draft':
+      return 0
+    case 'prepared':
+      return 1
+    case 'released':
+      return 2
+    case 'accepted':
+      return 3
+    case 'processing':
+      return 4
+    case 'settled':
+    case 'partially_returned':
+      return BATCH_STAGES.length
+  }
+}
+
+/** When each stage was reached, from the batch's recorded events. */
+export const batchStageTimestamps = (batch: SettlementBatch): Partial<Record<BatchStage, string>> => ({
+  prepared: batch.preparedAt,
+  released: batch.releasedAt,
+  accepted: batch.acceptedAt,
+  processing: batch.acceptedAt,
+  settled: batch.settledAt
+})
+
+export type BatchAction = 'prepare' | 'release' | 'acknowledge' | 'settle'
+
+export const BATCH_ACTION_LABELS: Record<BatchAction, string> = {
+  prepare: 'Prepare payment file',
+  release: 'Release to bank',
+  acknowledge: 'Record bank acknowledgement',
+  settle: 'Record settlement'
+}
+
+export interface BatchEvaluation {
+
+  /** The one action that moves the batch on, or null when it is settled. */
+  next: BatchAction | null
+
+  /** Why `next` cannot run yet, in the interface's voice. Empty means it can. */
+  blockingReasons: string[]
+
+  /** True but not blocking: what the file will leave out, and why. */
+  notes: string[]
+
+  /** Where to clear the first reason, when a screen does. */
+  href?: string
+}
+
+/**
+ * What happens next to a batch and what stands in the way. `prepareBatch()` and friends on the
+ * server apply the same rules; the release card shows them.
+ */
+export const evaluateBatch = (
+  batch: SettlementBatch,
+  run: PayRun,
+  runSettlements: Settlement[],
+  funding: FundingSummary
+): BatchEvaluation => {
+  const approved = run.status === 'approved' || run.status === 'paid' || run.status === 'closed'
+  const missingBank = runSettlements.filter(s => s.status === 'action_required' && !s.retryOfId)
+
+  // A person with no bank account is left out of the file, not a reason to hold everyone else's
+  // pay: their payment stays Action required and is issued once the account is on file.
+  const excludedNote =
+    missingBank.length > 0
+      ? `${missingBank.length} ${missingBank.length === 1 ? 'payment is' : 'payments are'} left out of the file: no bank account on file. ${missingBank.length === 1 ? 'It stays' : 'They stay'} Action required until one is added.`
+      : null
+
+  switch (batch.status) {
+    case 'draft': {
+      const reasons: string[] = []
+
+      if (!approved)
+        reasons.push(`${run.reference} is not approved. The file is built from an approved calculation only.`)
+
+      return {
+        next: 'prepare',
+        blockingReasons: reasons,
+        notes: excludedNote ? [excludedNote] : [],
+        href: !approved ? `/payroll/runs/${run.id}` : undefined
+      }
+    }
+
+    case 'prepared': {
+      const reasons: string[] = []
+
+      if (batch.validation && batch.validation.issues.length > 0) reasons.push(...batch.validation.issues)
+
+      if (funding.headroom.amount < 0) {
+        reasons.push(
+          `Funding is ${formatMoney({ ...funding.headroom, amount: -funding.headroom.amount })} short of ${formatMoney(funding.required)}. Top up the account or change the funding account.`
+        )
+      }
+
+      return {
+        next: 'release',
+        blockingReasons: reasons,
+        notes: excludedNote ? [excludedNote] : [],
+        href: reasons.length > 0 ? '/payroll/settings?section=banking' : undefined
+      }
+    }
+
+    case 'released':
+      return { next: 'acknowledge', blockingReasons: [], notes: [] }
+    case 'accepted':
+    case 'processing':
+      return { next: 'settle', blockingReasons: [], notes: [] }
+    case 'settled':
+    case 'partially_returned':
+      return { next: null, blockingReasons: [], notes: excludedNote ? [excludedNote] : [] }
+  }
 }
 
 /* -------------------------------------------------------------------------------------------- */
@@ -183,11 +319,14 @@ export type ReadinessCheck = {
 export const paymentReadiness = (
   run: PayRun,
   runSettlements: Settlement[],
-  funding: FundingSummary
+  funding: FundingSummary,
+  batch?: SettlementBatch
 ): { percent: number; checks: ReadinessCheck[] } => {
   const missingBank = runSettlements.filter(s => s.status === 'action_required').length
   const approved = run.status === 'approved' || run.status === 'paid' || run.status === 'closed'
-  const paid = run.status === 'paid' || run.status === 'closed'
+
+  // "Released" is the batch's recorded event, not an inference from the run being paid.
+  const released = batch ? batchStageIndex(batch.status) >= 2 : run.status === 'paid' || run.status === 'closed'
 
   const checks: ReadinessCheck[] = [
     {
@@ -221,8 +360,13 @@ export const paymentReadiness = (
     {
       key: 'file',
       label: 'Payment file released',
-      done: paid,
-      detail: paid ? `Released for payday ${formatDate(run.payDate)}` : `Scheduled for ${formatDate(run.payDate)}`
+      done: released,
+      detail: released
+        ? `Released ${batch?.releasedAt ? formatInstant(batch.releasedAt) : `for payday ${formatDate(run.payDate)}`}`
+        : batch?.status === 'prepared'
+          ? `Prepared, awaiting release for ${formatDate(run.payDate)}`
+          : `Scheduled for ${formatDate(run.payDate)}`,
+      href: released ? undefined : '/payroll/payments'
     }
   ]
 
@@ -239,6 +383,28 @@ export const paymentReadiness = (
 /** One settlement's life as a timeline, newest first. */
 export const settlementEvents = (row: SettlementRow, batch: SettlementBatch | undefined): AuditEvent[] => {
   const events: AuditEvent[] = []
+
+  if (batch?.preparedAt) {
+    events.push({
+      id: `${row.id}-prepared`,
+      at: batch.preparedAt,
+      actor: 'Payments',
+      action: 'Included in payment file',
+      detail: `${batch.reference} · ${batch.count} payments`,
+      kind: 'system'
+    })
+  }
+
+  if (batch?.acceptedAt) {
+    events.push({
+      id: `${row.id}-accepted`,
+      at: batch.acceptedAt,
+      actor: 'Bank',
+      action: 'File accepted',
+      detail: batch.bankReference ? `Bank reference ${batch.bankReference}` : undefined,
+      kind: 'system'
+    })
+  }
 
   if (batch?.releasedAt || row.releasedAt) {
     events.push({

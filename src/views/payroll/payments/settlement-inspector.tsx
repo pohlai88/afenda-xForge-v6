@@ -29,7 +29,9 @@ type Props = {
   batch?: SettlementBatch
   open: boolean
   onOpenChange: (open: boolean) => void
-  onReissue: (row: SettlementRow) => void
+
+  /** Absent when the signed-in person may not re-issue; the record is still shown. */
+  onReissue?: (row: SettlementRow) => void
 }
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -141,7 +143,7 @@ const SettlementInspector = ({ row, batch, open, onOpenChange, onReissue }: Prop
           </div>
         </ScrollArea>
 
-        {needsAction && (
+        {needsAction && onReissue && (
           <SheetFooter className='flex-row justify-end border-t'>
             <Button onClick={() => onReissue(row)}>
               <RotateCcwIcon />

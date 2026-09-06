@@ -428,6 +428,132 @@ export const payrollInputs = (row: PayrollRunRow): PayrollInput[] => {
   ]
 }
 
+/* -------------------------------------------------------------------------------------------- */
+/* Input readiness                                                                              */
+/* -------------------------------------------------------------------------------------------- */
+
+export type InputFeedStatus = 'ready' | 'pending' | 'missing'
+
+/**
+ * One upstream feed the calculation reads, and whether it is complete for this run. Only feeds
+ * the engine actually consumes are listed: a "Leave — ready" line for a feed nothing reads would
+ * be a state the domain cannot prove.
+ */
+export interface InputFeed {
+  key: string
+  label: string
+  source: string
+  status: InputFeedStatus
+
+  /** What is complete, or what is missing and for whom. */
+  detail: string
+
+  /** How many people the problem concerns, when it is per-person. */
+  affected?: number
+}
+
+const namesOf = (rows: PayrollRunRow[], limit = 3) => {
+  const names = rows.map(row => row.name)
+
+  return names.length <= limit
+    ? names.join(', ')
+    : `${names.slice(0, limit).join(', ')} and ${names.length - limit} more`
+}
+
+/**
+ * Run-level readiness: are the inputs the calculation depends on complete? Derived from the
+ * same records the per-employee Inputs tab reads, so the two agree by construction.
+ */
+export const inputReadiness = (run: PayRun, rows: PayrollRunRow[]): InputFeed[] => {
+  const noCompensation = rows.filter(row => row.employee.compensation.amount.amount <= 0)
+  const noHours = rows.filter(row => !row.payslip.hoursRegular)
+
+  const noBank = rows.filter(
+    row => row.employee.payroll.paymentMethod === 'bank_transfer' && !row.employee.payroll.bankAccountLast4
+  )
+
+  const noTax = rows.filter(row => !row.employee.payroll.taxIdentifierLast4)
+  const overtimeRows = rows.filter(row => (row.payslip.hoursOvertime ?? 0) > 0)
+  const overtimeHours = overtimeRows.reduce((total, row) => total + (row.payslip.hoursOvertime ?? 0), 0)
+  const pending = run.pendingInputs
+
+  const perPerson = (
+    key: string,
+    label: string,
+    source: string,
+    missing: PayrollRunRow[],
+    readyDetail: string,
+    missingWhat: string
+  ): InputFeed => ({
+    key,
+    label,
+    source,
+    status: missing.length === 0 ? 'ready' : 'missing',
+    detail:
+      missing.length === 0
+        ? readyDetail
+        : `${missing.length} ${missing.length === 1 ? 'employee has' : 'employees have'} ${missingWhat}: ${namesOf(missing)}`,
+    affected: missing.length || undefined
+  })
+
+  return [
+    perPerson(
+      'compensation',
+      'Compensation',
+      'Employment profile',
+      noCompensation,
+      `Salary on file for all ${rows.length} employees`,
+      'no salary on file'
+    ),
+    perPerson(
+      'hours',
+      'Regular hours',
+      'Timesheet import',
+      noHours,
+      `Hours received for all ${rows.length} employees`,
+      'no timesheet for the period'
+    ),
+    {
+      key: 'overtime',
+      label: 'Overtime',
+      source: 'Timesheet import',
+      status: 'ready',
+      detail:
+        overtimeRows.length === 0
+          ? 'No overtime claimed this period'
+          : `${overtimeHours} h across ${overtimeRows.length} ${overtimeRows.length === 1 ? 'employee' : 'employees'}`
+    },
+    {
+      key: 'adjustments',
+      label: 'Adjustments',
+      source: 'Import inputs',
+      status: pending ? 'pending' : 'ready',
+      detail: pending
+        ? `${pending.count} ${pending.count === 1 ? 'input' : 'inputs'} imported for ${pending.employees} ${pending.employees === 1 ? 'employee' : 'employees'}, not yet calculated`
+        : run.lastCalculationDiff
+          ? `${run.lastCalculationDiff.inputsApplied} ${run.lastCalculationDiff.inputsApplied === 1 ? 'input' : 'inputs'} applied in calculation #${run.lastCalculationDiff.currentVersion}`
+          : 'Nothing imported for this run',
+      affected: pending?.employees
+    },
+    perPerson(
+      'bank',
+      'Bank details',
+      'Employment profile · Banking',
+      noBank,
+      'Every bank-transfer employee has an account on file',
+      'no bank account on file'
+    ),
+    perPerson(
+      'tax',
+      'Tax identifiers',
+      'Employment profile · Tax',
+      noTax,
+      `Identifier on file for all ${rows.length} employees`,
+      'no tax identifier'
+    )
+  ]
+}
+
 const COMPONENT_RULES: Record<string, { source: string; rule: string }> = {
   BASE: { source: 'Employment profile · Compensation', rule: 'Annual salary ÷ 12 × FTE' },
   OT15: { source: 'Timesheet import', rule: 'Overtime hours × hourly rate × 1.5' },
@@ -502,13 +628,50 @@ export const auditEvents = (run: PayRun, nameOf: (employeeId: string) => string)
   }
 
   if (run.lastCalculatedAt) {
+    const diff = run.lastCalculationDiff
+
     events.push({
       id: `${run.id}-calculated`,
       at: run.lastCalculatedAt,
       actor: 'Payroll engine',
       action: `Calculation #${run.calculationVersion} completed`,
-      detail: `${run.employeeCount} payslips · ${formatMoney(run.totals.netPay)} net`,
+      detail:
+        diff && diff.currentVersion === run.calculationVersion
+          ? `${run.employeeCount} payslips · ${formatMoney(run.totals.netPay)} net · ${diff.affectedEmployees} changed vs #${diff.previousVersion} (net ${formatSignedMoney(diff.netDelta)})`
+          : `${run.employeeCount} payslips · ${formatMoney(run.totals.netPay)} net`,
       kind: 'system'
+    })
+  }
+
+  if (run.pendingInputs) {
+    events.push({
+      id: `${run.id}-inputs-${run.pendingInputs.importedAt}`,
+      at: run.pendingInputs.importedAt,
+      actor: nameOf(run.pendingInputs.importedBy),
+      action: `Imported ${run.pendingInputs.count} ${run.pendingInputs.count === 1 ? 'input' : 'inputs'}`,
+      detail: `${run.pendingInputs.employees} ${run.pendingInputs.employees === 1 ? 'employee' : 'employees'} affected · calculation #${run.calculationVersion} is out of date`,
+      kind: 'user'
+    })
+  }
+
+  if (run.review) {
+    const stale = run.review.calculationVersion !== run.calculationVersion
+    const findings = run.review.findingsAtReview
+
+    events.push({
+      id: `${run.id}-reviewed-${run.review.reviewedAt}`,
+      at: run.review.reviewedAt,
+      actor: nameOf(run.review.reviewedBy),
+      action: `Reviewed calculation #${run.review.calculationVersion}${stale ? ' (superseded)' : ''}`,
+      detail:
+        [
+          findings.blocking > 0 && `${findings.blocking} blocking`,
+          findings.error > 0 && `${findings.error} error`,
+          findings.warning > 0 && `${findings.warning} warning`
+        ]
+          .filter(Boolean)
+          .join(' · ') || 'No open exceptions at review',
+      kind: 'user'
     })
   }
 

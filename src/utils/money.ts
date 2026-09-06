@@ -24,6 +24,12 @@ const SYMBOLS: Record<CurrencyCode, string> = {
   INR: '₹'
 }
 
+/**
+ * The symbol for a currency, for chart axes and input adornments that format major-unit numbers
+ * themselves. Read it from the run or pay group in hand; never hard-code one in a screen.
+ */
+export const currencySymbol = (currency: CurrencyCode): string => SYMBOLS[currency]
+
 const groupDigits = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 
 /** 28446495 SGD -> 'S$284,464.95'. Input is minor units, as Money always is. */

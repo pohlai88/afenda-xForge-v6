@@ -2,6 +2,7 @@
 import type { CurrencyCode, IsoDate, Money } from '@/types/common/primitive-types'
 import type { PayFrequency } from '@/types/hrm/employee-types'
 import type { PayComponentKind } from '@/types/payroll/pay-run-types'
+import type { PayrollPermission } from '@/types/payroll/permission-types'
 
 /**
  * Payroll configuration: everything a run reads but does not change. Each section of
@@ -79,6 +80,8 @@ export interface GlMapping {
 }
 
 export interface ApprovalSettings {
+
+  /** Access role ids that may sign a run. One vocabulary with `AccessRole.id`, never free text. */
   approverRoles: string[]
 
   /** Runs above this net total need a second approver. Null disables the threshold. */
@@ -100,8 +103,10 @@ export interface AccessRole {
   id: string
   name: string
   description: string
-  memberCount: number
-  permissions: string[]
+
+  /** Employee ids holding the role. Membership is a fact here, not a count someone typed. */
+  memberIds: string[]
+  permissions: PayrollPermission[]
 }
 
 export interface PayrollSettings {

@@ -13,6 +13,9 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import SettingsSection from './settings-section'
 
+// Util Imports
+import { PERMISSION_LABELS } from '@/utils/payroll-permissions'
+
 type Props = {
   roles: AccessRole[]
 }
@@ -20,7 +23,8 @@ type Props = {
 /**
  * Who can do what in payroll. Read-only here: roles and their members are managed in the app's
  * Roles & Permissions area, and this section only shows the payroll slice of them so an admin
- * does not have to leave settings to check who can approve.
+ * does not have to leave settings to check who can approve. These are the permissions the
+ * server actions enforce, so what is listed here is what actually happens.
  */
 const AccessSettings = ({ roles }: Props) => (
   <SettingsSection
@@ -51,12 +55,12 @@ const AccessSettings = ({ roles }: Props) => (
                 <span className='text-muted-foreground text-xs'>{role.description}</span>
               </span>
             </TableCell>
-            <TableCell className='py-2.5 text-right tabular-nums'>{role.memberCount}</TableCell>
+            <TableCell className='py-2.5 text-right tabular-nums'>{role.memberIds.length}</TableCell>
             <TableCell className='py-2.5 pr-6 whitespace-normal'>
               <span className='flex flex-wrap gap-1'>
                 {role.permissions.map(permission => (
                   <Badge key={permission} variant='outline' className='text-xs'>
-                    {permission}
+                    {PERMISSION_LABELS[permission]}
                   </Badge>
                 ))}
               </span>

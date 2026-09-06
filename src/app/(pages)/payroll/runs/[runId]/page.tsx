@@ -2,18 +2,20 @@
 import { notFound } from 'next/navigation'
 
 // Type Imports
-import type { PayHistoryPoint } from '@/views/payroll/run/payroll-employee-inspector'
+import type { PayHistoryPoint } from '@/views/payroll/run/payroll-employee-drilldown'
 
 // Component Imports
 import PayrollRunWorkspace from '@/views/payroll/run/payroll-run-workspace'
 
 // Action Imports
 import {
+  getCurrentUser,
   getDepartments,
   getEmployees,
   getLocations,
   getPayRun,
   getPayRuns,
+  getPayrollSettings,
   getPayslipsForRun
 } from '@/app/server/actions'
 
@@ -42,12 +44,14 @@ export const generateMetadata = async ({ params }: Props) => {
 const PayrollRunPage = async ({ params }: Props) => {
   const { runId } = await params
 
-  const [run, runs, employees, departments, locations] = await Promise.all([
+  const [run, runs, employees, departments, locations, settings, actor] = await Promise.all([
     getPayRun(runId),
     getPayRuns(),
     getEmployees(),
     getDepartments(),
-    getLocations()
+    getLocations(),
+    getPayrollSettings(),
+    getCurrentUser()
   ])
 
   if (!run) notFound()
@@ -89,8 +93,11 @@ const PayrollRunPage = async ({ params }: Props) => {
     ? null
     : daysBetween(new Date().toISOString().slice(0, 10), run.payDate)
 
+  // Keyed on the calculation version: a recalculation produces new payslips on the server, and
+  // the workspace remounts on the new rows rather than keeping the old ones in state.
   return (
     <PayrollRunWorkspace
+      key={`${run.id}-${run.calculationVersion}`}
       run={run}
       previousRun={previousRun}
       rows={rows}
@@ -100,6 +107,9 @@ const PayrollRunPage = async ({ params }: Props) => {
       employeeNames={employeeNames}
       historyByEmployee={historyByEmployee}
       daysToPayday={daysToPayday}
+      actor={actor}
+      approvalSettings={settings.approvals}
+      roles={settings.access}
     />
   )
 }

@@ -151,6 +151,65 @@ export interface PayRunApproval {
   note?: string
 }
 
+/**
+ * "This calculation has been reviewed" as a record, not an inference. Someone acknowledging one
+ * exception is not a review of the run; this is. It names the calculation it reviewed, so a
+ * later recalculation leaves it standing as history while making the run unreviewed again.
+ */
+export interface PayrollReview {
+  calculationVersion: number
+
+  /** Employee id of the reviewer. */
+  reviewedBy: string
+  reviewedAt: IsoDateTime
+
+  /** What was open when the reviewer signed: the approver reads this against the current state. */
+  findingsAtReview: { blocking: number; error: number; warning: number }
+  acknowledgedWarnings: number
+  note?: string
+}
+
+/**
+ * Inputs accepted after the last calculation. While this is set the run's figures are out of
+ * date, and approval is refused until a new calculation exists. Cleared by the calculation
+ * that consumes them.
+ */
+export interface PendingInputs {
+  count: number
+  employees: number
+  importedAt: IsoDateTime
+
+  /** Employee id of whoever imported. */
+  importedBy: string
+}
+
+/** One component that changed for one employee between two calculations. */
+export interface ComponentChange {
+  employeeId: string
+  code: string
+  label: string
+  previous: Money
+  current: Money
+}
+
+/**
+ * What the latest calculation changed against the one before it. Persisted on the run so the
+ * approval dialog can say "12 employees affected, net +S$3,170" after a browser refresh, and
+ * so the audit trail has the figures the approver saw.
+ */
+export interface CalculationDiff {
+  previousVersion: number
+  currentVersion: number
+  affectedEmployees: number
+  grossDelta: Money
+  netDelta: Money
+  employerCostDelta: Money
+  componentChanges: ComponentChange[]
+
+  /** Inputs the calculation consumed, as imported. */
+  inputsApplied: number
+}
+
 export interface PayRun {
   id: string
 
@@ -191,6 +250,15 @@ export interface PayRun {
   totals: PayRunTotals
   exceptions: PayRunException[]
   approvals: PayRunApproval[]
+
+  /** The review of the current or an earlier calculation. Compare its version to the run's. */
+  review?: PayrollReview
+
+  /** Set while inputs have landed that no calculation has consumed yet. */
+  pendingInputs?: PendingInputs
+
+  /** What the latest calculation changed. Absent until the run has been recalculated once. */
+  lastCalculationDiff?: CalculationDiff
 
   createdAt: IsoDateTime
 

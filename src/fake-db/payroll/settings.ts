@@ -234,7 +234,7 @@ export const payrollSettings: PayrollSettings = {
 
   approvals: {
     secondApproverAbove: { amount: 50_000_000, currency: 'SGD' },
-    approverRoles: ['Finance lead', 'Payroll manager'],
+    approverRoles: ['role-payroll-admin', 'role-finance-approver'],
     requireWarningsAcknowledged: true,
     blockOnErrors: true,
     lockInputsOnApproval: true
@@ -278,34 +278,52 @@ export const payrollSettings: PayrollSettings = {
     }
   ],
 
+  // Membership is by employee id so the server can build an actor from it. The Finance head
+  // (emp-020) administers payroll; the payroll specialist (emp-022) prepares and reviews runs.
   access: [
     {
       id: 'role-payroll-admin',
       name: 'Payroll administrator',
       description: 'Runs payroll end to end, including settings.',
-      memberCount: 2,
-      permissions: ['Run payroll', 'Edit inputs', 'Approve', 'Release payments', 'Edit settings']
+      memberIds: ['emp-020', 'emp-022'],
+      permissions: [
+        'payroll.view',
+        'payroll.process',
+        'payroll.review',
+        'payroll.approve',
+        'payroll.payment.release',
+        'payroll.payment.reissue',
+        'payroll.settings.manage',
+        'payroll.report.export',
+        'payroll.audit.view'
+      ]
     },
     {
       id: 'role-finance-approver',
       name: 'Finance approver',
       description: 'Reviews and approves runs; cannot edit inputs.',
-      memberCount: 2,
-      permissions: ['View runs', 'Approve', 'Release payments']
+      memberIds: ['emp-020', 'emp-021'],
+      permissions: [
+        'payroll.view',
+        'payroll.approve',
+        'payroll.payment.release',
+        'payroll.report.export',
+        'payroll.audit.view'
+      ]
     },
     {
       id: 'role-hr',
       name: 'HR partner',
       description: 'Maintains employee data and clears data exceptions.',
-      memberCount: 3,
-      permissions: ['View runs', 'Edit inputs', 'Resolve exceptions']
+      memberIds: ['emp-005', 'emp-006', 'emp-007'],
+      permissions: ['payroll.view', 'payroll.process', 'payroll.review']
     },
     {
       id: 'role-auditor',
       name: 'Auditor',
       description: 'Read-only access to every run and its audit trail.',
-      memberCount: 1,
-      permissions: ['View runs', 'View audit']
+      memberIds: ['emp-021'],
+      permissions: ['payroll.view', 'payroll.audit.view', 'payroll.report.export']
     }
   ]
 }

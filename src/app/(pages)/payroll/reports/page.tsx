@@ -18,11 +18,9 @@ import {
 } from '@/app/server/actions'
 
 // Util Imports
-import { toMajorUnits } from '@/utils/money'
+import { currencySymbol, toMajorUnits } from '@/utils/money'
 import { buildReportTables } from '@/utils/payroll-reports'
 import { formatPeriod } from '@/utils/payroll-workspace'
-
-const CURRENCY_SYMBOL = 'S$'
 
 export const metadata = { title: 'Payroll reports' }
 
@@ -82,7 +80,7 @@ const PayrollReportsPage = async () => {
         exports={exports}
         employees={employees}
         costTrend={costTrend}
-        currencySymbol={CURRENCY_SYMBOL}
+        currencySymbol={currencySymbol(currentRun.currency)}
       />
     </div>
   )

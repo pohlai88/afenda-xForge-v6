@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 
 // Type Imports
+import type { CurrencyCode } from '@/types/common/primitive-types'
 import type { StatutoryRule } from '@/types/payroll/settings-types'
 
 // Component Imports
@@ -23,18 +24,21 @@ import SettingsSection from './settings-section'
 import { savePayrollSettingsSection } from '@/app/server/actions'
 
 // Util Imports
-import { formatMoney } from '@/utils/money'
+import { currencySymbol, formatMoney } from '@/utils/money'
 import { formatDate } from '@/utils/payroll-workspace'
 
 type Props = {
   rules: StatutoryRule[]
+
+  /** The entity's currency, for ceilings that do not yet have one. */
+  currency: CurrencyCode
 }
 
 /**
  * Rates and ceilings. Edited in place with a single save, because a change to one rate is
  * usually a change to its pair (employee and employer move together at each budget).
  */
-const StatutorySettings = ({ rules: initial }: Props) => {
+const StatutorySettings = ({ rules: initial, currency }: Props) => {
   const [rules, setRules] = useState(initial)
   const [saved, setSaved] = useState(initial)
   const [dirty, setDirty] = useState(false)
@@ -63,7 +67,13 @@ const StatutorySettings = ({ rules: initial }: Props) => {
     setRules(current =>
       current.map(rule =>
         rule.id === id
-          ? { ...rule, ceiling: major === null ? null : { amount: Math.round(major * 100), currency: 'SGD' } }
+          ? {
+              ...rule,
+              ceiling:
+                major === null
+                  ? null
+                  : { amount: Math.round(major * 100), currency: rule.ceiling?.currency ?? currency }
+            }
           : rule
       )
     )
@@ -150,7 +160,7 @@ const StatutorySettings = ({ rules: initial }: Props) => {
                     </Label>
                     <InputGroup className='h-8 w-40'>
                       <InputGroupAddon>
-                        <InputGroupText>S$</InputGroupText>
+                        <InputGroupText>{currencySymbol(rule.ceiling.currency)}</InputGroupText>
                       </InputGroupAddon>
                       <InputGroupInput
                         id={`${rule.id}-ceiling`}

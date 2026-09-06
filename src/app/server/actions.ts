@@ -13,13 +13,17 @@ import { z } from 'zod'
 // Type Imports
 import type { PayRun, PayRunException } from '@/types/payroll/pay-run-types'
 import type { StatutoryFiling } from '@/types/payroll/compliance-types'
+import type { PayrollActor, PayrollPermission } from '@/types/payroll/permission-types'
 import type { ReportExport } from '@/types/payroll/report-types'
-import type { FundingAccount, Settlement } from '@/types/payroll/settlement-types'
+import type { FundingAccount, Settlement, SettlementBatch } from '@/types/payroll/settlement-types'
 import type { PayGroup, PayrollSettings } from '@/types/payroll/settings-types'
 
 // Util Imports
+import { evaluatePayrollApproval, reviewRefusal } from '@/utils/payroll-approval'
 import { applyFilingAction, type FilingAction } from '@/utils/payroll-compliance'
-import { countExceptions } from '@/utils/payroll-metrics'
+import { PAY_RUN_STATUS_LABELS, countExceptions } from '@/utils/payroll-metrics'
+import { BATCH_STATUS_LABELS, evaluateBatch, fundingSummary } from '@/utils/payroll-payments'
+import { actorFor, can, permissionRefusal } from '@/utils/payroll-permissions'
 
 // Data Imports
 import { db as calendarDb } from '@/fake-db/apps/calendar'
@@ -29,6 +33,7 @@ import { db as userSettingsDb } from '@/fake-db/pages/user-settings'
 import { db as userProfileDb } from '@/fake-db/pages/user-profile'
 import { activeEmployees, departments, employees, locations } from '@/fake-db/hrm/employees'
 import { currentPayRun, payRuns, payslips } from '@/fake-db/payroll/pay-runs'
+import { recalculatePayslips, storeInputs, unappliedInputs } from '@/fake-db/payroll/inputs'
 import { fundingAccounts, settlementBatches, settlements } from '@/fake-db/payroll/settlements'
 import { payrollSettings } from '@/fake-db/payroll/settings'
 import { filings } from '@/fake-db/payroll/filings'
@@ -113,15 +118,27 @@ export const getRecentExports = async () => recentExports
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string }
 
 /**
- * Whoever is signed in. There is no auth in this app yet, so the Finance head stands in. The
- * server stamps every actor from here so no client can name its own approver.
+ * Whoever is signed in. There is no session in this app yet, so the Finance head stands in; the
+ * actor is still built the way a real one will be — from the Access roles that list the person —
+ * so every permission check below is the real check against a stub identity, not a stub check.
+ * The server stamps every actor from here so no client can name its own approver.
  */
 const CURRENT_USER_ID = 'emp-020'
 
-export const getCurrentUser = async () => CURRENT_USER_ID
+const currentActor = (): PayrollActor => {
+  const employee = employees.find(candidate => candidate.id === CURRENT_USER_ID)
+
+  return actorFor(employee ?? { id: CURRENT_USER_ID, firstName: 'Unknown', lastName: 'user' }, payrollSettings.access)
+}
+
+export const getCurrentUser = async (): Promise<PayrollActor> => currentActor()
 
 const ok = <T>(data: T): ActionResult<T> => ({ ok: true, data })
 const refuse = <T>(message: string): ActionResult<T> => ({ ok: false, message })
+
+/** The refusal for a missing permission, or null when the actor holds it. */
+const denied = (permission: PayrollPermission): string | null =>
+  can(currentActor(), permission) ? null : permissionRefusal(permission)
 
 const idSchema = z.string().trim().min(1)
 
@@ -133,6 +150,8 @@ const revalidateRun = (run: PayRun) => {
   revalidatePath('/payroll')
   revalidatePath('/payroll/runs')
   revalidatePath(`/payroll/runs/${run.id}`)
+  revalidatePath('/payroll/payments')
+  revalidatePath('/payroll/reports')
 }
 
 // --- Exceptions -------------------------------------------------------------------------------
@@ -147,6 +166,10 @@ const patchException = (
   const parsed = exceptionInput.safeParse({ runId, exceptionId })
 
   if (!parsed.success) return invalid(parsed.error)
+
+  const refusal = denied('payroll.review')
+
+  if (refusal) return refuse(refusal)
 
   const run = findRun(parsed.data.runId)
 
@@ -192,6 +215,10 @@ export const acknowledgeWarnings = async (
 
   if (!parsed.success) return invalid(parsed.error)
 
+  const refusal = denied('payroll.review')
+
+  if (refusal) return refuse(refusal)
+
   const run = findRun(parsed.data.runId)
 
   if (!run) return refuse('That pay run no longer exists.')
@@ -224,8 +251,18 @@ export const acknowledgeWarnings = async (
 
 const LOCKED = new Set(['approved', 'paid', 'closed', 'cancelled', 'failed'])
 
+const lockedRefusal = (run: PayRun, verb: string) =>
+  `${run.reference} is ${PAY_RUN_STATUS_LABELS[run.status].toLowerCase()} and cannot be ${verb}. Changes go through an off-cycle run.`
+
 const recalculateInput = z.object({ runId: idSchema, employeeIds: z.array(idSchema).optional() })
 
+/**
+ * A real calculation: every payslip on the run (or the chosen employees) is rebuilt from the
+ * employee record plus whatever inputs have landed, the totals are recomputed, and the run
+ * carries a diff against the calculation before. The version number moves because the figures
+ * did. Any review of the previous calculation no longer covers this one, so the run returns to
+ * Calculated for a reviewer to sign again.
+ */
 export const recalculateRun = async (
   runId: string,
   employeeIds?: string[]
@@ -234,22 +271,45 @@ export const recalculateRun = async (
 
   if (!parsed.success) return invalid(parsed.error)
 
+  const refusal = denied('payroll.process')
+
+  if (refusal) return refuse(refusal)
+
   const run = findRun(parsed.data.runId)
 
   if (!run) return refuse('That pay run no longer exists.')
 
-  if (LOCKED.has(run.status)) {
-    return refuse(`${run.reference} is ${run.status} and cannot be recalculated. Reopen it first.`)
-  }
+  if (LOCKED.has(run.status)) return refuse(lockedRefusal(run, 'recalculated'))
 
+  const nextVersion = run.calculationVersion + 1
+  const { diff, count } = recalculatePayslips(run, nextVersion, parsed.data.employeeIds)
   const now = new Date().toISOString()
 
-  run.calculationVersion += 1
+  run.calculationVersion = nextVersion
   run.lastCalculatedAt = now
+  run.lastCalculationDiff = diff
   run.updatedAt = now
+
+  // A partial recalculation leaves the other employees' inputs pending.
+  const stillPending = unappliedInputs(run.id)
+
+  run.pendingInputs =
+    stillPending.length === 0
+      ? undefined
+      : {
+          count: stillPending.length,
+          employees: new Set(stillPending.map(input => input.employeeId)).size,
+          importedAt: stillPending[stillPending.length - 1].importedAt,
+          importedBy: stillPending[stillPending.length - 1].importedBy
+        }
+
+  if (run.status === 'pending_approval' || run.status === 'draft' || run.status === 'calculating') {
+    run.status = 'calculated'
+  }
+
   revalidateRun(run)
 
-  return ok({ run, count: parsed.data.employeeIds?.length ?? run.employeeCount })
+  return ok({ run, count })
 }
 
 const importInput = z.object({
@@ -259,6 +319,8 @@ const importInput = z.object({
       z.object({
         employeeNumber: idSchema,
         component: idSchema,
+
+        /** Major units, as typed in the file. Stored in minor units. */
         amount: z.number().finite()
       })
     )
@@ -268,8 +330,9 @@ const importInput = z.object({
 export type ImportedInput = z.infer<typeof importInput>['rows'][number]
 
 /**
- * Accept validated input rows onto a run. The fake-db has no inputs store, so the run records
- * that its figures are stale; a real service would write the rows and queue a recalculation.
+ * Accept validated input rows onto a run. The rows are stored; the run records that its figures
+ * are out of date until a calculation consumes them. Nothing is recalculated here — a person
+ * asks for that, and sees the diff when it lands.
  */
 export const importPayrollInputs = async (
   runId: string,
@@ -279,15 +342,47 @@ export const importPayrollInputs = async (
 
   if (!parsed.success) return invalid(parsed.error)
 
+  const refusal = denied('payroll.process')
+
+  if (refusal) return refuse(refusal)
+
   const run = findRun(parsed.data.runId)
 
   if (!run) return refuse('That pay run no longer exists.')
 
-  if (LOCKED.has(run.status)) {
-    return refuse(`${run.reference} is ${run.status}. Inputs cannot be added to a run after approval.`)
+  if (LOCKED.has(run.status)) return refuse(lockedRefusal(run, 'given new inputs'))
+
+  const employeeIdByNumber = new Map(employees.map(employee => [employee.employeeNumber, employee.id]))
+  const unknown = parsed.data.rows.filter(row => !employeeIdByNumber.has(row.employeeNumber))
+
+  if (unknown.length > 0) {
+    return refuse(
+      `${unknown.length} ${unknown.length === 1 ? 'row names' : 'rows name'} an employee number not on this run: ${[...new Set(unknown.map(row => row.employeeNumber))].slice(0, 3).join(', ')}.`
+    )
   }
 
-  run.updatedAt = new Date().toISOString()
+  const now = new Date().toISOString()
+
+  storeInputs(
+    run.id,
+    parsed.data.rows.map(row => ({
+      employeeId: employeeIdByNumber.get(row.employeeNumber)!,
+      code: row.component,
+      amount: { amount: Math.round(row.amount * 100), currency: run.currency },
+      importedAt: now,
+      importedBy: CURRENT_USER_ID
+    }))
+  )
+
+  const pending = unappliedInputs(run.id)
+
+  run.pendingInputs = {
+    count: pending.length,
+    employees: new Set(pending.map(input => input.employeeId)).size,
+    importedAt: now,
+    importedBy: CURRENT_USER_ID
+  }
+  run.updatedAt = now
   revalidateRun(run)
 
   return ok({
@@ -297,6 +392,62 @@ export const importPayrollInputs = async (
   })
 }
 
+const reviewInput = z.object({
+  runId: idSchema,
+  calculationVersion: z.number().int().positive(),
+  note: z.string().trim().max(500).optional()
+})
+
+/**
+ * "I have reviewed calculation #N" as a recorded event. Moves a Calculated run to Pending
+ * approval; refuses over stale figures, and refuses to review a calculation other than the one
+ * the reviewer was looking at.
+ */
+export const markRunReviewed = async (
+  runId: string,
+  calculationVersion: number,
+  note?: string
+): Promise<ActionResult<PayRun>> => {
+  const parsed = reviewInput.safeParse({ runId, calculationVersion, note })
+
+  if (!parsed.success) return invalid(parsed.error)
+
+  const refusal = denied('payroll.review')
+
+  if (refusal) return refuse(refusal)
+
+  const run = findRun(parsed.data.runId)
+
+  if (!run) return refuse('That pay run no longer exists.')
+
+  const reason = reviewRefusal(run)
+
+  if (reason) return refuse(reason)
+
+  if (run.calculationVersion !== parsed.data.calculationVersion) {
+    return refuse(
+      `The run was recalculated while you were reviewing it (now calculation #${run.calculationVersion}). Look at the changes, then review again.`
+    )
+  }
+
+  const counts = countExceptions(run.exceptions)
+  const now = new Date().toISOString()
+
+  run.review = {
+    calculationVersion: run.calculationVersion,
+    reviewedBy: CURRENT_USER_ID,
+    reviewedAt: now,
+    findingsAtReview: { blocking: counts.blocking, error: counts.error, warning: counts.warning },
+    acknowledgedWarnings: counts.acknowledged,
+    note: parsed.data.note
+  }
+  run.status = 'pending_approval'
+  run.updatedAt = now
+  revalidateRun(run)
+
+  return ok(run)
+}
+
 const approveInput = z.object({
   runId: idSchema,
   calculationVersion: z.number().int().positive(),
@@ -304,9 +455,9 @@ const approveInput = z.object({
 })
 
 /**
- * The one gate that matters. Refuses unless the run is awaiting approval, nothing blocking is
- * open, and the client is approving the calculation it looked at — the same rules the approval
- * dialog shows, enforced where a client cannot skip them.
+ * The one gate that matters. `evaluatePayrollApproval` decides — the same function the approval
+ * dialog reads — with the actor the server knows and the approval rules in settings. A run above
+ * the second-approver threshold stays Pending approval after the first signature.
  */
 export const approveRun = async (
   runId: string,
@@ -317,13 +468,13 @@ export const approveRun = async (
 
   if (!parsed.success) return invalid(parsed.error)
 
+  const refusal = denied('payroll.approve')
+
+  if (refusal) return refuse(refusal)
+
   const run = findRun(parsed.data.runId)
 
   if (!run) return refuse('That pay run no longer exists.')
-
-  if (run.status !== 'calculated' && run.status !== 'pending_approval') {
-    return refuse(`${run.reference} is ${run.status} and is not awaiting approval.`)
-  }
 
   if (run.calculationVersion !== parsed.data.calculationVersion) {
     return refuse(
@@ -331,19 +482,23 @@ export const approveRun = async (
     )
   }
 
-  const counts = countExceptions(run.exceptions)
-  const blocking = counts.blocking + counts.error
+  const actor = currentActor()
 
-  if (blocking > 0) {
-    return refuse(
-      `Payroll cannot be approved. ${blocking} ${blocking === 1 ? 'exception is' : 'exceptions are'} still blocking.`
-    )
-  }
+  const evaluation = evaluatePayrollApproval({
+    run,
+    actor,
+    settings: payrollSettings.approvals,
+    roles: payrollSettings.access
+  })
+
+  if (!evaluation.canApprove) return refuse(`Payroll cannot be approved. ${evaluation.blockingReasons[0].message}`)
 
   const now = new Date().toISOString()
 
-  run.status = 'approved'
-  run.approvals.push({ approvedBy: CURRENT_USER_ID, approvedAt: now, note: parsed.data.note })
+  run.approvals.push({ approvedBy: actor.id, approvedAt: now, note: parsed.data.note })
+
+  if (run.approvals.length >= evaluation.signaturesRequired) run.status = 'approved'
+
   run.updatedAt = now
   revalidateRun(run)
 
@@ -357,6 +512,10 @@ export const reissueSettlement = async (settlementId: string): Promise<ActionRes
   const parsed = idSchema.safeParse(settlementId)
 
   if (!parsed.success) return invalid(parsed.error)
+
+  const refusal = denied('payroll.payment.reissue')
+
+  if (refusal) return refuse(refusal)
 
   const original = settlements.find(settlement => settlement.id === parsed.data)
 
@@ -390,6 +549,180 @@ export const reissueSettlement = async (settlementId: string): Promise<ActionRes
   revalidatePath('/payroll')
 
   return ok(retry)
+}
+
+// --- Payment batches --------------------------------------------------------------------------
+
+const revalidateBatch = (batch: SettlementBatch) => {
+  revalidatePath('/payroll/payments')
+  revalidatePath('/payroll')
+  revalidatePath(`/payroll/runs/${batch.payRunId}`)
+  revalidatePath('/payroll/runs')
+}
+
+/** The batch, its run, its settlements and its funding position — what every batch step reads. */
+const loadBatch = (batchId: string) => {
+  const batch = settlementBatches.find(candidate => candidate.id === batchId)
+
+  if (!batch) return null
+
+  const run = payRuns.find(candidate => candidate.id === batch.payRunId)
+
+  if (!run) return null
+
+  const runSettlements = settlements.filter(settlement => settlement.payRunId === run.id)
+  const account = fundingAccounts.find(candidate => candidate.id === batch.fundingAccountId)
+  const funding = fundingSummary(runSettlements, account, run.currency)
+
+  return { batch, run, runSettlements, funding, evaluation: evaluateBatch(batch, run, runSettlements, funding) }
+}
+
+const batchRefusal = (batchId: string, permission: PayrollPermission, expected: SettlementBatch['status'][]) => {
+  const parsed = idSchema.safeParse(batchId)
+
+  if (!parsed.success) return { error: invalid(parsed.error) as ActionResult<SettlementBatch> }
+
+  const refusal = denied(permission)
+
+  if (refusal) return { error: refuse<SettlementBatch>(refusal) }
+
+  const loaded = loadBatch(parsed.data)
+
+  if (!loaded) return { error: refuse<SettlementBatch>('That payment batch no longer exists.') }
+
+  if (!expected.includes(loaded.batch.status)) {
+    return {
+      error: refuse<SettlementBatch>(
+        `This batch is ${BATCH_STATUS_LABELS[loaded.batch.status].toLowerCase()} and cannot move from there.`
+      )
+    }
+  }
+
+  if (loaded.evaluation.blockingReasons.length > 0) {
+    return { error: refuse<SettlementBatch>(loaded.evaluation.blockingReasons[0]) }
+  }
+
+  return { loaded }
+}
+
+/** Build and validate the bank file from the approved run. Records what was checked. */
+export const prepareBatch = async (batchId: string): Promise<ActionResult<SettlementBatch>> => {
+  const { error, loaded } = batchRefusal(batchId, 'payroll.process', ['draft'])
+
+  if (error) return error
+
+  const { batch, runSettlements } = loaded
+  const included = runSettlements.filter(s => !s.retryOfId && s.status === 'ready')
+  const excluded = runSettlements.filter(s => !s.retryOfId && s.status === 'action_required')
+  const now = new Date().toISOString()
+
+  batch.count = included.length
+  batch.total = { amount: included.reduce((sum, s) => sum + s.amount.amount, 0), currency: batch.total.currency }
+
+  batch.validation = {
+    checkedAt: now,
+    payments: included.length,
+    total: batch.total,
+    issues: [],
+    excludedEmployeeIds: excluded.map(s => s.employeeId)
+  }
+  batch.preparedAt = now
+  batch.preparedBy = CURRENT_USER_ID
+  batch.status = 'prepared'
+  revalidateBatch(batch)
+
+  return ok(batch)
+}
+
+/** Send the prepared file to the bank. Every included payment becomes Released. */
+export const releaseBatch = async (batchId: string): Promise<ActionResult<SettlementBatch>> => {
+  const { error, loaded } = batchRefusal(batchId, 'payroll.payment.release', ['prepared'])
+
+  if (error) return error
+
+  const { batch, runSettlements } = loaded
+  const now = new Date().toISOString()
+
+  for (const settlement of runSettlements) {
+    if (settlement.status === 'ready' && !settlement.retryOfId) {
+      settlement.status = 'released'
+      settlement.releasedAt = now
+      settlement.reference = `GIRO-${batch.reference.split(' ').pop()}-${settlement.employeeId.replace('emp-', '')}`
+    }
+  }
+
+  batch.releasedAt = now
+  batch.releasedBy = CURRENT_USER_ID
+  batch.status = 'released'
+  revalidateBatch(batch)
+
+  return ok(batch)
+}
+
+const acknowledgeInput = z.object({
+  batchId: idSchema,
+  bankReference: z.string().trim().min(1, 'Enter the reference the bank returned.')
+})
+
+/** Record the bank's acknowledgement of the file. Payments are now in flight. */
+export const acknowledgeBatch = async (
+  batchId: string,
+  bankReference: string
+): Promise<ActionResult<SettlementBatch>> => {
+  const parsed = acknowledgeInput.safeParse({ batchId, bankReference })
+
+  if (!parsed.success) return invalid(parsed.error)
+
+  const { error, loaded } = batchRefusal(parsed.data.batchId, 'payroll.payment.release', ['released'])
+
+  if (error) return error
+
+  const { batch, runSettlements } = loaded
+  const now = new Date().toISOString()
+
+  for (const settlement of runSettlements) {
+    if (settlement.status === 'released') settlement.status = 'processing'
+  }
+
+  batch.bankReference = parsed.data.bankReference
+  batch.acceptedAt = now
+  batch.status = 'processing'
+  revalidateBatch(batch)
+
+  return ok(batch)
+}
+
+/** Record that the bank settled the file. Payments are Paid; the run is Paid. */
+export const settleBatch = async (batchId: string): Promise<ActionResult<SettlementBatch>> => {
+  const { error, loaded } = batchRefusal(batchId, 'payroll.payment.release', ['accepted', 'processing'])
+
+  if (error) return error
+
+  const { batch, run, runSettlements } = loaded
+  const now = new Date().toISOString()
+
+  for (const settlement of runSettlements) {
+    if (settlement.status === 'processing' || settlement.status === 'released') {
+      settlement.status = 'paid'
+      settlement.settledAt = now
+    }
+  }
+
+  for (const slip of payslips) {
+    if (slip.payRunId === run.id) slip.status = 'paid'
+  }
+
+  batch.settledAt = now
+  batch.status = runSettlements.some(s => s.status === 'returned') ? 'partially_returned' : 'settled'
+
+  if (run.status === 'approved') {
+    run.status = 'paid'
+    run.updatedAt = now
+  }
+
+  revalidateBatch(batch)
+
+  return ok(batch)
 }
 
 // --- Settings ---------------------------------------------------------------------------------
@@ -461,6 +794,10 @@ export const savePayrollSettingsSection = async <S extends SettingsSection>(
 
   if (!schema) return refuse('Unknown settings section.')
 
+  const refusal = denied('payroll.settings.manage')
+
+  if (refusal) return refuse(refusal)
+
   const parsed = schema.safeParse(values)
 
   if (!parsed.success) return invalid(parsed.error)
@@ -487,6 +824,10 @@ export const savePayGroup = async (values: Partial<PayGroup>): Promise<ActionRes
   const parsed = payGroupInput.safeParse(values)
 
   if (!parsed.success) return invalid(parsed.error)
+
+  const refusal = denied('payroll.settings.manage')
+
+  if (refusal) return refuse(refusal)
 
   const existing = parsed.data.id ? payrollSettings.payGroups.find(group => group.id === parsed.data.id) : undefined
 
@@ -532,6 +873,10 @@ export const addFundingAccount = async (
 
   if (!parsed.success) return invalid(parsed.error)
 
+  const refusal = denied('payroll.settings.manage')
+
+  if (refusal) return refuse(refusal)
+
   const account: FundingAccount = {
     id: `acct-${fundingAccounts.length + 1}`,
     ...parsed.data,
@@ -550,6 +895,10 @@ export const setDefaultFundingAccount = async (accountId: string): Promise<Actio
   const parsed = idSchema.safeParse(accountId)
 
   if (!parsed.success) return invalid(parsed.error)
+
+  const refusal = denied('payroll.settings.manage')
+
+  if (refusal) return refuse(refusal)
 
   const account = fundingAccounts.find(candidate => candidate.id === parsed.data)
 
@@ -587,6 +936,10 @@ export const applyFilingTransition = async (
   const parsedAction = filingActionInput.safeParse(action)
 
   if (!parsedAction.success) return invalid(parsedAction.error)
+
+  const refusal = denied('payroll.process')
+
+  if (refusal) return refuse(refusal)
 
   const index = filings.findIndex(filing => filing.id === parsedId.data)
 
@@ -632,6 +985,10 @@ export const recordReportExport = async (
   const parsed = exportInput.safeParse(values)
 
   if (!parsed.success) return invalid(parsed.error)
+
+  const refusal = denied('payroll.report.export')
+
+  if (refusal) return refuse(refusal)
 
   const record: ReportExport = {
     id: `export-${Date.now()}`,

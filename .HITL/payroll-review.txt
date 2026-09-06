@@ -1,0 +1,1153 @@
+I reviewed the current `main` branch of **afenda-xForge-v6**, including the latest payroll implementation, run workspace, dashboard, payments, domain types, settings, server actions, table, inspector, approval flow, and navigation.
+
+The latest payroll commit is `ffcc4e42…`, and it adds the run queue, compliance, reports, payments/settings integration, and server actions behind the payroll mutations.
+
+One qualification: this is a **code + product architecture + UX-structure review**. I did not render the application pixel-by-pixel in this session.
+
+# Executive verdict
+
+**The Payroll frontend is already very good. Do not redesign it.**
+
+The direction we discussed earlier has largely been implemented correctly.
+
+I would rate it:
+
+| Area                         |       Score | Assessment                                                |
+| ---------------------------- | ----------: | --------------------------------------------------------- |
+| Frontend architecture        |  **9.0/10** | Excellent                                                 |
+| AdminCN/Shadcn consistency   |  **9.0/10** | Correct architectural choice                              |
+| Payroll workspace UX         |  **8.8/10** | Very strong                                               |
+| Exception management         |  **9.0/10** | One of the strongest parts                                |
+| Financial explainability     |  **8.5/10** | Strong foundation                                         |
+| Approval UX                  |  **8.0/10** | Strong UI, incomplete policy semantics                    |
+| Payments UX                  |  **7.5/10** | Good surface, lifecycle incomplete                        |
+| Dashboard UX                 |  **8.0/10** | Visually/product mature but slightly analytics-heavy      |
+| Accessibility foundations    |  **8.5/10** | Thoughtful                                                |
+| Multi-country readiness      |  **5.5/10** | Architecture hints at it, implementation still SG-centric |
+| Production data integrity    |  **5.0/10** | Main remaining gap                                        |
+| Authentication / RBAC        |  **3.5/10** | Prototype only                                            |
+| Production payroll readiness | **~6.5/10** | UI ahead of operational backend                           |
+
+### My conclusion
+
+> **Frontend concept: APPROVE.**
+>
+> **Do not restructure.**
+>
+> Move from **“build more screens”** to **“make every displayed state operationally true.”**
+
+That is now the important transition.
+
+---
+
+# 1. The architecture decision is correct
+
+The repository explicitly states that Payroll is **a module inside AdminCN**, not another application. It uses the same shell, theme, UI primitives, TanStack Table conventions and server-action pattern, with no payroll-specific token system or pointless wrapper layer.
+
+This directly validates your decision:
+
+```text
+AdminCN
+   ↓
+shadcn/ui
+   ↓
+Payroll domain components
+```
+
+**Keep this.**
+
+Do not introduce ADL into this project now.
+
+Do not create:
+
+```text
+AfendaButton
+AfendaCard
+AfendaTable
+AfendaDialog
+```
+
+The existing implementation already avoided that mistake.
+
+---
+
+# 2. The information architecture is already strong
+
+You now have:
+
+```text
+/payroll
+/payroll/runs
+/payroll/runs/[runId]
+/payroll/payments
+/payroll/compliance
+/payroll/reports
+/payroll/settings
+```
+
+and importantly, input import remains attached to the payroll run rather than becoming another disconnected route.
+
+The sidebar exposes precisely those operational destinations.
+
+### Keep this architecture.
+
+I would **not add many more top-level Payroll navigation items**.
+
+---
+
+# 3. `/payroll/runs/[runId]` is the strongest part
+
+This is exactly where the product should concentrate.
+
+The implementation currently gives:
+
+```text
+PayrollRunHeader
+PayrollStageBar
+PayrollMetricRow
+
+Employees
+Exceptions
+Reconciliation
+Audit
+
+Employee table
+        ↔
+Resizable Employee Inspector
+```
+
+The workspace deliberately keeps most of a payroll cycle on one screen, and state such as the selected employee and workspace view is placed in the URL.
+
+The desktop implementation uses a roughly **68/32 split**, while smaller screens switch to a Sheet.
+
+This is excellent.
+
+### Do not turn this into:
+
+```text
+/payroll/input
+/payroll/calculate
+/payroll/review
+/payroll/approve
+/payroll/employee/123
+```
+
+You would make the UX worse.
+
+---
+
+# 4. The payroll table is already enterprise-grade in concept
+
+The table does several things correctly:
+
+* dense `h-11` rows
+* sticky headers
+* right-aligned financial amounts
+* tabular numerals
+* status filtering
+* exception filtering
+* row selection
+* page sizes 25/50/100
+* accessible selection labels
+* keyboard-sortable headers
+* actual focusable employee controls rather than relying entirely on row click.
+
+The pagination footer clearly reports the displayed range and selection count.
+
+This is considerably better than the typical “pretty shadcn table”.
+
+### Keep it.
+
+---
+
+# 5. The employee inspector is particularly good
+
+The current inspector answers:
+
+```text
+Who is this?
+What is the net pay?
+What changed?
+What issues exist?
+What generated the amount?
+What happened before?
+Who changed what?
+```
+
+It contains:
+
+```text
+Overview
+Pay
+Inputs
+Exceptions
+History
+Audit
+```
+
+plus:
+
+* pay variance
+* breakdown
+* source trace
+* audit timeline
+* payment information
+* exception links.
+
+This matches the correct payroll philosophy:
+
+> **Number → why → source → evidence**
+
+I would keep this almost exactly as it is.
+
+---
+
+# 6. Exception-first is the right philosophy
+
+Your domain model correctly makes exceptions a first-class entity with:
+
+```text
+kind
+severity
+employee / department
+rule
+source
+impact
+previous value
+current value
+owner
+detected time
+acknowledgement
+resolution
+```
+
+rather than reducing them to validation strings.
+
+That is a very good architectural decision.
+
+It allows Payroll to become:
+
+```text
+200 ordinary employees
+      ↓
+12 things that deserve attention
+      ↓
+human reviews those 12
+```
+
+instead of:
+
+```text
+human manually checks 200 rows
+```
+
+That should remain a central Afenda payroll principle.
+
+---
+
+# Where I would improve it now
+
+There are several **important gaps**.
+
+They are more serious than visual refinements.
+
+# P0 — Approval policy is not yet fully authoritative
+
+This is the most important issue I found.
+
+Payroll settings currently define:
+
+```text
+approverRoles
+secondApproverAbove
+requireWarningsAcknowledged
+blockOnErrors
+lockInputsOnApproval
+```
+
+and the seed configuration actually enables warning acknowledgement and specifies a second-approver threshold.
+
+But `approveRun()` currently enforces essentially:
+
+```text
+correct state
++
+same calculation version
++
+no blocking/error exceptions
+```
+
+It does **not yet appear to enforce** all of the configured approval policy, such as:
+
+* approver role
+* second approver threshold
+* mandatory warning acknowledgement.
+
+The current approval action and settings therefore risk becoming **two different authorities**.
+
+### Fix this before adding more UI.
+
+Create one authoritative policy:
+
+```text
+evaluatePayrollApproval(run, actor, settings)
+```
+
+returning something like:
+
+```text
+canApprove
+requiresSecondApproval
+blockingReasons[]
+warnings[]
+requiredApprovers[]
+calculationVersion
+```
+
+Both:
+
+```text
+ApprovalDialog
+```
+
+and:
+
+```text
+approveRun()
+```
+
+should consume the same policy.
+
+---
+
+# P0 — “Reviewed” is not yet a real payroll state
+
+This is another significant semantic issue.
+
+In the approval dialog, `reviewedBy` is currently inferred from an employee who acknowledged an exception:
+
+```text
+run.exceptions.find(e => e.acknowledgedBy)
+```
+
+That is not the same thing as:
+
+> “This payroll calculation has been reviewed.”
+
+The workspace also stores:
+
+```text
+changedSinceReview
+```
+
+as local client state. A browser refresh can therefore lose the concept of what changed since review.
+
+### Add a genuine review record.
+
+For example:
+
+```text
+PayrollReview {
+  calculationVersion
+  reviewedBy
+  reviewedAt
+  findingsAtReview
+  acknowledgedWarnings
+  note?
+}
+```
+
+Then:
+
+```text
+CALCULATED
+   ↓
+REVIEWED
+   ↓
+APPROVED
+```
+
+doesn't necessarily need another visible URL or wizard step—but it needs a **real domain event**.
+
+---
+
+# P0 — Recalculate currently does not really recalculate
+
+This is acceptable for the current demo, but it must not survive into a production backend.
+
+The server action currently advances:
+
+```text
+calculationVersion
+lastCalculatedAt
+updatedAt
+```
+
+and returns a count.
+
+The import action likewise accepts validated rows but explicitly acknowledges that there is no input store yet.
+
+Therefore the UI can currently say:
+
+> Calculation #9 complete
+
+without necessarily having generated materially different payslip calculations.
+
+### Production requirement
+
+The real pipeline should be:
+
+```text
+input accepted
+      ↓
+run becomes STALE
+      ↓
+calculation requested
+      ↓
+new immutable calculation
+      ↓
+new payslip results
+      ↓
+variance generated
+      ↓
+exceptions generated
+      ↓
+review invalidated
+```
+
+That is a crucial next step.
+
+---
+
+# P0 — Authentication and payroll authority
+
+Right now:
+
+```text
+CURRENT_USER_ID = 'emp-020'
+```
+
+exists on the server as the Finance head placeholder, because authentication has not landed yet.
+
+For payroll, auth is not merely “login”.
+
+You will need:
+
+```text
+Who may see payroll?
+Who may see individual compensation?
+Who may edit?
+Who may recalculate?
+Who may acknowledge?
+Who may approve?
+Who may release funds?
+Who may see bank details?
+Who may export?
+```
+
+### Required model
+
+At minimum:
+
+```text
+payroll.view
+payroll.process
+payroll.review
+payroll.approve
+payroll.payment.release
+payroll.payment.reissue
+payroll.settings.manage
+payroll.report.export
+payroll.audit.view
+```
+
+And actions must enforce these server-side.
+
+---
+
+# P0 — Payment workflow stops too early
+
+The Payments frontend is actually quite good.
+
+It has:
+
+* funding summary
+* readiness
+* batches
+* settlement table
+* failure queue
+* settlement inspector
+* re-issue.
+
+But the actual implemented mutation shown here is primarily:
+
+```text
+reissueSettlement()
+```
+
+and the page focuses on inspecting existing settlement state.
+
+The page says:
+
+> Funding, release and settlement
+
+but there isn't yet a full authoritative:
+
+```text
+prepare payment file
+→ validate
+→ approve funding
+→ release batch
+→ bank acknowledgement
+→ processing
+→ paid / returned
+```
+
+workflow.
+
+### Add this next.
+
+---
+
+# P1 — Dashboard has slightly too much analytics
+
+The dashboard is good, and it clearly received a lot of thoughtful visual work.
+
+It currently contains:
+
+```text
+Run Status
+Exception Queue
+KPI Strip
+Overtime Trend
+Gross-to-Net
+Department Cost
+Cost Trend
+Payment Readiness
+Run History
+```
+
+I would simplify the **above-the-fold hierarchy**.
+
+The first screen should overwhelmingly answer:
+
+```text
+Can payroll proceed?
+What is wrong?
+Who owns it?
+When is payday?
+What changed?
+Can we fund it?
+```
+
+Therefore I would rank:
+
+```text
+1 Current payroll / deadline
+2 Blocking issues
+3 Readiness
+4 Payroll movement
+5 Funding readiness
+6 Recent runs
+-----------------------------
+7 Overtime trend
+8 Department costs
+9 Cost history
+```
+
+The last three are useful, but they belong lower on the page or under analytics/reporting.
+
+### Payroll dashboard ≠ analytics dashboard.
+
+---
+
+# P1 — Fix “Employees paid”
+
+There is a small but important semantics issue in the dashboard metrics:
+
+```text
+title: 'Employees paid'
+```
+
+is derived from `currentRun.employeeCount`, even though the selected run can still be awaiting approval.
+
+For a pending payroll, those people have **not been paid yet**.
+
+Use:
+
+```text
+Employees in run
+```
+
+or:
+
+```text
+Employees
+```
+
+Then after settlement:
+
+```text
+218 / 218 paid
+```
+
+comes from actual settlement state.
+
+Payroll language must be extremely literal.
+
+---
+
+# P1 — Multi-country is only partially prepared
+
+The architecture already anticipates it.
+
+Settings contain:
+
+```text
+SG Monthly
+MY Monthly
+```
+
+with different currencies and entities.
+
+But the active calculation seed is explicitly:
+
+```text
+CURRENCY = SGD
+CPF employee = 20%
+CPF employer = 17%
+Tax = 15%
+SG Monthly
+```
+
+And the Payroll dashboard itself currently contains:
+
+```text
+const CURRENCY_SYMBOL = 'S$'
+```
+
+### Remove presentation-level country assumptions now.
+
+Even before Malaysia payroll is implemented, the frontend should always derive:
+
+```text
+currency
+country
+entity
+timezone
+rule pack
+```
+
+from the selected run/pay group.
+
+Never:
+
+```ts
+const CURRENCY_SYMBOL = 'S$'
+```
+
+inside a generic payroll dashboard.
+
+---
+
+# P1 — Add a run-level Input Readiness surface
+
+The employee inspector has an excellent Inputs view.
+
+But at **run level**, I would still add:
+
+```text
+INPUT READINESS
+
+Compensation       Ready
+Attendance         Ready
+Overtime           3 pending
+Leave              Ready
+Commission         Ready
+Adjustments        4 imported
+```
+
+This could be a Sheet opened from the **Inputs** lifecycle stage.
+
+It should answer:
+
+> Are all upstream inputs ready before calculation?
+
+The current lifecycle bar tells you where the run is, but not whether the underlying feeds are complete.
+
+---
+
+# P1 — Make “stale calculation” impossible to miss
+
+When inputs are imported after a calculation, show a persistent state such as:
+
+```text
+CALCULATION OUT OF DATE
+
+17 payroll inputs changed after calculation #8.
+
+Recalculate payroll →
+```
+
+Do not rely on a toast.
+
+Then Approval should be unavailable until the new calculation exists.
+
+This is one of the most important payroll trust patterns.
+
+---
+
+# P1 — Persist change sets
+
+Today `changedSinceReview` is a client number.
+
+Instead create:
+
+```text
+CalculationDiff
+```
+
+with:
+
+```text
+previousCalculationVersion
+currentCalculationVersion
+
+affectedEmployees
+grossDelta
+netDelta
+employerCostDelta
+
+componentChanges[]
+inputChanges[]
+exceptionsAdded[]
+exceptionsResolved[]
+```
+
+Then approval can say:
+
+```text
+Changes since review
+
+12 employees affected
+Gross +RM18,420
+Net +RM13,170
+
+8 overtime changes
+3 salary changes
+1 tax change
+```
+
+This becomes extremely powerful.
+
+---
+
+# P1 — Improve bulk selection semantics
+
+Current checkbox semantics explicitly select the current page.
+
+For larger payrolls, add the familiar pattern:
+
+```text
+25 employees selected.
+
+Select all 218 employees matching these filters
+```
+
+This matters when bulk recalculating or exporting.
+
+---
+
+# P2 — Scale the table only when necessary
+
+The current client-side table is absolutely fine for the present dataset.
+
+Do **not** prematurely introduce AG Grid or an enormous grid architecture.
+
+But establish a threshold:
+
+```text
+< 1,000 employees
+TanStack client sorting/filtering/pagination
+
+1,000–5,000
+consider server pagination/filtering
+
+5,000+
+server data model + virtualization
+```
+
+The current route loads all rows and history server-side, and employee history is constructed by iterating earlier runs and fetching each run's payslips.
+
+The comments already acknowledge this should become one database query later.
+
+Correct.
+
+---
+
+# P2 — Optimistic mutation concurrency
+
+The current client mutation helper takes a snapshot of `run`, applies an optimistic update, and restores that snapshot if the action fails.
+
+For a demo, excellent.
+
+With a real backend, overlapping mutations could eventually produce stale rollback problems.
+
+When live data arrives, move to either:
+
+```text
+serialized mutations
+```
+
+or:
+
+```text
+server-authoritative query cache
+```
+
+with optimistic patches keyed to individual records.
+
+Do not rebuild this prematurely.
+
+---
+
+# UI/UX philosophy I recommend
+
+The code is now mature enough that Payroll should have its own **product philosophy**, not its own design system.
+
+## 1. Payroll is a control room, not a dashboard
+
+Every important surface should answer:
+
+```text
+What needs attention?
+What changed?
+What happens next?
+```
+
+---
+
+## 2. Exceptions, not exhaustive checking
+
+The system should progressively move toward:
+
+> **Humans review exceptions. The system proves the ordinary cases.**
+
+---
+
+## 3. Every number must be explainable
+
+For every material payroll value:
+
+```text
+Value
+ ↓
+Composition
+ ↓
+Source
+ ↓
+Rule
+ ↓
+Calculation
+ ↓
+Approval
+ ↓
+Settlement
+```
+
+Your inspector architecture is already heading there.
+
+---
+
+## 4. Context preservation over navigation
+
+Keep:
+
+```text
+Table ↔ Inspector
+```
+
+Keep:
+
+```text
+Sheet for exceptions
+```
+
+Keep:
+
+```text
+Dialog for approval
+```
+
+Avoid route changes for minor inspection.
+
+---
+
+## 5. Consequence-aware actions
+
+Never:
+
+```text
+Approve
+```
+
+Prefer:
+
+```text
+Approve calculation #9
+218 employees
+RM481,244 net payroll
+0 blockers
+```
+
+Your current approval dialog already does this very well.
+
+---
+
+## 6. State must be truthful
+
+Never say:
+
+```text
+Paid
+Reviewed
+Calculated
+Ready
+```
+
+unless the domain has evidence that it occurred.
+
+This should become a very strict Payroll UX rule.
+
+---
+
+## 7. Quiet UI, strong exceptions
+
+Normal payroll should be visually calm.
+
+```text
+normal
+normal
+normal
+normal
+⚠ anomaly
+normal
+```
+
+rather than:
+
+```text
+blue
+green
+orange
+purple
+yellow
+red
+```
+
+Your current AdminCN-based implementation is already well positioned for this.
+
+---
+
+# Revised UX hierarchy
+
+## `/payroll`
+
+I would make the page hierarchy:
+
+```text
+┌ CURRENT RUN ──────────────────────────────────────┐
+│ Sep 2026                 Pending approval          │
+│ SGD 481,244 net          Payday Sep 28             │
+│ 1 blocker                6 days                    │
+│                                        Open run →  │
+└────────────────────────────────────────────────────┘
+
+┌ NEEDS ATTENTION ────────────┐ ┌ READINESS ───────┐
+│ Missing bank                │ │ Inputs      ✓     │
+│ OT above cap                │ │ Calculation ✓     │
+│ Tax identifier              │ │ Review      ⚠     │
+│                             │ │ Payment     75%   │
+└─────────────────────────────┘ └───────────────────┘
+
+Payroll movement
+Funding
+Recent runs
+
+─────────────────────────────────────────────────────
+SECONDARY ANALYTICS
+Overtime trend
+Cost by department
+Historical cost
+```
+
+That's the main dashboard change I would make.
+
+---
+
+# `/payroll/runs/[runId]`
+
+I would preserve almost everything.
+
+Conceptually:
+
+```text
+RUN HEADER
+──────────────────────────────────────
+STAGE
+──────────────────────────────────────
+METRICS
+──────────────────────────────────────
+Employees | Exceptions | Reconciliation | Audit
+
+┌──────────────────────────┬──────────────┐
+│                          │              │
+│     PAYROLL TABLE        │  INSPECTOR   │
+│                          │              │
+└──────────────────────────┴──────────────┘
+```
+
+The current implementation is already very close.
+
+---
+
+# What I would NOT do next
+
+I would **not** spend the next cycle on:
+
+* new dashboard cards
+* additional charts
+* animation
+* different radius
+* different theme
+* ADL integration
+* another data-grid abstraction
+* more routes
+* AI payroll assistant
+* mobile-perfect administrator screens.
+
+Those are lower-value now.
+
+---
+
+# Recommended next implementation order
+
+### **1 — Close approval-policy drift**
+
+Make settings actually control the approval gate.
+
+```text
+role
+warnings
+errors
+second approver
+calculation version
+```
+
+---
+
+### **2 — Introduce real REVIEW semantics**
+
+Persist:
+
+```text
+review
+reviewed calculation
+reviewer
+review timestamp
+changes since review
+```
+
+---
+
+### **3 — Create stale-calculation semantics**
+
+```text
+Inputs changed
+→ calculation stale
+→ recalculate required
+→ review invalidated
+```
+
+---
+
+### **4 — Complete payment lifecycle**
+
+```text
+Prepare
+→ Validate
+→ Release
+→ Bank accepted
+→ Processing
+→ Paid / Returned
+```
+
+---
+
+### **5 — Introduce auth + permission enforcement**
+
+Especially Payroll, Approval, Payments and Exports.
+
+---
+
+### **6 — Replace fake-db with real payroll read/write layer**
+
+Keep the frontend contracts.
+
+The README already intentionally isolates fake-db access behind server actions, which makes this migration much cleaner.
+
+---
+
+### **7 — Make entity/country/currency contextual**
+
+Remove SG assumptions from generic UI.
+
+---
+
+### **8 — Simplify dashboard hierarchy**
+
+Operational first; analytics second.
+
+---
+
+# Final assessment
+
+I would classify the build as:
+
+> ## **A very strong Payroll UX prototype / frontend reference implementation that is now approaching the point where additional UI work yields less value than making its states authoritative.**
+
+The most impressive aspect is that it has **not become a collection of Shadcn pages**.
+
+It has a coherent payroll product model:
+
+```text
+Dashboard
+     ↓
+Run
+     ↓
+Exception
+     ↓
+Employee
+     ↓
+Explanation
+     ↓
+Reconciliation
+     ↓
+Approval
+     ↓
+Payment
+     ↓
+Compliance / Audit
+```
+
+That is the right architecture.
+
+The next evolution should therefore be:
+
+> **from beautiful payroll simulation → trustworthy payroll operations system.**
+
+And I would establish one overriding requirement for every subsequent feature:
+
+> ### **Never display a payroll state that the domain cannot prove.**
+
+That single philosophy will improve the UI, UX, backend architecture, auditability, approval model and payment design simultaneously.

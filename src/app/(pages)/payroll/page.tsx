@@ -19,11 +19,12 @@ import {
   getFundingAccounts,
   getPayRuns,
   getPayslipsForRun,
+  getSettlementBatches,
   getSettlements
 } from '@/app/server/actions'
 
 // Util Imports
-import { formatMoney, formatMoneyCompact, toMajorUnits } from '@/utils/money'
+import { currencySymbol, formatMoney, formatMoneyCompact, toMajorUnits } from '@/utils/money'
 import {
   changeVsPrevious,
   costByDepartment,
@@ -33,8 +34,6 @@ import {
   overtimeSummary
 } from '@/utils/payroll-metrics'
 import { fundingSummary, paymentReadiness } from '@/utils/payroll-payments'
-
-const CURRENCY_SYMBOL = 'S$'
 
 /** Share of gross above which overtime stops being noise and becomes a staffing question. */
 const OVERTIME_TARGET_SHARE = 2
@@ -89,10 +88,23 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
 
   // Payment readiness for the selected run: the same gates the payments page shows, so the
   // overview and the payment centre never disagree about whether payday is safe.
-  const [runSettlements, fundingAccounts] = await Promise.all([getSettlements(currentRun.id), getFundingAccounts()])
+  const [runSettlements, fundingAccounts, batches] = await Promise.all([
+    getSettlements(currentRun.id),
+    getFundingAccounts(),
+    getSettlementBatches()
+  ])
+
+  const batch = batches.find(candidate => candidate.payRunId === currentRun.id)
   const fundingAccount = fundingAccounts.find(account => account.isDefault) ?? fundingAccounts[0]
   const funding = fundingSummary(runSettlements, fundingAccount, currentRun.currency)
-  const readiness = paymentReadiness(currentRun, runSettlements, funding)
+  const readiness = paymentReadiness(currentRun, runSettlements, funding, batch)
+
+  // The currency is the run's, never a constant: a Malaysian pay group will render here too.
+  const symbol = currencySymbol(currentRun.currency)
+
+  // "Paid" is a settlement fact. Until the bank has settled, these people are in the run, not paid.
+  const paidCount = runSettlements.filter(settlement => settlement.status === 'paid' && !settlement.retryOfId).length
+  const settled = paidCount > 0
 
   // The clock is read once, here, and the result passed down as a number. Components that read
   // it themselves render differently on the server and the client, which is a hydration bug.
@@ -165,8 +177,8 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
     {
       key: 'employees',
       icon: <UsersIcon />,
-      value: String(currentRun.employeeCount),
-      title: 'Employees paid',
+      value: settled ? `${paidCount} / ${currentRun.employeeCount}` : String(currentRun.employeeCount),
+      title: settled ? 'Employees paid' : 'Employees in run',
       change: previousRun
         ? ((currentRun.employeeCount - previousRun.employeeCount) / previousRun.employeeCount) * 100
         : null,
@@ -228,6 +240,9 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
     employees: run.employeeCount
   }))
 
+  // Operational first, analytics second. The first screen answers "can payroll proceed, what is
+  // wrong, when is payday, can we fund it"; the trends are for a different moment and sit below
+  // a heading that says so. A payroll overview is a control room, not an analytics dashboard.
   return (
     <div className='grid grid-cols-6 gap-6'>
       <PayrollRunStatus
@@ -248,31 +263,14 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
       <PayrollKpiStrip
         metrics={metrics}
         caption={`${currentRun.reference} · ${currentRun.periodStart} to ${currentRun.periodEnd}`}
-        className='col-span-full lg:col-span-4'
-      />
-
-      <PayrollOvertimeTrend
-        points={overtimePoints}
-        target={OVERTIME_TARGET_SHARE}
-        currentHours={overtime.hours}
-        currentCost={formatMoney(overtime.cost)}
-        className='col-span-full lg:col-span-2'
+        className='col-span-full'
       />
 
       <PayrollGrossToNet
         steps={grossToNetBridge(currentRun)}
-        currencySymbol={CURRENCY_SYMBOL}
+        currencySymbol={symbol}
         className='col-span-full lg:col-span-4'
       />
-
-      <PayrollByDepartment
-        departments={departmentRows}
-        runReference={currentRun.reference}
-        selectedDepartmentId={selectedDepartment?.id}
-        className='col-span-full lg:col-span-2'
-      />
-
-      <PayrollCostTrend points={costTrend} currencySymbol={CURRENCY_SYMBOL} className='col-span-full lg:col-span-4' />
 
       <PaymentReadiness percent={readiness.percent} checks={readiness.checks} className='col-span-full lg:col-span-2' />
 
@@ -281,6 +279,30 @@ const PayrollDashboard = async ({ searchParams }: Props) => {
         selectedReference={currentRun.reference}
         className='col-span-full'
       />
+
+      <div className='col-span-full mt-2 flex flex-col gap-0.5 border-t pt-6'>
+        <h2 className='text-lg font-semibold tracking-tight'>Trends</h2>
+        <p className='text-muted-foreground text-sm'>
+          How this run compares with the six before it. Nothing here needs action today.
+        </p>
+      </div>
+
+      <PayrollOvertimeTrend
+        points={overtimePoints}
+        target={OVERTIME_TARGET_SHARE}
+        currentHours={overtime.hours}
+        currentCost={formatMoney(overtime.cost)}
+        className='col-span-full lg:col-span-3'
+      />
+
+      <PayrollByDepartment
+        departments={departmentRows}
+        runReference={currentRun.reference}
+        selectedDepartmentId={selectedDepartment?.id}
+        className='col-span-full lg:col-span-3'
+      />
+
+      <PayrollCostTrend points={costTrend} currencySymbol={symbol} className='col-span-full' />
     </div>
   )
 }

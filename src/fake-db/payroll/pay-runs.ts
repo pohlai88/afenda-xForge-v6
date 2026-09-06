@@ -113,20 +113,34 @@ const overtimeHours = (employee: Employee, periodIndex: number) => {
   return ((seed * 7 + periodIndex * 5) % 7) + spike
 }
 
-const buildPayslip = (employee: Employee, period: Period, periodIndex: number): Payslip => {
+/** Earnings an import may add or override, with the label the payslip shows for each. */
+const EARNING_LABELS: Record<string, string> = {
+  BASE: 'Base salary',
+  OT15: 'Overtime 1.5x',
+  SHIFT: 'Shift allowance',
+  BONUS: 'Bonus'
+}
+
+/** One imported figure for one person: replaces the engine's own value for that component. */
+export type PayInputOverride = { code: string; amount: Money }
+
+/**
+ * The calculation, in one place. The seed calls it to build every payslip at load; the
+ * recalculation action calls it again with imported overrides so "Calculation #9" is a real
+ * calculation over real inputs rather than a version number moving on its own.
+ */
+export const calculatePayslip = (
+  employee: Employee,
+  period: Period,
+  periodIndex: number,
+  overrides: PayInputOverride[] = []
+): Payslip => {
   const annual = employee.compensation.amount.amount
   const base = Math.round((annual / 12) * employee.fte)
   const otHours = overtimeHours(employee, periodIndex)
   const hourlyRate = Math.round(base / MONTHLY_HOURS)
   const otRate = Math.round(hourlyRate * 1.5)
   const overtime = otHours * otRate
-
-  const gross = base + overtime
-  const contributable = Math.min(gross, CONTRIBUTION_CEILING)
-  const cpfEmployee = Math.round(contributable * EMPLOYEE_RATE)
-  const cpfEmployer = Math.round(contributable * EMPLOYER_RATE)
-  const tax = Math.round((gross - cpfEmployee) * TAX_RATE)
-  const net = gross - tax - cpfEmployee
 
   const components: PayComponent[] = [
     { code: 'BASE', label: 'Base salary', kind: 'earning', amount: sgd(base), taxable: true }
@@ -143,6 +157,34 @@ const buildPayslip = (employee: Employee, period: Period, periodIndex: number): 
       rate: sgd(otRate)
     })
   }
+
+  // Imported earnings win over the engine's own figure for the same code. A quantity and rate
+  // no longer describe an amount someone typed, so they are dropped rather than left to lie.
+  for (const override of overrides) {
+    const label = EARNING_LABELS[override.code]
+
+    if (!label) continue
+
+    const existing = components.findIndex(c => c.code === override.code)
+
+    const component: PayComponent = {
+      code: override.code,
+      label,
+      kind: 'earning',
+      amount: override.amount,
+      taxable: true
+    }
+
+    if (existing === -1) components.push(component)
+    else components[existing] = component
+  }
+
+  const gross = components.reduce((sum, c) => sum + c.amount.amount, 0)
+  const contributable = Math.min(gross, CONTRIBUTION_CEILING)
+  const cpfEmployee = Math.round(contributable * EMPLOYEE_RATE)
+  const cpfEmployer = Math.round(contributable * EMPLOYER_RATE)
+  const tax = Math.round((gross - cpfEmployee) * TAX_RATE)
+  const net = gross - tax - cpfEmployee
 
   components.push(
     { code: 'TAX', label: 'Income tax', kind: 'tax', amount: sgd(tax) },
@@ -163,10 +205,17 @@ const buildPayslip = (employee: Employee, period: Period, periodIndex: number): 
   }
 }
 
+/** The period a run id belongs to, with its index, for recalculating that run's payslips. */
+export const periodForRun = (runId: string) => {
+  const index = periods.findIndex(period => period.id === runId)
+
+  return index === -1 ? undefined : { period: periods[index], index }
+}
+
 const sumComponent = (slips: Payslip[], code: string): Money =>
   add(...slips.flatMap(s => s.components.filter(c => c.code === code).map(c => c.amount)))
 
-const totalsFor = (slips: Payslip[]): PayRunTotals => {
+export const totalsFor = (slips: Payslip[]): PayRunTotals => {
   const grossPay = add(...slips.map(s => s.grossPay))
   const employeeTaxes = sumComponent(slips, 'TAX')
   const employeeDeductions = sumComponent(slips, 'CPF_EE')
@@ -281,7 +330,7 @@ const openRunExceptions: PayRunException[] = [
 ]
 
 const allPayslips: Payslip[] = periods.flatMap((period, index) =>
-  employees.filter(e => isPaidIn(e, period)).map(e => buildPayslip(e, period, index))
+  employees.filter(e => isPaidIn(e, period)).map(e => calculatePayslip(e, period, index))
 )
 
 export const payslips = allPayslips
@@ -307,6 +356,30 @@ export const payRuns: PayRun[] = periods.map((period, index) => {
     approvals: isOpen
       ? []
       : [{ approvedBy: 'emp-020', approvedAt: `${period.payDate}T02:00:00.000Z`, note: 'Reviewed and approved' }],
+
+    // A run in Pending approval has, by definition, been reviewed: the payroll specialist signed
+    // off calculation #8 with the blocker still open, which is what the approver now reads.
+    // Closed runs were reviewed on their final calculation the morning they were approved.
+    review: isOpen
+      ? {
+          calculationVersion: 8,
+          reviewedBy: 'emp-022',
+          reviewedAt: '2026-09-18T02:10:00.000Z',
+          findingsAtReview: {
+            blocking: openRunExceptions.filter(e => e.severity === 'blocking' && !e.resolvedAt).length,
+            error: openRunExceptions.filter(e => e.severity === 'error' && !e.resolvedAt).length,
+            warning: openRunExceptions.filter(e => e.severity === 'warning' && !e.resolvedAt).length
+          },
+          acknowledgedWarnings: openRunExceptions.filter(e => e.severity === 'warning' && e.acknowledgedAt).length,
+          note: 'Overtime spike in Operations checked against timesheets.'
+        }
+      : {
+          calculationVersion: 3,
+          reviewedBy: 'emp-022',
+          reviewedAt: `${period.payDate}T00:30:00.000Z`,
+          findingsAtReview: { blocking: 0, error: 0, warning: 0 },
+          acknowledgedWarnings: 0
+        },
     createdAt: `${period.periodStart}T00:30:00.000Z`,
     createdBy: 'emp-022',
     updatedAt: `${period.payDate}T02:00:00.000Z`

@@ -57,14 +57,28 @@ const PayrollSettingsTabs = ({ settings, fundingAccounts }: Props) => {
       content: <ScheduleSettings schedules={settings.schedules} payGroups={settings.payGroups} />
     },
     { value: 'components', name: 'Components', content: <ComponentSettings components={settings.components} /> },
-    { value: 'statutory', name: 'Statutory', content: <StatutorySettings rules={settings.statutory} /> },
+    {
+      value: 'statutory',
+      name: 'Statutory',
+      content: <StatutorySettings rules={settings.statutory} currency={settings.general.defaultCurrency} />
+    },
     { value: 'banking', name: 'Banking', content: <BankingSettings accounts={fundingAccounts} /> },
     {
       value: 'accounting',
       name: 'Accounting',
       content: <AccountingSettings mappings={settings.accounting} components={settings.components} />
     },
-    { value: 'approvals', name: 'Approvals', content: <ApprovalSettingsSection settings={settings.approvals} /> },
+    {
+      value: 'approvals',
+      name: 'Approvals',
+      content: (
+        <ApprovalSettingsSection
+          settings={settings.approvals}
+          roles={settings.access}
+          currency={settings.general.defaultCurrency}
+        />
+      )
+    },
     {
       value: 'notifications',
       name: 'Notifications',
