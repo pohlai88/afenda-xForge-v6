@@ -584,8 +584,35 @@ afenda_ux_doctrine:
       - 'What happens next?'
 
     behavior:
-      follow_selection: true
+      # Decided in Phase 04E. A query panel does not track what the workspace selects; the subject
+      # is whatever the reader explicitly asked about, and `subject_lifetime` below is the rule.
+      follow_selection: false
       preserve_parent_context: true
+
+    # Recorded in Phase 04D, from the Settlement pilot: a query subject and an inspector selection
+    # turned out to be different things, and the surfaces that were most likely to conflate them
+    # are the ones where both live in the same address.
+    subject_lifetime:
+      rule: >
+        A 360 Query subject is the object the reader explicitly asked about. It is
+        not the workspace's current selection, and the two change independently.
+
+      MUST:
+        - 'set the subject only from an explicit invocation of the contextual query command'
+        - 'clear the previous question, answer and input when the subject changes'
+        - 'close the panel when the reader leaves the route the question was asked from'
+        - 'keep the panel open while the workspace is filtered, sorted, paged or inspected'
+
+      MUST_NOT:
+        - 'tie panel lifetime to an inspector selection parameter such as ?payment=, ?employee= or ?filing='
+        - 'retarget an open panel because a different record was selected or inspected'
+        - 'close the panel because an inspector showing the same record was dismissed'
+        - 'publish a nested object into the shared object-context store in order to make it askable'
+
+      note: >
+        This is why `follow_selection` above is false. Silently retargeting a question somebody
+        asked is worse than making them ask again: the answer on screen would stop matching the
+        question printed above it, with nothing to say it had changed.
 
   # ---------------------------------------------------------------------------
   # 15. ONE TABLE ENGINE

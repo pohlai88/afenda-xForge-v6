@@ -41,6 +41,17 @@ button, the filing name button — never against the row, which is deliberately 
 | 9   | Group payroll     | Selection by keyboard              | Space toggles a checkbox, the engine's bar and the truth strip below the table both update                   |
 | 10  | Run history       | `⋮` by pointer and by keyboard     | As row 2. The run the page is showing has a `⋮` but no `Open run` — it is already open                        |
 | 11  | All six           | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
+| 12  | Run queue, Payments | `Shift+F10` → `Ask about this` → Enter | 360 Query opens and the question filter takes focus; arrows move through the questions, Enter runs one, Escape closes and focus returns to the control the menu was summoned from |
+
+### Note on row 12 — where focus can and cannot return
+
+360 Query hands focus back to the control the menu was opened from, resolved to the nearest element
+that can actually hold focus. On a run reference link or a `⋮` button that is the control itself,
+and closing was observed returning focus to it exactly. Right-clicking a plain table cell — an
+employee name that is not a link, a payment amount — has no focusable ancestor at all, so focus
+falls to the document. That is the absence of row focus, not a defect in the panel: rows are
+deliberately not tabbable, and giving them focus is the One Table Engine's decision to make, not
+this feature's.
 
 ### Note on row 7 — a row without a trigger
 

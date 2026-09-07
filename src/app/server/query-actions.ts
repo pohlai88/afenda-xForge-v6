@@ -32,6 +32,28 @@ const actor = () => {
 }
 
 /**
+ * Which questions a pay run can be asked, for this actor.
+ *
+ * Only the audit question is conditional, and only on the actor: what changed since the last
+ * calculation is a question every run can answer — even one with no stored comparison, which
+ * answers that it has none — so the record decides nothing here. Whether the reader may read audit
+ * evidence at all is a different matter, and a question they can never get an answer to should not
+ * be on the list. Search is unconditional, exactly as it was.
+ *
+ * Deliberately takes no run id. Availability genuinely does not depend on the run, and accepting an
+ * identifier this ignores would suggest a record-level rule that does not exist — unlike the
+ * settlement capabilities below, where the record really does decide.
+ *
+ * A capability, never the gate: `payRunCalculationChanges` re-checks the same permission where it
+ * runs, so a caller that never asked this gets the same refusal as one that did.
+ */
+export const payRunQueryCapabilities = async (): Promise<{ calculationChanges: boolean }> => {
+  const current = actor()
+
+  return { calculationChanges: can(current, 'payroll.view') && can(current, 'payroll.audit.view') }
+}
+
+/**
  * The people on one run who still have something outstanding against them.
  *
  * Deliberately not capped. Find caps its sources because Find is recognition — if what you had in
