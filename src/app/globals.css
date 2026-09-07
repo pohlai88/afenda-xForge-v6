@@ -39,7 +39,22 @@
      surface keeps `--warning` and the text takes `--warning-strong`, which is the same hue and
      chroma at a lightness chosen to clear the floor. Backgrounds, borders, solid fills and charts
      are untouched, so nothing about the app's colour changes except that the words became
-     readable. Pair them: `bg-warning/15 text-warning-strong`. */
+     readable. Pair them: `bg-warning/15 text-warning-strong`.
+
+     THE ONE USAGE LAW. `*-strong` is the semantic foreground for text on a *neutral or subtle*
+     semantic surface — a tint, or the plain card behind a status word. It MUST NOT be used for
+     text on a *solid* semantic fill; that case needs a foreground designed to sit on the hue at
+     full strength, and `*-strong` there would put a dark red on a red button.
+
+         subtle warning surface  →  bg-warning/15  +  text-warning-strong
+         solid semantic fill     →  its own on-fill foreground, which this theme does not yet have
+
+     The distinction is what the text is painted on, not what it means. Today the law has no
+     counter-example to protect: `--destructive-foreground` and its siblings do not exist here, the
+     destructive button variant is itself a tint, and every solid `bg-success` / `bg-warning` /
+     `bg-destructive` in the app is a dot, bar or progress fill carrying no text. So the rule is
+     written before it is needed — whoever adds the first solid semantic fill with a label on it
+     must add that foreground token rather than reaching for `*-strong`. */
   --color-destructive-strong: var(--destructive-strong);
   --color-success-strong: var(--success-strong);
   --color-warning-strong: var(--warning-strong);

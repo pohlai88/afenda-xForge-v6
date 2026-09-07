@@ -94,22 +94,27 @@ Recorded so the manual pass only has to cover what is genuinely unknown.
 - Both surfaces render the same `ObjectCommandItems` over the same descriptors, so parity is
   structural rather than duplicated — there is no second command list that could drift.
 
-## Open 2026-09-08 — P01 operational sections, focus order
+## Closed 2026-09-08 — P01 operational sections, focus order
 
-The four sections added to `/payroll` — the on-track band, Needs attention, Next actions and the
-timeline rail — introduce no context menu, so rows 1–11 above do not grow. What was **not**
-observed is focus order through them, because the automation degraded partway through the visual
-pass: `javascript_tool` began reporting zero cards on a page that screenshots showed rendering
-correctly, and two tabs went blank and had to be replaced.
+Rows 12, 13 and 14 were all opened and closed on the same day. They were open for a few hours
+because the automation degraded during the first visual pass — `javascript_tool` reported zero
+cards on a page screenshots showed rendering correctly, and two tabs went blank. Key delivery
+recovered later the same session and all three were worked by hand rather than left standing.
 
-| #   | Surface       | Interaction                           | Expected                                                                                      |
-| --- | ------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 12  | Group payroll | Tab through Needs attention           | Reaches each item's single action button in list order, worst item first                      |
-| 13  | Group payroll | Tab through Next actions and the rail | Each row is one stop, in the displayed order; the whole row is the control, not a label in it |
+| #   | Surface       | Interaction                           | Result                                                                                                                 |
+| --- | ------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 12  | Group payroll | Tab through Needs attention           | **PASS** — five items, five stops, in list order, blocker first and warning last; each is the item's one action button |
+| 13  | Group payroll | Tab through Next actions and the rail | **PASS** — six action rows and the timeline rows are one stop each, in displayed order, the ring around the whole row  |
+| 14  | Group payroll | Column menu on the company matrix     | **PASS** — full open/navigate/toggle/close cycle, detailed below                                                       |
 
-Row 14 — the company matrix column menu — was opened here on 2026-09-08 and is **closed below**.
+Row 13 was checked in both directions: Tab forward through Next actions, and Shift+Tab backward up
+the timeline rail, which steps one row per press. No row produced two stops, so the row-as-control
+construction holds — there is no link nested inside the button.
 
-What construction evidence does support: every row is a real `Button` with `render={<Link/>}` and
+Focus rings were visible in both themes: the Needs attention and Next actions rings in light, the
+column-menu trigger ring in dark.
+
+What construction evidence supported before observation: every row is a real `Button` with `render={<Link/>}` and
 `nativeButton={false}`, so each is one tab stop with the app's own focus ring rather than a
 container `onClick`; and no target is under 24×24, measured at 0 undersized controls across the
 four sections.

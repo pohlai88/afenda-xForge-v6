@@ -31,14 +31,15 @@ p01_group_payroll_control:
 
     evidence:
       contrast: 'P01-DEF-001 resolved; ratios under evaluation.resolved_defects, both themes'
-      keyboard: 'manual-acceptance-ledger row 14 closed 2026-09-08, full sequence observed'
-      gates: 'check-types, lint, build and audit.py all pass at commit time'
+      keyboard: >
+        manual-acceptance-ledger rows 12, 13 and 14 all closed 2026-09-08. Tab order through Needs
+        attention and Next actions, Shift+Tab up the timeline rail, and the column menu's full
+        open/navigate/toggle/close cycle were each observed on the rendered page.
+      gates: 'check-types, lint, build and audit.py all pass; audit ratchet clean at 77/77'
       render: 'desktop light and dark verified; 390px verified on the identical layout before the colour-only change'
 
     still_open_not_blocking:
-      - 'manual-acceptance-ledger rows 12 and 13 — tab order through Needs attention and Next actions'
       - 'sidebar-collapsed capture — the harness could not reliably trigger it; no defect observed'
-      - 'audit.py card-title budget still reads 83 against an actual 77'
 
   # ---------------------------------------------------------------------------
   # AUTHORITY
