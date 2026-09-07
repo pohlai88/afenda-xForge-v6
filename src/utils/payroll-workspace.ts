@@ -25,6 +25,7 @@ import type {
 import { PAYROLL_STAGES } from '@/types/payroll/run-workspace-types'
 
 // Util Imports
+import { formatDate, formatInstant, formatPeriod } from '@/utils/format-datetime'
 import { formatMoney } from '@/utils/money'
 import { exceptionStatusOf } from '@/utils/payroll-metrics'
 
@@ -127,23 +128,6 @@ export const PAYMENT_STATUS_STYLES: Record<EmployeePaymentStatus, string> = {
 /* Formatting                                                                                   */
 /* -------------------------------------------------------------------------------------------- */
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-const MONTHS_LONG = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December'
-]
-
 /** 'Yuki Tanaka' -> 'YT'. */
 export const initials = (name: string) =>
   name
@@ -163,32 +147,31 @@ export const formatSignedMoney = (money: Money): string => {
 export const formatSignedPercent = (value: number | null, digits = 1): string =>
   value === null ? '—' : `${value > 0 ? '+' : ''}${value.toFixed(digits)}%`
 
-/** '2026-09-18T01:00:00.000Z' -> '18 Sep 2026, 01:00 UTC'. Hand-rolled for the same reason money is. */
-export const formatInstant = (iso: string): string => {
-  const [date, time] = iso.split('T')
-  const [year, month, day] = date.split('-')
-
-  return `${Number(day)} ${MONTHS_SHORT[Number(month) - 1]} ${year}, ${time.slice(0, 5)} UTC`
-}
-
-/** '2026-09-30' -> '30 Sep 2026'. */
-export const formatDate = (iso: string): string => {
-  const [year, month, day] = iso.split('-')
-
-  return `${Number(day)} ${MONTHS_SHORT[Number(month) - 1]} ${year}`
-}
-
-/** '2026-09-01' + '2026-09-30' -> 'September 2026' when the period is a calendar month. */
-export const formatPeriod = (start: string, end: string): string => {
-  const [year, month] = start.split('-')
-  const endMonth = end.split('-')[1]
-
-  return month === endMonth ? `${MONTHS_LONG[Number(month) - 1]} ${year}` : `${formatDate(start)} – ${formatDate(end)}`
-}
+/*
+ * Calendar formatting moved to `@/utils/format-datetime` when an audit timeline had to render
+ * outside payroll, and is re-exported here so every caller that already reads it from the workspace
+ * builders keeps working. One definition, two doors.
+ */
+export { formatDate, formatInstant, formatPeriod }
 
 /* -------------------------------------------------------------------------------------------- */
 /* Rows                                                                                         */
 /* -------------------------------------------------------------------------------------------- */
+
+/**
+ * Which of a run's exceptions are about one person.
+ *
+ * An exception names an employee, or names a department and therefore everyone in it. That rule
+ * decides a row's status, its badge and its blockers, so it is written once: three surfaces read it
+ * — the rows built on the server, the rows re-derived when somebody clears an exception in the
+ * browser, and the 360 Query question that asks which people still have one open. Three copies of
+ * one predicate is how "open exception" comes to mean two different things.
+ */
+export const exceptionsForEmployee = (
+  exceptions: PayRunException[],
+  employee: { id: string; departmentId: string }
+): PayRunException[] =>
+  exceptions.filter(e => e.employeeId === employee.id || (!e.employeeId && e.departmentId === employee.departmentId))
 
 const employeePayrollStatus = (run: PayRun, openBlockers: number, openWarnings: number): EmployeePayrollStatus => {
   if (run.status === 'paid' || run.status === 'closed') return 'paid'
@@ -254,9 +237,7 @@ export const buildRunRows = ({ run, slips, previousSlips, employees, departments
 
     if (!employee) continue
 
-    const exceptions = run.exceptions.filter(
-      e => e.employeeId === employee.id || (!e.employeeId && e.departmentId === employee.departmentId)
-    )
+    const exceptions = exceptionsForEmployee(run.exceptions, employee)
 
     const open = exceptions.filter(e => !e.resolvedAt)
     const openBlockers = open.filter(e => e.severity === 'blocking').length
@@ -309,9 +290,7 @@ export const buildRunRows = ({ run, slips, previousSlips, employees, departments
  */
 export const refreshRows = (rows: PayrollRunRow[], run: PayRun): PayrollRunRow[] =>
   rows.map(row => {
-    const exceptions = run.exceptions.filter(
-      e => e.employeeId === row.employeeId || (!e.employeeId && e.departmentId === row.departmentId)
-    )
+    const exceptions = exceptionsForEmployee(run.exceptions, { id: row.employeeId, departmentId: row.departmentId })
 
     const open = exceptions.filter(e => !e.resolvedAt)
     const openBlockers = open.filter(e => e.severity === 'blocking').length
@@ -698,6 +677,72 @@ export const auditEvents = (run: PayRun, nameOf: (employeeId: string) => string)
   }
 
   return events.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))
+}
+
+/**
+ * What the run's latest calculation changed, and what has happened to it since.
+ *
+ * The question a person actually asks — "what changed since the last calculation?" — has two halves
+ * and the record answers both: the stored diff says what that calculation did to the figures, and
+ * the run's own history says what has been done to the run afterwards. Both halves are read from
+ * timestamps the run already carries; nothing here derives, estimates or explains.
+ *
+ * The distinction that matters is between *no change* and *no comparison*. A run carries a diff
+ * only for the calculation that produced it, so a diff naming an older version proves nothing about
+ * the current one — and neither does its absence. In that case this says the comparison is missing
+ * rather than reporting a delta of zero, because reporting zero would be an answer the record
+ * cannot support.
+ */
+export const calculationChangeEvents = (run: PayRun, nameOf: (employeeId: string) => string): AuditEvent[] => {
+  // Never calculated: there is no calculation to have changed anything, and no instant to file an
+  // event under. An empty answer is the truthful one.
+  if (!run.lastCalculatedAt) return []
+
+  const calculatedAt = run.lastCalculatedAt
+  const diff = run.lastCalculationDiff
+  const comparable = diff !== undefined && diff.currentVersion === run.calculationVersion
+
+  const headline: AuditEvent = {
+    id: `${run.id}-calculation-${run.calculationVersion}`,
+    at: calculatedAt,
+    actor: 'Payroll engine',
+    action: `Calculation #${run.calculationVersion} completed`,
+    detail: comparable
+      ? [
+          `${diff.affectedEmployees} of ${run.employeeCount} changed against #${diff.previousVersion}`,
+          `net ${formatSignedMoney(diff.netDelta)}`,
+          `gross ${formatSignedMoney(diff.grossDelta)}`,
+          `employer cost ${formatSignedMoney(diff.employerCostDelta)}`,
+          diff.inputsApplied > 0
+            ? `${diff.inputsApplied} ${diff.inputsApplied === 1 ? 'input' : 'inputs'} applied`
+            : null
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : `${run.employeeCount} payslips · ${formatMoney(run.totals.netPay)} net · no stored comparison with an earlier calculation`,
+    kind: 'system'
+  }
+
+  // One line per figure the diff says moved, named and shown before and after. Not summarised by
+  // component: the stored change is per employee, and adding them up would present a figure the
+  // record does not hold.
+  const changes: AuditEvent[] = comparable
+    ? diff.componentChanges.map(change => ({
+        id: `${run.id}-change-${change.employeeId}-${change.code}`,
+        at: calculatedAt,
+        actor: 'Payroll engine',
+        action: `${change.label} · ${nameOf(change.employeeId)}`,
+        detail: `${formatMoney(change.previous)} → ${formatMoney(change.current)}`,
+        kind: 'system' as const
+      }))
+    : []
+
+  // Anything the run recorded after that calculation ran — inputs that make it stale, exceptions
+  // raised or cleared, a review, an approval. Taken from the run's own history rather than
+  // re-derived, so there is one account of what happened and this reads a slice of it.
+  const since = auditEvents(run, nameOf).filter(event => event.at > calculatedAt)
+
+  return [...since, headline, ...changes]
 }
 
 /* -------------------------------------------------------------------------------------------- */

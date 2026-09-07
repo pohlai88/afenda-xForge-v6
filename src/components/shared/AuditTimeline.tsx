@@ -1,5 +1,5 @@
 // Type Imports
-import type { AuditEvent } from '@/types/payroll/run-workspace-types'
+import type { AuditEvent } from '@/types/common/audit-types'
 
 // Component Imports
 import {
@@ -13,7 +13,7 @@ import {
 
 // Util Imports
 import { cn } from '@/lib/utils'
-import { formatInstant } from '@/utils/payroll-workspace'
+import { formatInstant } from '@/utils/format-datetime'
 
 type Props = {
   events: AuditEvent[]
@@ -31,8 +31,12 @@ const DOT_STATUS: Record<AuditEvent['kind'], 'done' | 'current' | 'error' | 'def
 /**
  * Who did what, when — newest first. The same Timeline the user profile uses, so an auditor
  * moving between the two reads one convention.
+ *
+ * Shared rather than payroll's, because a run's history, a filing's, a payment's and a 360 Query
+ * audit answer are all the same evidence read the same way. A second implementation of this grammar
+ * would be a second audit visual language, and an auditor would have to learn both.
  */
-const PayrollAuditTimeline = ({ events, emptyMessage = 'Nothing has happened on this run yet.', className }: Props) => {
+const AuditTimeline = ({ events, emptyMessage = 'Nothing has happened on this run yet.', className }: Props) => {
   if (events.length === 0) {
     return <p className={cn('text-muted-foreground py-6 text-center text-sm', className)}>{emptyMessage}</p>
   }
@@ -58,4 +62,4 @@ const PayrollAuditTimeline = ({ events, emptyMessage = 'Nothing has happened on 
   )
 }
 
-export default PayrollAuditTimeline
+export default AuditTimeline

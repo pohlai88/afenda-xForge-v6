@@ -115,7 +115,7 @@ PayrollRunWorkspace (client)
     ├── exceptions          ExceptionSummary · ExceptionList → ExceptionInspector (Sheet)
     ├── reconciliation      PayrollReconciliation (current vs previous, gross-to-net, by
     │                       department, largest movers) — every figure drills into the table
-    └── audit               PayrollAuditTimeline
+    └── audit               AuditTimeline
 ```
 
 The drill-down's cards, left to right: Pay (headline net, tiles, PayBreakdown), Why it changed

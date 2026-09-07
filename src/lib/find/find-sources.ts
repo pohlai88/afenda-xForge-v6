@@ -42,6 +42,16 @@ const asResults = (hits: FindObjectHit[], fallbackIcon: LucideIcon): FindResult[
   })
 
 /**
+ * The same conversion, for anything else that gets objects back from a server.
+ *
+ * 360 Query answers with business objects, and an object it returned had to look and open exactly
+ * like the same object returned by Find — otherwise there would be two employee rows in this app
+ * that behave differently. So there is one converter rather than two, and the adapter stays the
+ * only place that knows what an employee looks like or where one is read.
+ */
+export const resultsFromHits = (hits: FindObjectHit[]): FindResult[] => asResults(hits, FileTextIcon)
+
+/**
  * Routes, from the index that has always backed the palette.
  *
  * Deliberately not a new route-name map. `searchData` is the route descriptor this app already
@@ -135,7 +145,9 @@ export const FIND_SOURCES: readonly FindSource[] = [payRunSource, employeeSource
 export const resolveTargets = async (
   targets: readonly FindTarget[]
 ): Promise<{ results: FindResult[]; unresolved: FindTarget[] }> => {
-  const objectTargets = targets.filter((target): target is Extract<FindTarget, { kind: 'object' }> => target.kind === 'object')
+  const objectTargets = targets.filter(
+    (target): target is Extract<FindTarget, { kind: 'object' }> => target.kind === 'object'
+  )
 
   const hits = objectTargets.length > 0 ? await resolveObjectTargets(objectTargets) : []
   const byId = new Map(hits.map(hit => [`${hit.object.type}:${hit.object.id}`, hit]))
@@ -166,8 +178,7 @@ export const resolveTargets = async (
     if (target.kind === 'report') {
       const report = REPORTS.find(candidate => candidate.key === target.key)
 
-      if (report)
-        results.push({ target, label: report.name, sublabel: report.purpose, icon: FileSpreadsheetIcon })
+      if (report) results.push({ target, label: report.name, sublabel: report.purpose, icon: FileSpreadsheetIcon })
       else unresolved.push(target)
 
       continue

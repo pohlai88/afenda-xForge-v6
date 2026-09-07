@@ -54,7 +54,7 @@ import ExceptionList, { type ExceptionListItem } from './exception-list'
 import ExceptionSummary from './exception-summary'
 import InputReadinessSheet from './input-readiness-sheet'
 import PayrollApprovalDialog from './payroll-approval-dialog'
-import PayrollAuditTimeline from './payroll-audit-timeline'
+import AuditTimeline from '@/components/shared/AuditTimeline'
 import PayrollEmployeeDrilldown, { type PayHistoryPoint } from './payroll-employee-drilldown'
 import PayrollMetricRow, { type PayrollMetric } from './payroll-metric-row'
 import PayrollReconciliation from './payroll-reconciliation'
@@ -837,7 +837,7 @@ const PayrollRunWorkspace = ({
 
         <TabsContent value='audit'>
           <div className='bg-card rounded-lg border p-4'>
-            <PayrollAuditTimeline events={audit} />
+            <AuditTimeline events={audit} />
           </div>
         </TabsContent>
       </Tabs>

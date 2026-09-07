@@ -16,7 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import PayrollAuditTimeline from '@/views/payroll/run/payroll-audit-timeline'
+import AuditTimeline from '@/components/shared/AuditTimeline'
 import SettlementStatusBadge from './settlement-status-badge'
 
 // Util Imports
@@ -135,7 +135,7 @@ const SettlementInspector = ({ row, batch, open, onOpenChange, onReissue }: Prop
 
             <div className='flex flex-col gap-2'>
               <h3 className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>History</h3>
-              <PayrollAuditTimeline
+              <AuditTimeline
                 events={settlementEvents(row, batch)}
                 emptyMessage='Not yet released. History starts when the batch goes to the bank.'
               />

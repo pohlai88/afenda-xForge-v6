@@ -9,7 +9,7 @@ import type { ReactElement, ReactNode } from 'react'
 import Link from 'next/link'
 
 // Third-party Imports
-import { EllipsisVerticalIcon, InfoIcon, StarIcon, StarOffIcon } from 'lucide-react'
+import { EllipsisVerticalIcon, InfoIcon, StarIcon, StarOffIcon, TelescopeIcon } from 'lucide-react'
 
 // Type Imports
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
@@ -36,6 +36,10 @@ import {
 // Find Imports
 import { findObjectType } from '@/lib/find/find-object-adapter'
 import { favouriteStore } from '@/lib/find/recent-and-favourites'
+
+// Query Imports
+import { queryProviderFor } from '@/lib/query/query-providers'
+import { openQuery } from '@/lib/query/query-store'
 
 // Util Imports
 import { sameTarget } from '@/types/common/find-types'
@@ -77,8 +81,15 @@ const ObjectCommandItems = ({
   commands,
   onOpenProperties,
   parts,
-  anchorRef
-}: ObjectCommandsProps & { parts: MenuParts; anchorRef?: React.Ref<HTMLDivElement> }) => {
+  anchorRef,
+  returnFocus
+}: ObjectCommandsProps & {
+  parts: MenuParts
+  anchorRef?: React.Ref<HTMLDivElement>
+
+  /** The control this menu was summoned from, so 360 Query can hand focus back to exactly it. */
+  returnFocus?: () => HTMLElement | null
+}) => {
   const { Group, Item, Separator } = parts
   const groups = groupCommands(commands)
 
@@ -101,7 +112,18 @@ const ObjectCommandItems = ({
   const pinnable = target !== null
   const pinned = target !== null && favourites.some(candidate => sameTarget(candidate, target))
 
-  if (groups.length === 0 && !onOpenProperties && !pinnable) return null
+  /*
+   * Asking about an object is a capability, not a business command.
+   *
+   * So it is composed here for the same reason pinning is: no payroll file lists "Ask about this"
+   * and none of them can forget to, which is what keeps one object from being askable in a table
+   * and not in a header. It appears only for types a domain has actually written questions for —
+   * doctrine `context_menu` requires an unavailable capability to be absent rather than disabled,
+   * and an empty query panel would be worse than no menu item.
+   */
+  const askable = queryProviderFor(object.type) !== undefined
+
+  if (groups.length === 0 && !onOpenProperties && !pinnable && !askable) return null
 
   return (
     <>
@@ -142,9 +164,18 @@ const ObjectCommandItems = ({
           })}
         </Group>
       ))}
-      {pinnable ? (
+      {askable ? (
         <Group>
           {groups.length > 0 ? <Separator /> : null}
+          <Item onClick={() => openQuery(object, returnFocus?.() ?? null)}>
+            <TelescopeIcon />
+            Ask about this
+          </Item>
+        </Group>
+      ) : null}
+      {pinnable ? (
+        <Group>
+          {groups.length > 0 || askable ? <Separator /> : null}
           <Item onClick={() => favouriteStore.toggle(target!)}>
             {pinned ? <StarOffIcon /> : <StarIcon />}
             {pinned ? 'Remove from favourites' : 'Add to favourites'}
@@ -153,7 +184,7 @@ const ObjectCommandItems = ({
       ) : null}
       {onOpenProperties ? (
         <Group>
-          {groups.length > 0 || pinnable ? <Separator /> : null}
+          {groups.length > 0 || askable || pinnable ? <Separator /> : null}
           <Item onClick={() => onOpenProperties(object)}>
             <InfoIcon />
             Properties
@@ -248,6 +279,16 @@ export const ObjectContextMenu = ({
   const invocation = useRef<KeyboardInvocation | null>(null)
 
   /*
+   * The element the menu was summoned from, pointer or keyboard.
+   *
+   * Deliberately separate from `invocation` above, which exists to decide whether focus should be
+   * moved *into* the popup and must stay keyboard-only. This one is read by a command that outlives
+   * the menu — 360 Query opens a panel, and the panel has to know where to put focus back when the
+   * menu that opened it is long gone.
+   */
+  const summonedFrom = useRef<HTMLElement | null>(null)
+
+  /*
    * Whether this closing is the one case that has to put focus back itself.
    *
    * Only Escape. Every other way out of the menu has a destination that owns focus already —
@@ -297,6 +338,7 @@ export const ObjectContextMenu = ({
 
         if (next) {
           invocation.current = keyboardInvocationFrom(details.event)
+          summonedFrom.current = (details.event?.target as HTMLElement | null) ?? null
           restoreOnClose.current = false
 
           return
@@ -306,7 +348,6 @@ export const ObjectContextMenu = ({
         // menu's own closing is the only thing that can say this menu was cancelled.
         restoreOnClose.current = details.reason === 'escape-key' && invocation.current !== null
       }}
-
     >
       <ContextMenuTrigger render={render ?? <div className='contents' />}>{children}</ContextMenuTrigger>
       <ContextMenuContent
@@ -330,6 +371,7 @@ export const ObjectContextMenu = ({
           onOpenProperties={onOpenProperties}
           parts={CONTEXT_PARTS}
           anchorRef={anchorRef}
+          returnFocus={() => summonedFrom.current}
         />
         <KeyboardFocusHandoff invocation={invocation} anchorRef={anchorRef} />
       </ContextMenuContent>
@@ -338,18 +380,25 @@ export const ObjectContextMenu = ({
 }
 
 /** The pointer- and keyboard-reachable twin of the context menu. */
-export const ObjectCommandsButton = ({ object, commands, onOpenProperties }: ObjectCommandsProps) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger render={<Button variant='ghost' size='icon' aria-label={`Commands for ${object.label}`} />}>
-      <EllipsisVerticalIcon className='size-4.5' aria-hidden='true' />
-    </DropdownMenuTrigger>
-    <DropdownMenuContent align='end' className='min-w-52' aria-label={`Commands for ${object.label}`}>
-      <ObjectCommandItems
-        object={object}
-        commands={commands}
-        onOpenProperties={onOpenProperties}
-        parts={DROPDOWN_PARTS}
-      />
-    </DropdownMenuContent>
-  </DropdownMenu>
-)
+export const ObjectCommandsButton = ({ object, commands, onOpenProperties }: ObjectCommandsProps) => {
+  const trigger = useRef<HTMLButtonElement>(null)
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button ref={trigger} variant='ghost' size='icon' aria-label={`Commands for ${object.label}`} />}
+      >
+        <EllipsisVerticalIcon className='size-4.5' aria-hidden='true' />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align='end' className='min-w-52' aria-label={`Commands for ${object.label}`}>
+        <ObjectCommandItems
+          object={object}
+          commands={commands}
+          onOpenProperties={onOpenProperties}
+          parts={DROPDOWN_PARTS}
+          returnFocus={() => trigger.current}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}

@@ -22,7 +22,7 @@ import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import PayrollAuditTimeline from '@/views/payroll/run/payroll-audit-timeline'
+import AuditTimeline from '@/components/shared/AuditTimeline'
 import type { InspectorMode } from './compliance-focus'
 import FilingStageRail from './filing-stage-rail'
 import FilingStatusBadge from './filing-status-badge'
@@ -275,7 +275,7 @@ const FilingInspector = ({ filing, open, mode, onOpenChange, rules, nameOf, onAc
 
           <section className='flex flex-col gap-2'>
             <h3 className='text-sm font-semibold'>History</h3>
-            <PayrollAuditTimeline events={events} emptyMessage='Nothing has happened on this filing yet.' />
+            <AuditTimeline events={events} emptyMessage='Nothing has happened on this filing yet.' />
           </section>
 
           {filing.payRunId && (

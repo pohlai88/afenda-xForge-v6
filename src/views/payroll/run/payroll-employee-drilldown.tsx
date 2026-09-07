@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import ExceptionList, { type ExceptionListItem } from './exception-list'
 import PayBreakdown from './pay-breakdown'
 import PayVariance from './pay-variance'
-import PayrollAuditTimeline from './payroll-audit-timeline'
+import AuditTimeline from '@/components/shared/AuditTimeline'
 import PayrollSourceTrace, { PayrollInputs } from './payroll-source-trace'
 
 // Util Imports
@@ -339,7 +339,7 @@ const PayrollEmployeeDrilldown = ({
               <CardDescription>Who did what to this payslip, newest first</CardDescription>
             </CardHeader>
             <CardContent>
-              <PayrollAuditTimeline events={audit} emptyMessage='No activity recorded for this employee on this run.' />
+              <AuditTimeline events={audit} emptyMessage='No activity recorded for this employee on this run.' />
             </CardContent>
           </Card>
         </div>

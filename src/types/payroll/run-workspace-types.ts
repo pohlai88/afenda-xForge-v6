@@ -101,14 +101,12 @@ export interface SourceTraceEntry {
   calculatedAt: IsoDateTime
 }
 
-export interface AuditEvent {
-  id: string
-  at: IsoDateTime
-  actor: string
-  action: string
-  detail?: string
-  kind: 'system' | 'user' | 'exception' | 'approval'
-}
+/*
+ * An audit event is six neutral fields, and three payroll modules plus one shared timeline already
+ * produced and consumed them, so the definition now lives in `@/types/common/audit-types` and is
+ * re-exported here. Payroll keeps the door it has always used; there is one definition behind it.
+ */
+export type { AuditEvent } from '@/types/common/audit-types'
 
 export interface ReconciliationLine {
   key: string
