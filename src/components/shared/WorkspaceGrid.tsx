@@ -4,6 +4,13 @@ import { Fragment, cloneElement } from 'react'
 // Type Imports
 import type { ModuleSize, WorkspaceDefinition } from '@/types/common/workspace-types'
 
+// Component Imports
+import {
+  WorkspaceCustomiseBar,
+  WorkspaceModuleFrame,
+  WorkspaceZoneHeading
+} from '@/components/shared/WorkspaceCustomisation'
+
 // Util Imports
 import { cn } from '@/lib/utils'
 
@@ -35,28 +42,45 @@ const SPAN: Record<ModuleSize, string> = {
  * There is nothing here that knows which workspace this is. Sizes arrive as names, zones arrive as
  * data, and the only decision this file makes is which class a name becomes.
  *
+ * Customisation is composed rather than branched on: every module goes through the same frame and
+ * every titled band through the same heading, and both render exactly what this file passed them
+ * until somebody is actually customising. A workspace rendered outside a `WorkspaceCustomisation`
+ * gets the inert defaults and this markup unchanged.
+ *
  * Doctrine: `workspace_grid` (D08).
  */
 const WorkspaceGrid = ({ definition, className }: { definition: WorkspaceDefinition; className?: string }) => (
-  <div className={cn('grid grid-cols-6 gap-6', className)}>
-    {definition.zones.map(zone => (
-      <Fragment key={zone.id}>
-        {zone.title ? (
-          <div className='col-span-full mt-2 flex flex-col gap-0.5 border-t pt-6'>
-            <h2 className='text-lg font-semibold tracking-tight'>{zone.title}</h2>
-            {zone.description ? <p className='text-muted-foreground text-sm'>{zone.description}</p> : null}
-          </div>
-        ) : null}
+  <>
+    <WorkspaceCustomiseBar />
 
-        {zone.modules.map(module =>
-          cloneElement(module.content, {
-            key: module.id,
-            className: cn(module.content.props.className, SPAN[module.defaultSize])
-          })
-        )}
-      </Fragment>
-    ))}
-  </div>
+    <div className={cn('grid grid-cols-6 gap-6', className)}>
+      {definition.zones.map(zone => (
+        <Fragment key={zone.id}>
+          {zone.title ? (
+            <WorkspaceZoneHeading
+              title={zone.title}
+              description={zone.description}
+              moduleIds={zone.modules.map(module => module.id)}
+            />
+          ) : null}
+
+          {zone.modules.map(module => (
+            <WorkspaceModuleFrame
+              key={module.id}
+              id={module.id}
+              title={module.title}
+              required={module.required === true}
+              span={SPAN[module.defaultSize]}
+            >
+              {cloneElement(module.content, {
+                className: cn(module.content.props.className, SPAN[module.defaultSize])
+              })}
+            </WorkspaceModuleFrame>
+          ))}
+        </Fragment>
+      ))}
+    </div>
+  </>
 )
 
 export default WorkspaceGrid

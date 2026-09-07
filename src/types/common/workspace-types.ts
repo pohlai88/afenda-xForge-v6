@@ -90,3 +90,23 @@ export type WorkspaceDefinition = {
   id: string
   zones: readonly WorkspaceZone[]
 }
+
+/**
+ * A module as everything except the renderer sees it.
+ *
+ * The declaration carries an element, and an element cannot cross into the part of the app that
+ * knows what a person has hidden. So customisation is given the three facts it is entitled to —
+ * which module, what to call it in a list, and whether hiding it would mislead — and nothing that
+ * would let it decide where a module goes or how wide it is. Those stay the declaration's.
+ */
+export type WorkspaceModuleSummary = {
+  id: string
+  title: string
+  required: boolean
+}
+
+/** The declaration, flattened for the parts of the app that must not hold its elements. */
+export const workspaceModules = (definition: WorkspaceDefinition): WorkspaceModuleSummary[] =>
+  definition.zones.flatMap(zone =>
+    zone.modules.map(module => ({ id: module.id, title: module.title, required: module.required === true }))
+  )

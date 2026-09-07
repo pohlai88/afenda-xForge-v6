@@ -1,3 +1,6 @@
+// React Imports
+import type { ReactNode } from 'react'
+
 // Next Imports
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -13,10 +16,12 @@ import type { ExceptionRow } from '@/views/dashboards/payroll/payroll-exception-
 
 // Component Imports
 import WorkspaceGrid from '@/components/shared/WorkspaceGrid'
+import { CustomiseWorkspaceAction, WorkspaceCustomisation } from '@/components/shared/WorkspaceCustomisation'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 // Workspace Imports
+import { workspaceModules } from '@/types/common/workspace-types'
 import { entityWorkspace } from '@/views/payroll/entity-workspace'
 
 // Action Imports
@@ -94,21 +99,25 @@ const EntityPayrollPage = async ({ params, searchParams }: Props) => {
   // plain group route. A navigation target taken raw from a query parameter is an open redirect.
   const backHref = returnTo && /^\/payroll(?:[/?#]|$)/.test(returnTo) ? returnTo : '/payroll'
 
-  const header = (
-    <header className='flex flex-col gap-1'>
-      <Button
-        variant='link'
-        size='xs'
-        className='text-muted-foreground w-fit px-0 font-normal'
-        render={<Link href={backHref} />}
-        nativeButton={false}
-      >
-        <ChevronLeftIcon /> Group payroll
-      </Button>
-      <h1 className='text-2xl font-semibold tracking-tight'>{entity.name}</h1>
-      <p className='text-muted-foreground text-sm'>
-        {COUNTRY_LABELS[entity.countryCode]} · pays in {entity.currency} · {entity.registrationNumber}
-      </p>
+  // `action` is the page's overflow, which only exists once there is a workspace to customise.
+  const header = (action?: ReactNode) => (
+    <header className='flex items-start justify-between gap-4'>
+      <div className='flex flex-col gap-1'>
+        <Button
+          variant='link'
+          size='xs'
+          className='text-muted-foreground w-fit px-0 font-normal'
+          render={<Link href={backHref} />}
+          nativeButton={false}
+        >
+          <ChevronLeftIcon /> Group payroll
+        </Button>
+        <h1 className='text-2xl font-semibold tracking-tight'>{entity.name}</h1>
+        <p className='text-muted-foreground text-sm'>
+          {COUNTRY_LABELS[entity.countryCode]} · pays in {entity.currency} · {entity.registrationNumber}
+        </p>
+      </div>
+      {action}
     </header>
   )
 
@@ -117,7 +126,7 @@ const EntityPayrollPage = async ({ params, searchParams }: Props) => {
   if (runs.length === 0) {
     return (
       <div className='flex flex-col gap-6'>
-        {header}
+        {header()}
         <Card>
           <CardHeader>
             <CardTitle className='text-lg font-semibold'>No payroll yet</CardTitle>
@@ -322,48 +331,50 @@ const EntityPayrollPage = async ({ params, searchParams }: Props) => {
   // a heading that says so. A payroll overview is a control room, not an analytics dashboard.
   const basePath = `/payroll/entities/${entity.id}`
 
+  const workspace = entityWorkspace({
+    run: currentRun,
+    runs: [...runs].reverse(),
+    basePath,
+    currencySymbol: symbol,
+    daysToCutoff,
+    blockingCount: exceptionCounts.blocking,
+    exceptions: filteredExceptionRows,
+    departmentFilter: selectedDepartment && { id: selectedDepartment.id, name: selectedDepartment.name },
+    metrics,
+    kpiCaption: `${currentRun.reference} · ${currentRun.periodStart} to ${currentRun.periodEnd}`,
+    grossToNet: grossToNetBridge(currentRun),
+    readiness: { percent: readiness.percent, checks: readiness.checks },
+    overtime: {
+      points: overtimePoints,
+      target: OVERTIME_TARGET_SHARE,
+      hours: overtime.hours,
+      cost: formatMoney(overtime.cost)
+    },
+    departments: departmentRows,
+    selectedDepartmentId: selectedDepartment?.id,
+    costTrend
+  })
+
   return (
-    <div className='flex flex-col gap-6'>
-      {header}
+    <WorkspaceCustomisation modules={workspaceModules(workspace)}>
+      <div className='flex flex-col gap-6'>
+        {header(<CustomiseWorkspaceAction />)}
 
       {state === 'awaiting_data' && (
-        <Card>
-          <CardHeader>
-            <CardTitle className='text-lg font-semibold'>{stateDetail}</CardTitle>
-            <CardDescription>
-              The figures below are {currentRun.reference}, the most recent calculation. This company is not
-              included in the group total for the open period.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      )}
+          <Card>
+            <CardHeader>
+              <CardTitle className='text-lg font-semibold'>{stateDetail}</CardTitle>
+              <CardDescription>
+                The figures below are {currentRun.reference}, the most recent calculation. This company is not
+                included in the group total for the open period.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
 
-      <WorkspaceGrid
-        definition={entityWorkspace({
-          run: currentRun,
-          runs: [...runs].reverse(),
-          basePath,
-          currencySymbol: symbol,
-          daysToCutoff,
-          blockingCount: exceptionCounts.blocking,
-          exceptions: filteredExceptionRows,
-          departmentFilter: selectedDepartment && { id: selectedDepartment.id, name: selectedDepartment.name },
-          metrics,
-          kpiCaption: `${currentRun.reference} · ${currentRun.periodStart} to ${currentRun.periodEnd}`,
-          grossToNet: grossToNetBridge(currentRun),
-          readiness: { percent: readiness.percent, checks: readiness.checks },
-          overtime: {
-            points: overtimePoints,
-            target: OVERTIME_TARGET_SHARE,
-            hours: overtime.hours,
-            cost: formatMoney(overtime.cost)
-          },
-          departments: departmentRows,
-          selectedDepartmentId: selectedDepartment?.id,
-          costTrend
-        })}
-      />
-    </div>
+        <WorkspaceGrid definition={workspace} />
+      </div>
+    </WorkspaceCustomisation>
   )
 }
 
