@@ -1,0 +1,1381 @@
+Yes. Referring back to the **normative Afenda UX doctrine**, I would compose Payroll differently from a conventional HR/payroll menu tree.
+
+The doctrine says Afenda is **“find + operate + understand”**, important entities must be **first-class business objects**, work should preserve context, commands follow **CRUD-SAP**, capability should exist without excessive chrome, there should be **one table interaction engine**, and new routes require proof that they represent genuinely independent work contexts.
+
+That gives us a much stronger payroll architecture.
+
+# Afenda Payroll Product Doctrine
+
+> **Payroll is not a collection of pages.**
+>
+> It is a connected operating system around a small number of business objects:
+>
+> **Worker → Employment → Compensation → Payroll Inputs → Payroll Run → Payslip → Payment → Filing → Accounting**
+
+The existing run workspace already follows a lot of this doctrine well: lifecycle, metrics, employee table, drill-down, exceptions, reconciliation and audit are all kept inside one working context rather than fragmented across many pages.
+
+The missing work should therefore extend this model rather than create dozens of new routes.
+
+---
+
+# 1. ESSENTIAL — Payroll Core
+
+This is the complete minimum product I would require before calling **Afenda Payroll** finished.
+
+## A. Payroll Control Center
+
+**Business question**
+
+> What payroll work needs my attention now?
+
+This replaces the idea of a passive dashboard.
+
+### Features
+
+| Feature           | Functions                                                                         |
+| ----------------- | --------------------------------------------------------------------------------- |
+| Current payroll   | Show current period, status, company, pay group and payday                        |
+| Readiness         | Compensation, bank, statutory, recurring items, variable inputs, time/leave feeds |
+| Action queue      | Missing data, pending approvals, exceptions, failed payments, filings             |
+| Upcoming payrolls | Next pay periods and cutoff dates                                                 |
+| Payroll exposure  | Gross, net, employer cost, cash required                                          |
+| Company coverage  | Which entities are ready/not ready                                                |
+| Recent activity   | Calculations, approvals, payments, filings                                        |
+| Favourites        | Favourite company, run, report, saved view                                        |
+| 360 Query         | “Why isn't payroll ready?”, “What changed?”, “Show blockers”                      |
+
+### Doctrine
+
+This is primarily **Orient + Find + Predict**.
+
+It must immediately answer:
+
+**Where am I? What state is payroll in? What should I do next?**
+
+Exactly as required by D17.
+
+---
+
+# 2. People — Payroll Population
+
+This is one of the biggest missing foundations.
+
+### Primary object
+
+**Employee / Worker**
+
+The employee already exists in the source model with entity, department, location, manager, employment status, compensation, pay frequency, payment method and payroll profile.
+
+Afenda should make that worker a first-class payroll object.
+
+## People workspace
+
+```text
+PEOPLE
+
+Search employee...     Company ▾  Pay group ▾  Status ▾  Readiness ▾
+
+Employee          Company      Pay Group      Compensation    Payroll readiness
+───────────────────────────────────────────────────────────────────────────────
+Aisyah Rahman     AFENDA MY    Monthly MY    RM 8,000        Ready
+Jack Tan          AFENDA SG    Monthly SG    S$ 12,000       Bank missing
+Nguyen Anh        AFENDA VN    Monthly VN    ₫ 38,000,000    Tax review
+```
+
+### Functions
+
+**Create**
+
+* Add employee to payroll
+* Add existing HR worker to payroll
+* Bulk add population
+
+**Read**
+
+* Payroll profile
+* Employment
+* Compensation
+* Banking
+* Statutory setup
+* Recurring components
+* Payroll history
+
+**Update**
+
+* Change pay group
+* Change compensation
+* Change banking
+* Change statutory profile
+* Add recurring component
+* Transfer legal entity
+
+**Delete semantics**
+
+* End payroll participation
+* Terminate
+* Archive
+* Never destroy payroll history
+
+**Search**
+
+* Employee
+* Employee number
+* company
+* department
+* tax status
+* bank readiness
+* pay component
+
+**Audit**
+
+* Who changed salary?
+* What changed?
+* Effective date
+* Previous value
+* Source
+
+**Predict**
+
+* Next payroll impact
+* Estimated employer cost
+* Effects of future compensation change
+
+That is CRUD-SAP directly applied to Employee.
+
+---
+
+# 3. Employee Payroll Profile
+
+Do not create seven separate employee pages.
+
+The doctrine explicitly says hierarchical information should **drill down inside the current context first** and routes should not merely represent parent-child relationships.
+
+So opening an employee from People should produce one rich workspace.
+
+```text
+Employees › Aisyah Rahman
+
+AISYAH RAHMAN                     Active
+EMP-0027 · AFENDA MY · Operations
+──────────────────────────────────────────────────────
+
+Overview   Employment   Compensation   Payroll   History
+
+Compensation
+RM 8,000 monthly
+Effective 01 Aug 2026
+
+Recurring payroll
+Housing allowance                   RM 600
+Phone allowance                     RM 150
+
+Statutory
+EPF                                  Ready
+SOCSO                                Ready
+EIS                                  Ready
+PCB                                  Ready
+
+Payment
+Maybank · ···· 3381                 Verified
+```
+
+### Context commands
+
+Right-click / Shift+F10:
+
+```text
+Open
+Change compensation
+Add recurring item
+Move pay group
+Calculate impact
+View payroll history
+View source
+View audit
+Properties
+```
+
+This directly follows Afenda's context-menu command order.
+
+---
+
+# 4. Compensation
+
+### First-class object
+
+**Compensation Record**
+
+Not merely `employee.salary`.
+
+```text
+COMPENSATION HISTORY
+
+Effective       Compensation        Reason             Status
+01 Jan 2025     RM 7,500/month      Appointment        Superseded
+01 Aug 2026     RM 8,000/month      Annual review      Current
+01 Jan 2027     RM 8,700/month      Approved review    Future
+```
+
+### Functions
+
+* Grant compensation
+* Change compensation
+* Schedule future change
+* Correct incorrect record
+* End compensation
+* Compare current versus previous
+* View approval
+* View source document
+* View audit history
+* Calculate payroll impact
+* Bulk salary review import
+
+### Critical rule
+
+Never expose **Edit Salary**.
+
+Expose business intent:
+
+**Change Compensation**
+
+because payroll needs effective dating and history.
+
+---
+
+# 5. Pay Components
+
+This should become a genuine Afenda business-object system.
+
+### First-class object
+
+**Pay Component**
+
+Examples:
+
+```text
+BASE
+OT15
+OT20
+HOUSING_ALLOW
+TRANSPORT_ALLOW
+COMMISSION
+BONUS
+EPF_EE
+EPF_ER
+PCB
+LOAN
+ADVANCE
+UNPAID_LEAVE
+```
+
+The current component model contains code, label, kind, taxable, contributable, GL mapping, jurisdiction and active state.
+
+But the current UI is essentially a table of toggles for taxable/contributable/active.
+
+That should become:
+
+## Component workspace
+
+```text
+Pay Components
+
+Code        Component             Type          Calculation          Status
+BASE        Base salary           Earning       Compensation         Active
+OT15        Overtime 1.5×         Earning       Qty × hourly × 1.5   Active
+HOUSE       Housing allowance     Earning       Fixed                Active
+PCB         Income tax            Tax           Statutory            Active
+```
+
+Open `OT15`:
+
+### Identity
+
+* Code
+* Name
+* Description
+* Category
+* Country/entity scope
+
+### Calculation
+
+* Fixed
+* Quantity × rate
+* Percentage
+* Formula
+* statutory table
+* imported amount
+* derived component
+
+### Payroll behaviour
+
+* Recurring
+* Variable
+* Proratable
+* Retroactive
+* Negative permitted
+* rounding
+* minimum
+* maximum
+
+### Statutory behaviour
+
+* Taxable
+* contributable
+* pensionable
+* jurisdiction rules
+
+### Eligibility
+
+* Company
+* Pay group
+* Location
+* Employment type
+* Grade
+* Employee
+
+### Accounting
+
+* Debit
+* Credit
+* Cost centre
+* Project allocation
+
+### Presentation
+
+* Payslip category
+* Order
+* Hide zero
+* Employee-visible
+
+### Audit
+
+* Version
+* effective from/to
+* changed by
+* reason
+
+### Commands
+
+**Create · Clone · Change · Retire · Show employees using component · Show runs using component · Audit · Properties**
+
+---
+
+# 6. Recurring Pay
+
+This deserves its own object.
+
+### First-class object
+
+**Recurring Pay Instruction**
+
+Example:
+
+```text
+Employee       Component           Amount       Effective       End
+Aisyah         Housing             RM 600       01 Jan 2026     —
+Jack           Transport           S$ 180       01 Mar 2026     —
+Nguyen         Phone               ₫ 500,000    01 Jul 2026     31 Dec 2026
+```
+
+### Functions
+
+* Add recurring earning
+* Add recurring deduction
+* Change amount
+* Future-date change
+* Suspend
+* Resume
+* End
+* Bulk assign
+* Bulk import
+* View impact
+* Audit
+
+This should not be confused with compensation or period inputs.
+
+---
+
+# 7. Inputs Hub
+
+This becomes one of the most important Payroll workspaces.
+
+### First-class object
+
+**Payroll Input**
+
+Sources:
+
+```text
+Compensation
+Recurring
+Attendance
+Overtime
+Leave
+Commission
+Expense
+Bonus
+Deduction
+Adjustment
+Manual
+Import
+Integration
+```
+
+## Workspace
+
+```text
+Payroll › Inputs
+
+THIS PERIOD     RECURRING     IMPORTS     SOURCES     ISSUES
+
+Source            Records    Ready    Pending    Error
+Compensation      382        382      —          —
+Recurring pay     814        814      —          —
+Attendance        382        370      12         —
+Overtime           97         94       3         —
+Leave              38         38      —          —
+Commission         41         41      —          —
+Adjustments        14         12      —           2
+```
+
+### Functions
+
+* Add manual input
+* Bulk input
+* Upload CSV/XLSX
+* Validate
+* Map columns
+* Resolve errors
+* Approve input
+* Reject input
+* Lock
+* Reopen
+* Import
+* Trace source
+* See which run consumed it
+* Reverse
+* Correct
+* Audit
+
+Your existing upload dialog already implements a useful **Upload → Validate → Review → Import** flow and checks employee/component validity, duplicates, unusual amounts and negative values.
+
+Keep it.
+
+But make that dialog one **command within Inputs**, rather than treating it as the entire input architecture.
+
+---
+
+# 8. Implementation & Migration
+
+This belongs inside one **Setup workspace**, not ten separate implementation routes.
+
+### First-class object
+
+**Migration Batch**
+
+## Setup → Implementation
+
+```text
+IMPLEMENTATION
+
+1 Company & payroll structure         Ready
+2 Employees                           382 / 382
+3 Compensation                        382 / 382
+4 Banking                             377 / 382
+5 Statutory                           380 / 382
+6 Recurring pay                       814 records
+7 Opening balances                    382 / 382
+8 Accounting                          Ready
+9 Parallel payroll                    Not started
+10 Go-live                            Blocked
+```
+
+### Functions
+
+* Create migration batch
+* Upload source data
+* Map fields
+* Save mappings
+* Transform values
+* Validate
+* Detect duplicates
+* Identify unknown employees
+* identify missing required data
+* Preview target records
+* Resolve errors
+* Commit records
+* Roll back batch where permissible
+* reconcile totals
+* compare old payroll versus Afenda
+* sign off
+* retain migration history
+
+### Datasets
+
+**Employee**
+**Employment**
+**Compensation**
+**Bank**
+**Statutory**
+**Recurring items**
+**Opening YTD**
+**Leave opening balance**
+**Payroll history**
+**Cost centres**
+**GL mappings**
+
+---
+
+# 9. Payroll Calendar
+
+### Objects
+
+**Pay Group**
+**Pay Schedule**
+
+The source already correctly models pay group as legal entity + currency + frequency + payday rule + cutoff.
+
+The schedule model includes period start/end, cutoff and payday.
+
+### Functions
+
+* Create pay group
+* Assign employees
+* Change payday rule
+* Change cutoff
+* Generate periods
+* Edit payday
+* Holiday adjustment
+* Bank closure adjustment
+* Lock period
+* Open run
+* off-cycle schedule
+* future calendar preview
+
+The current schedule screen describes changing dates but does not actually expose the corresponding edit operation.
+
+Fix that rather than adding another screen.
+
+---
+
+# 10. Payroll Readiness
+
+This should be a reusable **inspector**, not necessarily a route.
+
+```text
+PAYROLL READINESS
+
+Employees                       ✓ 382
+Compensation                    ✓ 382
+Bank details                    ⚠ 5 incomplete
+Statutory                       ⚠ 2 incomplete
+Recurring items                 ✓ 814
+Attendance                      ⚠ 12 pending
+Overtime                        ⚠ 3 approvals
+Leave                           ✓
+Variable inputs                 ✓ 41
+New joiners                     ✓ 4
+Leavers                         ⚠ 2 final settlements
+
+──────────────────────────────────────
+BLOCKERS                          7
+
+Payroll cannot calculate.
+```
+
+### Functions
+
+* Explain blocker
+* Open affected records
+* bulk resolve
+* assign issue
+* acknowledge warning
+* refresh source
+* ignore permitted warning
+* calculate when clear
+
+This is **Orient + Audit + Predict**, very aligned with the doctrine.
+
+---
+
+# 11. Payroll Runs
+
+This part is already structurally strong.
+
+The existing architecture already has:
+
+**Inputs → Calculate → Review → Approve → Pay → Close**, metric row, Employee table, Exceptions, Reconciliation and Audit.
+
+Keep that structure.
+
+### Add only missing payroll functions
+
+* Create regular run
+* Create off-cycle run
+* Calculate
+* Recalculate selected workers
+* comparison against previous calculation
+* retro calculation
+* correction run
+* termination/final-pay run
+* rollback before approval where permitted
+* review
+* approve
+* second approval
+* lock
+* cancel
+* close
+* reopen under explicit policy
+* clone/re-run where permitted
+
+---
+
+# 12. Exception Management
+
+### First-class object
+
+**Payroll Exception**
+
+Examples:
+
+* Missing bank
+* Missing tax profile
+* Large pay variance
+* Negative net
+* Missing compensation
+* Duplicate input
+* Missing attendance
+* Unapproved OT
+* calculation error
+* statutory ceiling inconsistency
+
+### Functions
+
+* Open
+* Assign
+* acknowledge
+* resolve
+* reopen
+* add note
+* filter
+* bulk resolve where permitted
+* jump to source record
+* see impacted employee
+* see impacted amount
+* audit
+* predict consequence
+
+Very important:
+
+> Do not just show “error”.
+
+Show:
+
+**What is wrong → why it matters → what it blocks → how to resolve it.**
+
+That follows the doctrine's **domain truth** rule: Afenda cannot communicate certainty or status the domain cannot prove.
+
+---
+
+# 13. Payments
+
+Keep Payments independent because it is genuinely a separate work context.
+
+The existing architecture already treats funding, readiness, batches, settlements and reissues as payment-domain activities.
+
+### Objects
+
+**Funding Account**
+**Payment Batch**
+**Settlement**
+
+### Functions
+
+* Check funding
+* Prepare batch
+* generate bank file
+* release batch
+* acknowledge bank receipt
+* process
+* mark settled
+* detect failed/returned payments
+* investigate
+* reissue
+* change payment method
+* reconcile bank confirmation
+* payment audit
+
+---
+
+# 14. Compliance
+
+### Objects
+
+**Statutory Profile**
+**Filing**
+**Statutory Liability**
+
+### Functions
+
+* Configure statutory profile
+* version statutory rates
+* associate rules with jurisdiction
+* calculate liability
+* reconcile liability
+* prepare filing
+* validate
+* submit
+* accept/reject
+* amend
+* pay statutory liability
+* retain receipt/reference
+* show due dates
+* alert overdue
+* audit
+
+Do not pretend one country's institution exists in another country.
+
+That follows D14: interface truth must match domain truth.
+
+---
+
+# 15. Reports & Analytics
+
+The current catalogue already has:
+
+* Payroll Register
+* Run Summary
+* Overtime
+* Gross-to-Net
+* Cost by Department
+* Variance
+* Statutory Summary
+* Bank File
+
+Keep those as presets.
+
+Then add the doctrinal **relationship-aware analytics builder**.
+
+### Dimensions
+
+* Employee
+* Department
+* Company
+* Location
+* Cost centre
+* Pay group
+* Component
+* Employment type
+* Period
+
+### Measures
+
+* Gross
+* Net
+* Employer cost
+* Base salary
+* Allowances
+* Bonus
+* OT hours
+* OT cost
+* deductions
+* statutory
+* headcount
+* FTE
+
+Afenda should constrain nonsense combinations, exactly as the doctrine requires of analytics construction.
+
+---
+
+# 16. Setup
+
+Instead of scattering configuration into many unrelated screens, make **Setup** one bounded workspace.
+
+```text
+SETUP
+
+Implementation
+Companies
+Pay Groups
+Calendar
+Components
+Statutory
+Banking
+Accounting
+Approvals
+Notifications
+Access
+```
+
+These can remain tabs/sections within one primary workspace.
+
+That is exactly what the source doctrine's **Domain Page Budget** is trying to prevent: filesystem-style route proliferation.
+
+---
+
+# Recommended Essential Route Budget
+
+I would formalize the Payroll domain as only **eight primary workspaces**:
+
+| Route                 | Purpose                        |
+| --------------------- | ------------------------------ |
+| `/payroll`            | Control Center                 |
+| `/payroll/people`     | Payroll population             |
+| `/payroll/inputs`     | Inputs and readiness           |
+| `/payroll/runs`       | Payroll execution              |
+| `/payroll/payments`   | Payment execution              |
+| `/payroll/compliance` | Statutory obligations          |
+| `/payroll/reports`    | Reporting and analysis         |
+| `/payroll/setup`      | Configuration + implementation |
+
+Everything else is:
+
+**tab · inspector · sheet · dialog · drill-down · properties · context command**
+
+unless it genuinely deserves its own independently addressable object workspace.
+
+That is much closer to Afenda's doctrine.
+
+---
+
+# ADVANCED — Workforce-to-Pay
+
+These should connect to Payroll through the **Inputs Hub**.
+
+They should **not duplicate payroll records**.
+
+## 17. Time & Attendance
+
+### Objects
+
+* Time entry
+* Timesheet
+* Shift
+* Attendance exception
+
+### Functions
+
+* clock in/out
+* manual entry
+* import machine logs
+* timesheet
+* correction
+* manager approval
+* late/absence detection
+* break calculation
+* shift differential
+* overtime
+* lock
+* payroll submission
+* audit
+
+**Payroll output:** hours, OT, lateness/absence deductions, shift premiums.
+
+---
+
+# 18. Leave Management
+
+### Objects
+
+* Leave policy
+* Leave entitlement
+* Leave balance
+* Leave request
+
+### Functions
+
+* configure policy
+* accrual
+* carry forward
+* request
+* approve/reject
+* cancel
+* balance adjustment
+* public holidays
+* unpaid leave
+* half-day/hourly leave
+* leave encashment
+* leave payout on termination
+* payroll impact
+* audit
+
+**Payroll output:** unpaid days/hours, paid leave information, encashment.
+
+---
+
+# 19. Scheduling
+
+### Functions
+
+* roster
+* shifts
+* rest days
+* holidays
+* replacement shifts
+* shift premiums
+* work location
+* planned versus actual
+* overtime forecast
+* attendance reconciliation
+
+**Payroll output:** expected hours, premiums, rest-day/public-holiday rates.
+
+---
+
+# 20. Employee Self-Service
+
+The employee should see their **own worker object**, not a separate shadow employee database.
+
+### Functions
+
+**My Pay**
+
+* payslips
+* pay history
+* pay breakdown
+* “Why did my pay change?”
+* YTD totals
+
+**My Profile**
+
+* personal information
+* bank update request
+* tax details
+* emergency contact
+
+**My Time**
+
+* attendance
+* timesheet
+* correction
+
+**My Leave**
+
+* balances
+* requests
+* history
+
+**My Claims**
+
+* expense submission
+* reimbursement status
+
+**Documents**
+
+* tax certificates
+* employment documents
+* letters
+
+**Requests**
+
+* payroll query
+* salary information request
+* correction request
+
+---
+
+# 21. Manager Self-Service
+
+Managers should get a **work queue**, not a miniature HR administration system.
+
+### Functions
+
+* approve attendance
+* approve OT
+* approve leave
+* approve claims
+* review payroll exceptions
+* see team payroll readiness
+* review new joiner readiness
+* confirm final attendance for leavers
+* monitor workforce cost
+
+---
+
+# 22. Expenses & Claims
+
+### Objects
+
+**Claim**
+**Expense Line**
+**Reimbursement**
+
+### Functions
+
+* create
+* attach receipt
+* code category
+* allocate department/project
+* submit
+* approve
+* reject
+* request changes
+* taxable/non-taxable classification
+* reimburse through payroll
+* reimburse outside payroll
+* audit
+
+---
+
+# 23. Benefits / Loans / Advances
+
+### Benefits
+
+* plans
+* enrolment
+* employee deduction
+* employer contribution
+* eligibility
+* effective dates
+
+### Loans
+
+* issue loan
+* repayment schedule
+* payroll deductions
+* outstanding balance
+* reschedule
+* settlement
+* termination recovery
+
+### Salary Advance
+
+* request
+* approve
+* payment
+* repayment
+* payroll recovery
+
+---
+
+# PRO — Hire-to-Retire HCM
+
+These should **not sit beneath Payroll**.
+
+They become sibling Afenda People domains.
+
+```text
+PEOPLE
+
+People
+Recruitment
+Onboarding
+Time
+Leave
+Performance
+Compensation
+Learning
+Workforce Planning
+Payroll
+```
+
+They share the same worker identity.
+
+That directly satisfies the doctrine's identity rule:
+
+> the same business object must not become a different conceptual identity merely because it appears in another Afenda domain.
+
+---
+
+# 24. Recruitment
+
+### Objects
+
+**Position**
+**Requisition**
+**Candidate**
+**Application**
+**Interview**
+**Offer**
+
+### Functions
+
+* requisition
+* approve vacancy
+* publish job
+* candidate intake
+* screening
+* pipeline
+* interview scheduling
+* scorecards
+* evaluation
+* offer
+* acceptance
+* convert candidate → worker
+
+The last function is critical:
+
+```text
+Candidate
+    ↓ ACCEPT OFFER
+Worker
+    ↓
+Employment
+    ↓
+Onboarding
+    ↓
+Payroll
+```
+
+Never re-key the person.
+
+---
+
+# 25. Onboarding
+
+### Objects
+
+**Onboarding Plan**
+**Task**
+**Document**
+**Checklist**
+
+### Functions
+
+* onboarding template
+* generate tasks
+* collect documents
+* signatures
+* bank details
+* tax forms
+* equipment request
+* account provisioning
+* orientation
+* manager tasks
+* payroll readiness
+* probation date
+* completion
+
+Payroll receives the worker only when the required payroll facts are ready.
+
+---
+
+# 26. Offboarding
+
+### Functions
+
+* resignation
+* termination
+* end-of-contract
+* final working date
+* notice
+* leave settlement
+* final attendance
+* asset return
+* access removal
+* benefit cessation
+* final payroll
+* statutory exit
+* final payslip
+* employment document
+* archive
+
+This should orchestrate a **Final Pay Run**, not manually edit the normal payroll.
+
+---
+
+# 27. Performance
+
+### Objects
+
+* Goal
+* Review
+* Feedback
+* Calibration
+* Improvement plan
+
+### Functions
+
+* goals
+* review cycles
+* self-review
+* manager review
+* peer feedback
+* ratings
+* calibration
+* promotion recommendation
+* compensation recommendation
+* history
+
+---
+
+# 28. Compensation Planning
+
+Separate this from payroll compensation administration.
+
+### Functions
+
+* salary bands
+* grades
+* compa-ratio
+* market reference
+* review budget
+* merit allocation
+* promotion
+* bonus pool
+* manager proposals
+* calibration
+* approvals
+* effective dating
+* publish
+* push approved changes to employee Compensation records
+
+Then Payroll consumes approved compensation.
+
+---
+
+# 29. Learning & Development
+
+### Objects
+
+**Course**
+**Learning Path**
+**Certification**
+**Skill**
+
+### Functions
+
+* course catalogue
+* assign
+* enrol
+* completion
+* tests
+* certification
+* expiration
+* mandatory training
+* skill assessment
+* learning paths
+* manager recommendations
+* compliance alerts
+
+---
+
+# 30. Workforce Planning
+
+### Objects
+
+**Position**
+**Headcount Plan**
+**Workforce Scenario**
+
+### Functions
+
+* approved positions
+* vacancies
+* hiring plan
+* labour budget
+* future headcount
+* transfer plan
+* restructuring
+* salary-cost forecast
+* scenario comparison
+* variance against plan
+
+This can eventually feed Afenda Payroll's **Predict** capability.
+
+---
+
+# The Common Afenda Object Pattern
+
+This is the most important part.
+
+Every significant object should behave consistently.
+
+```text
+OBJECT
+│
+├─ Identity
+├─ State
+├─ Relationships
+├─ Commands
+├─ Source
+├─ History
+├─ Audit
+└─ Prediction
+```
+
+So:
+
+### Employee
+
+**Open · Change · Search Related · Audit · Predict**
+
+### Compensation
+
+**Open · Change · Correct · History · Source · Predict impact**
+
+### Payroll Input
+
+**Open · Correct · Reverse · Source · Audit**
+
+### Payroll Run
+
+**Open · Calculate · Review · Approve · Audit · Predict**
+
+### Payment
+
+**Open · Release · Reissue · Reconcile · Audit**
+
+### Filing
+
+**Open · Prepare · Submit · Amend · Audit**
+
+This is much more powerful than independently designing each screen.
+
+---
+
+# Afenda Payroll's Final Product Architecture
+
+```text
+                         AFENDA PEOPLE
+                              │
+                       ONE WORKER IDENTITY
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        │                     │                     │
+    ESSENTIAL             ADVANCED                PRO
+   PAYROLL CORE         WORKFORCE-TO-PAY      HIRE-TO-RETIRE
+        │                     │                     │
+        │                     ├─ Time               ├─ Recruitment
+        │                     ├─ Attendance         ├─ Onboarding
+        │                     ├─ Leave              ├─ Performance
+        │                     ├─ Scheduling         ├─ Compensation Planning
+        │                     ├─ Expenses           ├─ Learning
+        │                     ├─ Benefits           ├─ Workforce Planning
+        │                     ├─ ESS                └─ Offboarding
+        │                     └─ Manager SS
+        │
+        ├─ People
+        ├─ Compensation
+        ├─ Components
+        ├─ Recurring Pay
+        ├─ Inputs
+        ├─ Migration
+        ├─ Readiness
+        ├─ Runs
+        ├─ Exceptions
+        ├─ Payments
+        ├─ Compliance
+        ├─ Reports
+        └─ Setup
+```
+
+## And the governing flow should be
+
+```text
+FIND
+ ↓
+SELECT BUSINESS OBJECT
+ ↓
+UNDERSTAND STATE
+ ↓
+OPERATE
+ ↓
+SEE CONSEQUENCE
+ ↓
+AUDIT / SOURCE
+ ↓
+CONTINUE WITHOUT LOSING CONTEXT
+```
+
+That is the architecture I would now use as the **feature/function authority for Afenda Payroll**. It preserves the strong run workspace already built, but adds the missing upstream payroll foundation and prevents Advanced/Pro features from turning into an uncontrolled collection of menus and pages.
