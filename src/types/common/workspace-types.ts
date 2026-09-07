@@ -27,6 +27,30 @@ import type { ReactElement } from 'react'
  */
 export type ModuleSize = 'one-third' | 'half' | 'two-thirds' | 'full'
 
+/**
+ * A width, as the six-column grid expresses it — the one conversion from a name to a layout.
+ *
+ * Every module is full width below `lg` and its declared width above, which is what every payroll
+ * workspace was already hand-writing on every card. Keeping the collapse here rather than in the
+ * declaration is what makes "one stored width, rendered as a column when there is no room for
+ * columns" true by construction: a domain never gets to say what happens on a phone, so it can
+ * never say something different there.
+ */
+export const MODULE_SPAN: Record<ModuleSize, string> = {
+  'one-third': 'col-span-full lg:col-span-2',
+  half: 'col-span-full lg:col-span-3',
+  'two-thirds': 'col-span-full lg:col-span-4',
+  full: 'col-span-full'
+}
+
+/** What a person is offered when choosing a width. Named for how it reads, not for the fraction. */
+export const MODULE_SIZE_LABEL: Record<ModuleSize, string> = {
+  'one-third': 'Small',
+  half: 'Half',
+  'two-thirds': 'Wide',
+  full: 'Full width'
+}
+
 export type WorkspaceModule = {
   /** Stable within its workspace, and only there. Not a business object and not a global widget. */
   id: string
@@ -117,6 +141,10 @@ export type WorkspaceModuleSummary = {
   zone: string
   required: boolean
   movable: boolean
+
+  /** The widths this module may legally take. Customisation offers these and refuses anything else. */
+  sizes: readonly ModuleSize[]
+  defaultSize: ModuleSize
 }
 
 /** The declaration, flattened for the parts of the app that must not hold its elements. */
@@ -127,6 +155,8 @@ export const workspaceModules = (definition: WorkspaceDefinition): WorkspaceModu
       title: module.title,
       zone: zone.id,
       required: module.required === true,
-      movable: module.movable !== false
+      movable: module.movable !== false,
+      sizes: module.allowedSizes,
+      defaultSize: module.defaultSize
     }))
   )

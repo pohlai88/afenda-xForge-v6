@@ -5,16 +5,35 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { KeyboardEvent, ReactNode, RefObject } from 'react'
 
 // Third-party Imports
-import { ArrowDownIcon, ArrowUpIcon, EllipsisVerticalIcon, EyeOffIcon, LayoutGridIcon, RotateCcwIcon } from 'lucide-react'
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  EllipsisVerticalIcon,
+  EyeOffIcon,
+  LayoutGridIcon,
+  RotateCcwIcon,
+  ScalingIcon
+} from 'lucide-react'
 
 // Type Imports
-import type { WorkspaceModuleSummary } from '@/types/common/workspace-types'
+import type { ModuleSize, WorkspaceModuleSummary } from '@/types/common/workspace-types'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 
 // Util Imports
+import { MODULE_SIZE_LABEL, MODULE_SPAN } from '@/types/common/workspace-types'
 import { cn } from '@/lib/utils'
 
 type WorkspaceCustomisationValue = {
@@ -31,6 +50,12 @@ type WorkspaceCustomisationValue = {
 
   /** Which of Move up and Move down would actually change what this reader can see. */
   moves: (id: string) => { up: boolean; down: boolean }
+
+  /** The width this reader has chosen for a module, when it is not the one the domain ships. */
+  sizeOf: (id: string) => ModuleSize | undefined
+
+  /** The widths worth offering: the domain's list, or nothing at all when it holds only one. */
+  sizeChoices: (id: string) => readonly ModuleSize[]
   announcement: string
 
   /**
@@ -50,12 +75,15 @@ type WorkspaceCustomisationValue = {
   hide: (id: string) => void
   restore: (id: string) => void
   move: (id: string, direction: 'up' | 'down') => void
+  resize: (id: string, size: ModuleSize) => void
   reset: () => void
 }
 
 const NOTHING_HIDDEN: ReadonlySet<string> = new Set()
 const NO_MODULES: readonly WorkspaceModuleSummary[] = []
 const NO_MOVES = { up: false, down: false }
+const NO_SIZES: readonly ModuleSize[] = []
+const NO_OVERRIDES: ReadonlyMap<string, ModuleSize> = new Map()
 const noop = () => {}
 
 /**
@@ -95,6 +123,8 @@ const WorkspaceCustomisationContext = createContext<WorkspaceCustomisationValue>
   modules: NO_MODULES,
   sequence: ids => [...ids],
   moves: () => NO_MOVES,
+  sizeOf: () => undefined,
+  sizeChoices: () => NO_SIZES,
   announcement: '',
   focus: { token: 0, target: 'bar' },
   exitToken: 0,
@@ -104,6 +134,7 @@ const WorkspaceCustomisationContext = createContext<WorkspaceCustomisationValue>
   hide: noop,
   restore: noop,
   move: noop,
+  resize: noop,
   reset: noop
 })
 
@@ -150,6 +181,10 @@ export const WorkspaceCustomisation = ({
 
   // Declaration order, which is the domain default and therefore also the starting point.
   const [order, setOrder] = useState<readonly string[]>(() => modules.map(module => module.id))
+
+  // Only the widths that differ from the declared one. A module absent from this map is at the
+  // width its domain ships, which is why there is nothing here to keep in step with a declaration.
+  const [overrides, setOverrides] = useState<ReadonlyMap<string, ModuleSize>>(NO_OVERRIDES)
   const [announcement, setAnnouncement] = useState('')
 
   const [focus, setFocus] = useState<{ token: number; target: 'bar' | 'list' | 'module'; moduleId?: string }>({
@@ -297,15 +332,59 @@ export const WorkspaceCustomisation = ({
     [declared, order, segmentFor]
   )
 
+  const sizeOf = useCallback((id: string) => overrides.get(id), [overrides])
+
+  /*
+   * What to offer, which is not the same as what the engine can render.
+   *
+   * The engine renders all four widths. A module gets the ones its domain says stay truthful for
+   * it, and a module whose domain named only one gets none at all — a Size command that opens on
+   * the width you already have is a capability being mimed rather than offered.
+   */
+  const sizeChoices = useCallback(
+    (id: string) => {
+      const found = declared.get(id)
+
+      return found && found.sizes.length > 1 ? found.sizes : NO_SIZES
+    },
+    [declared]
+  )
+
+  /*
+   * The third refusal, and it is the domain's list that decides.
+   *
+   * A width the declaration does not name is refused here whether or not a menu ever offered it,
+   * and so is the width the module already has: re-choosing what you already have changed nothing,
+   * so there is nothing to announce and nothing to move focus for.
+   */
+  const resize = useCallback(
+    (id: string, size: ModuleSize) => {
+      const found = declared.get(id)
+
+      if (!found || !found.sizes.includes(size)) return
+      if ((overrides.get(id) ?? found.defaultSize) === size) return
+
+      const next = new Map(overrides)
+
+      next.set(id, size)
+      setOverrides(next)
+      setAnnouncement(`${found.title} resized to ${MODULE_SIZE_LABEL[size].toLowerCase()}.`)
+      setFocus(current => ({ token: current.token + 1, target: 'module', moduleId: id }))
+    },
+    [declared, overrides]
+  )
+
   const reset = useCallback(() => {
     const declaration = modules.map(module => module.id)
+    const ordered = order.every((id, index) => id === declaration[index])
 
-    if (hidden.size === 0 && order.every((id, index) => id === declaration[index])) return
+    if (hidden.size === 0 && overrides.size === 0 && ordered) return
 
     setHidden(NOTHING_HIDDEN)
     setOrder(declaration)
+    setOverrides(NO_OVERRIDES)
     setAnnouncement('Workspace reset to default.')
-  }, [hidden, modules, order])
+  }, [hidden, modules, order, overrides])
 
   /*
    * Entering has the same problem leaving does: the menu item that started it took its own menu
@@ -330,6 +409,8 @@ export const WorkspaceCustomisation = ({
       modules,
       sequence,
       moves,
+      sizeOf,
+      sizeChoices,
       announcement,
       focus,
       exitToken,
@@ -339,6 +420,7 @@ export const WorkspaceCustomisation = ({
       hide,
       restore,
       move,
+      resize,
       reset
     }),
     [
@@ -354,8 +436,11 @@ export const WorkspaceCustomisation = ({
       move,
       moves,
       reset,
+      resize,
       restore,
-      sequence
+      sequence,
+      sizeChoices,
+      sizeOf
     ]
   )
 
@@ -517,16 +602,19 @@ export const WorkspaceModuleFrame = ({
   id,
   title,
   required,
-  span,
+  defaultSize,
   children
 }: {
   id: string
   title: string
   required: boolean
-  span: string
+  defaultSize: ModuleSize
   children: ReactNode
 }) => {
-  const { customising, exit, focus, hidden, hide, move, moves } = useContext(WorkspaceCustomisationContext)
+  const { customising, exit, focus, hidden, hide, move, moves, resize, sizeChoices, sizeOf } = useContext(
+    WorkspaceCustomisationContext
+  )
+
   const trigger = useRef<HTMLButtonElement>(null)
   const handled = useRef(focus.token)
 
@@ -553,54 +641,101 @@ export const WorkspaceModuleFrame = ({
   // honour it if something did.
   if (hidden.has(id) && !required) return null
 
-  if (!customising) return children
+  /*
+   * A width the reader chose, applied where the grid could not.
+   *
+   * The grid gives every module the width its domain declared, and while that is still the width
+   * the module has, nothing here touches it — the card is the grid item, exactly as the previous
+   * phases proved. A module that has been resized cannot be given a new class the same way: it
+   * reaches this component as an already-rendered payload, and half of them arrive as references
+   * their chunk has not resolved yet, so cloning finds nothing to clone. So the chosen width goes
+   * on a box around it instead, which becomes the grid item and hands its full height back down.
+   * That box exists only while a module is somewhere other than where its domain put it.
+   */
+  const size = sizeOf(id) ?? defaultSize
+  const span = MODULE_SPAN[size]
+
+  if (!customising) {
+    return size === defaultSize ? children : <div className={cn(span, '[&>*]:h-full')}>{children}</div>
+  }
 
   const legal = moves(id)
-  const commands = { up: legal.up, down: legal.down, hide: !required }
-  const any = commands.up || commands.down || commands.hide
+  const choices = sizeChoices(id)
+  const any = legal.up || legal.down || choices.length > 0 || !required
 
   return (
     <div onKeyDown={escapeExits(exit)} className={cn('flex flex-col gap-2 rounded-lg border border-dashed p-2', span)}>
       <div className='flex min-h-8 items-center justify-between gap-2 ps-2'>
         <span className='text-muted-foreground truncate text-xs font-medium'>{title}</span>
 
-        {/*
-          A module with nothing legal to offer gets a word, not a menu. An anchor that may not be
-          hidden either has no command at all this phase, and a menu that opens on nothing — or on
-          a row that is greyed out — reads as a capability being withheld rather than one that was
-          never true of this module. The word is only shown where it explains the absence.
-        */}
-        {any ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button ref={trigger} variant='ghost' size='icon-sm' aria-label={`Actions for ${title}`} />}
-            >
-              <EllipsisVerticalIcon className='size-4' aria-hidden='true' />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align='end' className='min-w-40' aria-label={`Actions for ${title}`}>
-              {commands.up ? (
-                <DropdownMenuItem onClick={() => move(id, 'up')}>
-                  <ArrowUpIcon />
-                  Move up
-                </DropdownMenuItem>
-              ) : null}
-              {commands.down ? (
-                <DropdownMenuItem onClick={() => move(id, 'down')}>
-                  <ArrowDownIcon />
-                  Move down
-                </DropdownMenuItem>
-              ) : null}
-              {commands.hide ? (
-                <DropdownMenuItem onClick={() => hide(id)} aria-label={`Hide ${title}`}>
-                  <EyeOffIcon />
-                  Hide
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : required ? (
-          <span className='text-muted-foreground shrink-0 text-xs'>Required</span>
-        ) : null}
+        <div className='flex shrink-0 items-center gap-2'>
+          {/*
+            Why there is no Hide, said once, in a word. It is not a state to be discovered by
+            opening a menu and finding a command missing from it.
+          */}
+          {required ? <span className='text-muted-foreground text-xs'>Required</span> : null}
+
+          {/*
+            A module with nothing legal to offer gets no menu. Its commands are exactly the ones it
+            can run: no greyed-out rows, no Size that opens on the width it already has, and no
+            Move on a module that has nowhere to go.
+          */}
+          {any ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button ref={trigger} variant='ghost' size='icon-sm' aria-label={`Actions for ${title}`} />}
+              >
+                <EllipsisVerticalIcon className='size-4' aria-hidden='true' />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align='end' className='min-w-40' aria-label={`Actions for ${title}`}>
+                {legal.up ? (
+                  <DropdownMenuItem onClick={() => move(id, 'up')}>
+                    <ArrowUpIcon />
+                    Move up
+                  </DropdownMenuItem>
+                ) : null}
+                {legal.down ? (
+                  <DropdownMenuItem onClick={() => move(id, 'down')}>
+                    <ArrowDownIcon />
+                    Move down
+                  </DropdownMenuItem>
+                ) : null}
+                {choices.length > 0 ? (
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <ScalingIcon />
+                      Size
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent aria-label={`Size of ${title}`}>
+                      <DropdownMenuRadioGroup
+                        value={size}
+                        onValueChange={next => resize(id, next as ModuleSize)}
+                      >
+                        {/*
+                          Closing on choice, which a radio group does not do by itself. Choosing a
+                          width is finishing something, and focus goes back to the module the width
+                          belongs to — a menu left standing open behind a reader who is no longer
+                          in it is worse than either behaviour on its own.
+                        */}
+                        {choices.map(choice => (
+                          <DropdownMenuRadioItem key={choice} value={choice} closeOnClick>
+                            {MODULE_SIZE_LABEL[choice]}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ) : null}
+                {required ? null : (
+                  <DropdownMenuItem onClick={() => hide(id)} aria-label={`Hide ${title}`}>
+                    <EyeOffIcon />
+                    Hide
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
       </div>
 
       {children}

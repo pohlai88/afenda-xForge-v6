@@ -2,29 +2,14 @@
 import { cloneElement } from 'react'
 
 // Type Imports
-import type { ModuleSize, WorkspaceDefinition } from '@/types/common/workspace-types'
+import type { WorkspaceDefinition } from '@/types/common/workspace-types'
 
 // Component Imports
 import { WorkspaceCustomiseBar, WorkspaceModuleFrame, WorkspaceZone } from '@/components/shared/WorkspaceCustomisation'
 
 // Util Imports
+import { MODULE_SPAN } from '@/types/common/workspace-types'
 import { cn } from '@/lib/utils'
-
-/**
- * A width, as the six-column grid expresses it.
- *
- * Every module is full width below `lg` and its declared width above, which is what every payroll
- * workspace was already hand-writing on every card. Keeping the collapse here rather than in the
- * declaration is what makes "one stored order, rendered as a column when there is no room for
- * columns" true by construction: a domain never gets to say what happens on a phone, so it can
- * never say something different there.
- */
-const SPAN: Record<ModuleSize, string> = {
-  'one-third': 'col-span-full lg:col-span-2',
-  half: 'col-span-full lg:col-span-3',
-  'two-thirds': 'col-span-full lg:col-span-4',
-  full: 'col-span-full'
-}
 
 /**
  * Lays out a workspace from what its domain declared.
@@ -36,7 +21,9 @@ const SPAN: Record<ModuleSize, string> = {
  * business and quietly broken the pairs that currently match.
  *
  * There is nothing here that knows which workspace this is. Sizes arrive as names, zones arrive as
- * data, and the only decision this file makes is which class a name becomes.
+ * data, and the only decision this file makes is which class the declared name becomes. A width a
+ * reader has since chosen for themselves is a runtime answer and this renders on the server, so
+ * that one is applied by the frame the module goes through.
  *
  * Customisation is composed rather than branched on. Each band is handed to one client component
  * that puts its own modules in whatever order the reader has them and renders nothing else; each
@@ -64,10 +51,10 @@ const WorkspaceGrid = ({ definition, className }: { definition: WorkspaceDefinit
                 id={module.id}
                 title={module.title}
                 required={module.required === true}
-                span={SPAN[module.defaultSize]}
+                defaultSize={module.defaultSize}
               >
                 {cloneElement(module.content, {
-                  className: cn(module.content.props.className, SPAN[module.defaultSize])
+                  className: cn(module.content.props.className, MODULE_SPAN[module.defaultSize])
                 })}
               </WorkspaceModuleFrame>
             )
