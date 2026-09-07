@@ -1,0 +1,725 @@
+afenda_payroll_architecture:
+  schema_version: '1.0'
+  status: 'normative'
+  authority: 'payroll-programme'
+  product: 'Afenda Payroll'
+
+  # ---------------------------------------------------------------------------
+  # AUTHORITY
+  # ---------------------------------------------------------------------------
+
+  authority_chain:
+    outranked_by:
+      - '.architecture/ux/afenda-ui-ux-doctrine.yaml'
+
+    outranks:
+      - '.architecture/payroll/P01-group-payroll-control.yaml'
+
+    supersedes:
+      - path: '.HITL/dev-branch/Afenda Payroll Frontend Architecture & Future Development Context.md'
+        note: 'The prose source this file was converted from. Kept for provenance, not for resolution.'
+      - path: '.HITL/GROUP-PAYROLL-UX.md'
+      - path: '.HITL/GROUP-PAYROLL.yaml'
+      - path: '.HITL/group-payroll-plan.md'
+
+    rule: >
+      Prose under .HITL/ is superseded. Where this file and the UX doctrine
+      disagree, the doctrine wins. Where this file and a page contract disagree
+      about the page, the page contract wins within its own surface and this
+      file wins about the programme.
+
+  # ---------------------------------------------------------------------------
+  # 1. DEVELOPMENT PHILOSOPHY
+  # ---------------------------------------------------------------------------
+
+  development_philosophy:
+    id: 'A01'
+
+    order:
+      - business_concept
+      - frontend_interaction
+      - visible_state_and_object_model
+      - required_domain_truth
+      - backend_implementation
+
+    rule: >
+      The frontend is not a cosmetic layer over a backend model. The product
+      experience defines what information, objects, states, actions and
+      explanations are actually necessary.
+
+    MUST_NOT:
+      - 'expand backend machinery because a domain model could theoretically support it'
+      - 'create backend capability before a frontend surface proves the user needs it'
+      - 'let technical completeness compensate for an unclear product experience'
+
+    unclear_concept_test: >
+      If the concept cannot be understood and operated through the frontend,
+      the feature is not yet correctly designed.
+
+    backend_gap_handling:
+      classify_as: 'FRONTEND_CONTRACT_GAP'
+      rule: >
+        A backend gap discovered during frontend design is recorded as a
+        contract gap. It is not an invitation to immediately build the backend,
+        and it is never a licence to render the missing state anyway.
+
+  # ---------------------------------------------------------------------------
+  # 2. PRODUCT THESIS
+  # ---------------------------------------------------------------------------
+
+  product_thesis:
+    id: 'A02'
+    mantra: 'We resolve the complexity. You enjoy the simplicity.'
+
+    target: 'Find + Operate + Understand'
+
+    user_can:
+      - orient
+      - find
+      - operate
+      - explore
+      - compose
+      - understand_why
+
+    synthesis:
+      traditional_saas:
+        good_at: [navigation, pages, dashboards, forms]
+        weakness: 'the user has to know where everything lives'
+      desktop_operator_software:
+        good_at: [dense_operation, keyboard_driven_work, staying_in_task, large_data_volumes]
+        weakness: 'often difficult to understand'
+
+  # ---------------------------------------------------------------------------
+  # 3. ENDURING UX PRINCIPLES
+  # ---------------------------------------------------------------------------
+
+  ux_principles:
+    id: 'A03'
+
+    objects_before_routes:
+      rule: 'Business objects have stable identity. The user thinks "find this payroll", not "which page".'
+      objects:
+        - company
+        - employee
+        - pay_run
+        - payment
+        - filing
+        - statement
+        - payroll_input
+        - exception
+
+    drill_down_preserving_context:
+      default_pattern: 'summary -> drill down -> inspect -> act -> return to the same context'
+      prefer: [drawer, sheet, inspector, tab, workspace_group, contextual_dialog]
+      new_route_requires: 'a genuinely independent work context'
+
+    capability_without_permanent_chrome:
+      persistent_button: 'the dominant action only'
+      contextual_action: 'when relevant'
+      overflow_menu: 'lower-frequency actions'
+      context_menu: 'object commands'
+      inspector: 'detailed work'
+      global_find: 'discovery'
+      MUST_NOT: 'display every possible capability simultaneously'
+
+    one_consequential_primary_action:
+      rule: 'A primary work surface normally has one obvious next action.'
+      rejected_example: 'Run payroll | Recalculate | Import | Export | Reports | Settings | Payments'
+      note: 'The existence of a capability does not justify permanent button chrome.'
+
+    truth_before_convenience:
+      rule: >
+        The UI MUST NEVER communicate a state, certainty, relationship,
+        obligation, or financial meaning it cannot prove.
+      MUST_NOT:
+        - 'infer statutory treatment from a component label'
+        - 'invent a filing obligation'
+        - 'imply an employee transfer history when history does not exist'
+        - 'display a mixed-currency group total without a governed FX basis'
+        - 'imply cash is fungible across separate legal employers'
+        - 'offer a PDF action when no real PDF artifact exists'
+
+    smallest_legitimate_blocker_scope:
+      rule: >
+        One employee problem MUST NOT stop unrelated employees unless the
+        underlying rule genuinely applies to the entire run or entity.
+      scopes:
+        - problem: 'missing employee bank account'
+          scope: 'employee payment'
+        - problem: 'missing overtime approval'
+          scope: 'employee input'
+        - problem: 'unclassified allowance'
+          scope: 'employee component'
+        - problem: 'unresolved transfer'
+          scope: 'employee'
+        - problem: 'invalid statutory rule pack'
+          scope: 'jurisdiction or run'
+        - problem: 'invalid employer statutory registration'
+          scope: 'legal entity filing or release'
+        - problem: 'invalid payroll period'
+          scope: 'run'
+
+  # ---------------------------------------------------------------------------
+  # 4. VISUAL DOCTRINE
+  # ---------------------------------------------------------------------------
+
+  visual_doctrine:
+    id: 'A04'
+
+    character: 'A serious financial operating system, not a startup dashboard template.'
+    qualities: [quiet, dense, precise, low_decoration, long_session_readable, financially_serious]
+
+    colour:
+      carries: [success, warning, blocking_error, selection, focus, category_where_necessary]
+      MUST_NOT: 'be decorative'
+      chart_series_are_not_status_colours: true
+      semantics:
+        ready_completed_successful: 'success'
+        review_warning_approaching_risk: 'warning'
+        blocking_failure: 'destructive'
+        neutral_movement_information: 'neutral or info'
+        excluded_inert: 'muted'
+
+    cards:
+      rule: 'Cards are not the default layout unit.'
+      prefer: [alignment, spacing, bands, lists, tables, rails, open_sections]
+      use_only_where: 'information genuinely forms an independent object or group'
+      MUST_NOT: [card_inside_card, kpi_card_grids_by_default, bento_dashboards, decorative_stat_cards]
+
+    tables:
+      rule: 'Operational payroll work belongs in dense tables, through one governed table engine.'
+      engine_for:
+        - payroll_populations
+        - company_control
+        - payment_settlements
+        - filing_registries
+        - large_operational_datasets
+      exemption: >
+        Simple read-only, detail, preview and configuration tables may remain
+        simple. Do not mechanically force every small table into the engine.
+
+  # ---------------------------------------------------------------------------
+  # 5. PAYROLL PRODUCT MODEL
+  # ---------------------------------------------------------------------------
+
+  product_model:
+    id: 'A05'
+
+    essential_payroll:
+      definition: 'Pay correctly, selectively, visibly and explainably.'
+      includes:
+        - legal_employer_setup
+        - payroll_calendar
+        - pay_groups
+        - currencies
+        - bank_and_payment_configuration
+        - employee_payroll_identity
+        - employment_and_assignment
+        - effective_compensation
+        - semantic_pay_components
+        - data_intake_and_migration
+        - opening_balances_and_ytd
+        - payroll_inputs
+        - payroll_run
+        - calculation
+        - review
+        - approval
+        - payment
+        - statutory_minimum
+        - pay_statement
+        - audit_source_explanation
+        - selective_processing
+        - partial_payroll
+        - supplementary_payroll
+        - corrections
+        - off_cycle_payroll
+        - final_pay
+        - employee_and_legal_employer_movement
+
+    advanced_payroll_workforce:
+      role: 'produces controlled payroll inputs'
+      includes: [attendance, shifts, clocking, overtime, leave, claims, ess, mss, approvals, integrations, analytics]
+      MUST_NOT: 'bypass the payroll snapshot and calculation boundary'
+
+    pro_hr_people_platform:
+      role: 'operates upstream of payroll'
+      includes:
+        [
+          onboarding,
+          offboarding,
+          inter_company_transfer,
+          recruitment,
+          learning_and_development,
+          skills,
+          career,
+          talent,
+          performance,
+          recognition,
+          compensation_planning
+        ]
+      produces: 'HR -> employment -> assignment -> compensation -> payroll input'
+      MUST_NOT: 'directly manipulate payroll results'
+
+  # ---------------------------------------------------------------------------
+  # 6. PAYROLL EVENT MODEL
+  # ---------------------------------------------------------------------------
+
+  event_model:
+    id: 'A06'
+    events: [regular, supplementary, correction, off_cycle, final_pay]
+    rule: 'These are not labels. Each must eventually carry a legitimate processing meaning.'
+    correction_rule: >
+      A correction MUST NOT casually mutate historical paid or released payroll.
+      Historical results remain explainable and stable.
+
+  # ---------------------------------------------------------------------------
+  # 7. MOVEMENT AND TRANSFER ARCHITECTURE
+  # ---------------------------------------------------------------------------
+
+  movement_architecture:
+    id: 'A07'
+    rule: 'Movement is effective-dated.'
+
+    dimensions:
+      [legal_employer, branch, location, department, cost_centre, position, manager, pay_group, employment_basis]
+
+    inter_company_transfer_exposes:
+      - previous_legal_employer
+      - next_legal_employer
+      - effective_date
+      - payroll_responsibility
+      - currency_consequence
+      - statutory_consequence
+      - split_period_treatment
+      - audit_trail
+
+    MUST_NOT: 'reconstruct transfer history from current values alone'
+
+  # ---------------------------------------------------------------------------
+  # 8. PAY STATEMENT ARCHITECTURE
+  # ---------------------------------------------------------------------------
+
+  pay_statement:
+    id: 'A08'
+    rule: 'The Pay Statement is a first-class employee object, not a PDF.'
+    philosophy: 'Web statement first. PDF is an output.'
+
+    content:
+      - employer
+      - employee
+      - payroll_period
+      - payment_date
+      - earnings
+      - deductions
+      - employee_statutory
+      - employer_statutory
+      - claims_and_reimbursements_separated_from_reward
+      - net_pay
+      - payment_status
+      - payment_reference
+      - calculation_version
+      - statement_revision
+      - line_explanation
+      - source_and_change_explanation
+
+    bridges: 'My Pay -> My Work -> My Employment / HR'
+
+  # ---------------------------------------------------------------------------
+  # 9. TOTAL REWARDS CONNECTION
+  # ---------------------------------------------------------------------------
+
+  total_rewards:
+    id: 'A09'
+    programme: 'DLBB Total Rewards Programme'
+    platform: 'THE UNFAIR GAME'
+
+    journeys:
+      - id: 'J01'
+        name: 'Harvest Tomorrow'
+        subject: 'YOUR VALUE / C&B'
+      - id: 'J02'
+        name: 'Build Your Edge'
+        subject: 'YOUR CAPABILITY / L&D'
+      - id: 'J03'
+        name: 'Make Your Move'
+        subject: 'YOUR PATH / Career'
+      - id: 'J04'
+        name: 'Make Your Mark'
+        subject: 'YOUR CONTRIBUTION / Recognition'
+      - id: 'J05'
+        name: 'Play the Long Game'
+        subject: 'YOUR WELLBEING'
+
+    cycle: 'Discover -> Choose -> Act -> Build -> Review -> Next Move'
+
+    harvest_tomorrow_categories: [core_pay, protected_benefits, flex_wallet, business_expenses, incentives_and_rewards]
+
+    is_not: [competition, employee_ranking, payroll_substitute, guaranteed_financial_outcome]
+
+    MUST_NOT: 'let business expenses inflate employee reward value'
+
+  # ---------------------------------------------------------------------------
+  # 10. ROUTE ARCHITECTURE
+  # ---------------------------------------------------------------------------
+
+  route_architecture:
+    id: 'A10'
+    domain_name: 'payroll'
+    max_primary_pages: 8
+
+    justification: >
+      Payroll requires eight primary work contexts. Every other evaluated item
+      is an embedded work surface and does not justify a new primary route.
+
+    primary_routes:
+      - id: 'P01'
+        workspace: 'Group Payroll Control Centre'
+        route: '/payroll'
+        purpose: 'Understand whether group payroll is on track and where intervention is required.'
+        contract: '.architecture/payroll/P01-group-payroll-control.yaml'
+      - id: 'P02'
+        workspace: 'Entity Payroll Workspace'
+        route: '/payroll/entities/[entityId]'
+        purpose: 'Understand and operate payroll for one legal employer.'
+      - id: 'P03'
+        workspace: 'Payroll Runs'
+        route: '/payroll/runs'
+        purpose: 'Find and triage payroll runs across entities and periods.'
+      - id: 'P04'
+        workspace: 'Payroll Run Control Centre'
+        route: '/payroll/runs/[runId]'
+        purpose: 'Process one payroll population selectively, visibly and explainably.'
+        note: 'The operational centre of gravity.'
+      - id: 'P07'
+        workspace: 'Payments'
+        route: '/payroll/payments'
+        purpose: 'Fund, release, monitor and reconcile payroll settlements.'
+      - id: 'P08'
+        workspace: 'Compliance'
+        route: '/payroll/compliance'
+        purpose: 'Understand statutory readiness and operate filing work without inventing legal obligations.'
+      - id: 'P09'
+        workspace: 'Reports'
+        route: '/payroll/reports'
+        purpose: 'Produce precise payroll outputs and comparisons without compromising currency or domain truth.'
+      - id: 'P10'
+        workspace: 'Payroll Settings'
+        route: '/payroll/settings'
+        purpose: 'Configure actual payroll authority and distinguish live settings from future read-only contracts.'
+
+    embedded_surfaces:
+      - id: 'P05'
+        name: 'Employee Payroll Inspector'
+        embedded_in: 'P04'
+        purpose: "Understand and resolve one employee's payroll result without leaving the run."
+      - id: 'P06'
+        name: 'Pay Statement'
+        embedded_in: 'employee surfaces'
+        purpose: "Present the employee's payroll result as a comprehensible first-class statement."
+      - id: 'P11'
+        name: 'Payroll Input / Import'
+        embedded_in: 'run context'
+        process: 'Upload -> Identify -> Map -> Validate -> Resolve -> Preview -> Import -> Reconcile'
+      - id: 'P12'
+        name: 'Employee Movement / Transfer'
+        embedded_in: 'employee context'
+        purpose: 'Manage effective-dated employment movement and its payroll consequences.'
+      - id: 'P13'
+        name: 'Close & Evidence'
+        embedded_in: 'run context'
+        purpose: 'Prove that payroll was correctly reviewed, approved, paid, reconciled and closed.'
+        long_term: 'Closure Manifest'
+
+    evaluation_order: ['P01', 'P02', 'P03', 'P04', 'P05', 'P06', 'P07', 'P08', 'P09', 'P10', 'P11', 'P12', 'P13']
+
+    evaluation_rule: >
+      A page is evaluated only once the page before it in the order has passed.
+      Section-level progress within a page is permitted; page-level skipping is not.
+
+  # ---------------------------------------------------------------------------
+  # 11. SHADCN STUDIO STRATEGY
+  # ---------------------------------------------------------------------------
+
+  studio_strategy:
+    id: 'A11'
+    role: 'implementation accelerator and pattern library'
+    is_not: 'product authority'
+
+    authority_order:
+      - afenda_ux_doctrine
+      - payroll_architecture
+      - accepted_page_specification
+      - existing_afenda_patterns
+      - studio_evidence
+
+    search_order:
+      - existing_afenda_view
+      - existing_afenda_primitive_or_component
+      - studio_page_block_or_component
+      - existing_base_ui_or_shadcn_primitive_composition
+      - custom_composition
+
+    compatibility:
+      standardised_on: 'shadcn + Base UI / base-vega'
+      MUST_NOT_introduce:
+        - second_primitive_system
+        - radix_only_dependency
+        - second_theme
+        - second_app_shell
+        - second_sidebar
+        - second_table_engine
+
+    outcomes:
+      REUSE_EXISTING: 'Afenda already solves the problem.'
+      REFINE_EXISTING: 'Afenda owns the right composition but needs improvement.'
+      COMPOSE_EXISTING: 'Existing primitives can compose the requirement.'
+      ADAPT_STUDIO: 'Studio offers materially better compatible structure. Adapt anatomy, interaction and hierarchy; retokenise into Afenda.'
+      CUSTOM_AFTER_PREFLIGHT: 'Justified only after existing repo and Studio investigation both fail.'
+      REJECT_STUDIO: 'Conflicts with Base UI, doctrine, semantics, accessibility, shell ownership, table ownership or theme ownership.'
+
+    catalog_architecture:
+      chain:
+        - studio_upstream
+        - local_vendor_metadata_catalog
+        - stable_studio_resolver_ids
+        - page_specific_candidate_mapping
+        - preflight_decision_evidence
+        - application_implementation
+      rule: >
+        A page specification MUST NOT duplicate Studio metadata — block counts,
+        registry URLs, tier labels, vendor descriptions. Those live in the
+        catalog, so vendor drift cannot contaminate a product specification.
+
+    shared_evidence:
+      rule: 'Do not inspect the same block separately for every section. Use evidence groups.'
+      groups:
+        metric_hierarchy: [group_hero, readiness, variance, funding_exposure]
+        operational_list: [needs_attention, next_actions, employee_changes, statutory_snapshot, upcoming_events]
+
+  # ---------------------------------------------------------------------------
+  # 12. PREFLIGHT AND EVIDENCE BUDGETS
+  # ---------------------------------------------------------------------------
+
+  frontend_preflight:
+    id: 'A12'
+
+    question: >
+      Can we reuse Afenda? If not, what is the minimum evidence necessary to
+      prove the next implementation path?
+
+    objective: 'minimum sufficient discovery, not maximum catalog coverage'
+
+    confidence:
+      high:
+        meaning: 'Repo and specification already prove the decision.'
+        action: 'do not inspect Studio'
+      medium:
+        meaning: 'Direction known, but one Studio reference could materially improve or overturn it.'
+        action: 'inspect one or two strong references'
+      low:
+        meaning: 'Interaction or composition genuinely unresolved.'
+        action: 'structured Studio exploration'
+
+    evidence_budget:
+      REUSE_EXISTING: 0
+      RUI_REFINE: 2
+      COMPOSE_EXISTING: 1
+      CUI_ADAPT: 2
+      CUSTOM_AFTER_PREFLIGHT: 3
+      IUI: 3
+
+    stop_rule: 'Stop when additional Studio examples no longer change the design decision.'
+
+    section_level_unlock: >
+      A page need not be fully resolved before an independent section is worked.
+      High-confidence sections are not blocked by an unrelated unresolved one.
+      Development operates at page-architecture level and section-implementation
+      level, not as one monolithic page PASS/FAIL.
+
+  # ---------------------------------------------------------------------------
+  # 13. RUI / CUI / IUI
+  # ---------------------------------------------------------------------------
+
+  ui_modes:
+    id: 'A13'
+    rule: 'Three different modes, not a sequence.'
+
+    RUI:
+      name: 'Refine UI'
+      use_when: ['a current Afenda view exists', 'ownership is correct', 'a concrete frontend defect exists']
+      principle: 'Edit, do not redraw.'
+      requires: 'state the defect before touching the UI'
+      example_defects: [weak_hierarchy, too_much_chrome, duplicated_actions, wrong_density, poor_responsive_composition]
+      valid_conclusion: 'Current Afenda is already better. Stop.'
+
+    CUI:
+      name: 'Create UI'
+      use_when: ['accepted specification requires a genuinely new composition', 'existing repo reuse has failed']
+      study_for: [layout_dna, component_combinations, interaction_mechanics, responsive_behavior]
+      principle: 'Synthesize, never copy.'
+
+    IUI:
+      name: 'Inspire UI'
+      use_when: ['the interaction itself is uncertain', 'multiple legitimate directions exist']
+      then: 'choose a direction and stop browsing'
+      MUST_NOT: 'be invoked by default'
+
+  # ---------------------------------------------------------------------------
+  # 14. SKILL ARCHITECTURE AND GOVERNANCE
+  # ---------------------------------------------------------------------------
+
+  skill_architecture:
+    id: 'A14'
+
+    layers:
+      lightweight_core:
+        load_for: 'any frontend decision'
+        owns:
+          [
+            frontend_first,
+            base_ui,
+            semantic_tokens,
+            existing_afenda_first,
+            no_second_shell_theme_or_table_system,
+            truth_before_presentation
+          ]
+      frontend_preflight:
+        load_for: 'material frontend composition'
+        owns: [reuse_decision, studio_routing, evidence_budget, mode_choice, section_unlock]
+      deep_design_system:
+        load_for:
+          [implementation, visual_qa, measurement, spacing_type_surface_rules, accessibility, debugging, screenshots]
+        note: 'Do not consume the full deep context merely to answer a simple reuse question.'
+      react_next_practices:
+        load_for: 'implementing or refactoring React'
+        principles:
+          - derive_state_instead_of_duplicating_it
+          - avoid_effects_for_event_driven_state
+          - keep_client_boundaries_focused
+          - prefer_server_ownership
+          - preserve_url_addressable_shareable_state
+          - avoid_unnecessary_subscriptions_and_renders
+          - lazy_load_genuinely_heavy_optional_ui
+
+    governance:
+      new_skill_must_prove: [unique_trigger, unique_output, no_current_owner]
+      otherwise: 'extend an existing skill or reference'
+
+      mutable_facts_live_in:
+        component_counts: 'script or config'
+        studio_metadata: 'catalog'
+        routes: 'architecture'
+        payroll_semantics: 'payroll doctrine'
+        design_tokens: 'CSS / design system'
+        page_contract: 'page YAML'
+
+      rule: 'Skills describe how to reason and act. They are not copies of repository facts.'
+
+  # ---------------------------------------------------------------------------
+  # 15. AUDIT MODEL
+  # ---------------------------------------------------------------------------
+
+  audit_model:
+    id: 'A15'
+    rule: 'Three levels, never conflated.'
+
+    levels:
+      - level: 1
+        name: 'Target Product Contract'
+        meaning: 'What the page should eventually be, defined independently of current implementation.'
+      - level: 2
+        name: 'Current Frontend Evidence'
+        meaning: 'What the current screen actually communicates and allows.'
+      - level: 3
+        name: 'Implementation Status'
+        meaning: 'Whether target behavior is actually available and validated.'
+
+    source_audit_can_validate:
+      - information_hierarchy
+      - component_ownership
+      - action_placement
+      - url_state
+      - semantics
+      - duplicated_controls
+      - fake_actions
+      - structural_responsive_intent
+
+    source_audit_cannot_validate:
+      - spacing
+      - actual_wrapping
+      - visual_balance
+      - dark_mode_appearance
+      - sticky_behavior
+      - focus_order
+      - keyboard_interaction
+      - touch_ergonomics
+      - overflow
+      - visual_regressions
+
+    rule_restated: 'Source and composition validation is not rendered UI validation. Final approval requires the rendered application.'
+
+    visual_validation_method:
+      - render_the_target_route
+      - capture_desktop_sidebar_expanded
+      - capture_desktop_sidebar_collapsed
+      - capture_tablet
+      - capture_mobile
+      - check_light_theme
+      - check_dark_theme
+      - verify_focus_order
+      - verify_sheets_and_dialogs
+      - verify_table_overflow
+      - verify_empty_states
+      - verify_loading_states
+      - compare_against_accepted_page_specification
+      - refine_until_target_is_satisfied
+
+  # ---------------------------------------------------------------------------
+  # 16. DEVELOPMENT SEQUENCE
+  # ---------------------------------------------------------------------------
+
+  development_sequence:
+    id: 'A16'
+
+    steps:
+      - step: 1
+        do: 'Take the page specification as the clean target.'
+        MUST_NOT: 'alter the target to accommodate the existing implementation'
+      - step: 2
+        do: 'Render the current route.'
+      - step: 3
+        do: 'Compare every visible current element against the specification.'
+        classify: [KEEP, REFINE, REPLACE, REMOVE, ADD]
+      - step: 4
+        do: 'For every REFINE, REPLACE and ADD: check existing Afenda, assign confidence, select the mode, inspect minimum Studio evidence, decide the frontend shape.'
+      - step: 5
+        do: 'Produce the accepted visual and composition contract.'
+      - step: 6
+        do: 'Implement frontend only. Backend and domain gaps remain explicit contract gaps.'
+      - step: 7
+        do: 'Render and validate.'
+        gate: 'Only once the page passes does evaluation proceed to the next page.'
+
+  # ---------------------------------------------------------------------------
+  # 17. GOVERNING MODEL
+  # ---------------------------------------------------------------------------
+
+  governing_model:
+    id: 'A17'
+    chain:
+      - 'Define the ideal product independently.'
+      - 'Use the UX and payroll doctrine to constrain it.'
+      - 'Benchmark large SaaS for proven operating principles, not layouts.'
+      - 'Search existing Afenda before creating anything.'
+      - 'Use Shadcn Studio as evidence and acceleration, not authority.'
+      - 'Choose RUI, CUI or IUI according to uncertainty.'
+      - 'Consume the minimum evidence required to make a decision.'
+      - 'Design and validate the frontend first.'
+      - 'Expose backend and domain gaps only after the UI proves they are necessary.'
+      - 'Render, measure and visually validate before calling the page complete.'
+
+    objective: >
+      Not the most features. A payroll product where complexity is absorbed by
+      the system, the operator immediately understands what matters, exceptions
+      become actionable work, and every number or state on the screen can be
+      explained and trusted.

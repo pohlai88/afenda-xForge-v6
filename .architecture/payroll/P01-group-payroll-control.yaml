@@ -1,0 +1,384 @@
+p01_group_payroll_control:
+  schema_version: '1.0'
+  status: 'normative'
+  authority: 'page-contract'
+
+  id: 'P01'
+  workspace: 'Group Payroll Control Centre'
+  route: '/payroll'
+  internal_name: 'Group Payroll Control'
+  archetype: 'operational command surface with an embedded consolidation surface'
+
+  # ---------------------------------------------------------------------------
+  # AUTHORITY
+  # ---------------------------------------------------------------------------
+
+  authority_chain:
+    outranked_by:
+      - '.architecture/ux/afenda-ui-ux-doctrine.yaml'
+      - '.architecture/payroll/afenda-payroll-architecture.yaml'
+
+    supersedes:
+      - '.HITL/GROUP-PAYROLL-UX.md'
+      - '.HITL/GROUP-PAYROLL.yaml'
+      - '.HITL/group-payroll-plan.md'
+
+    rule: >
+      This file decides what P01 shows and in what order. The doctrine decides
+      the interaction grammar. The architecture decides the programme. Prose
+      under .HITL/ resolves nothing.
+
+  # ---------------------------------------------------------------------------
+  # PURPOSE
+  # ---------------------------------------------------------------------------
+
+  purpose: >
+    Understand whether group payroll is on track and where intervention is
+    required.
+
+  core_question: >
+    Across the entire group, will everybody who can legitimately be paid be paid
+    correctly and on time — and where does the operator need to act?
+
+  is_not:
+    - generic_executive_dashboard
+    - calculator
+    - employee_register
+    - payment_ledger
+    - report_catalogue
+    - compliance_filing_page
+
+  # ---------------------------------------------------------------------------
+  # DECLARED DIVERGENCE — the two-zone resolution
+  # ---------------------------------------------------------------------------
+
+  divergences:
+    - id: 'P01-DIV-001'
+      subject: 'the dominant figure'
+
+      source_position: >
+        The programme source (§15.2) requires the hero to be "X of Y companies
+        on track" and explicitly rejects employer cost as the dominant figure,
+        on the grounds that P01 is an operational command surface rather than a
+        financial-reporting page.
+
+      conflicting_position: >
+        The shipped surface was built and accepted against a consolidation
+        specification whose constitutional rules are "no consolidated number
+        without coverage" and "no financial number without explanation". Under
+        those rules the consolidated employer cost is the point of the page, and
+        the repo design system records its 60px treatment as correct.
+
+      resolution: 'two_zones'
+
+      decision: >
+        P01 carries both, separated. Zone 1 is operational and leads the page:
+        the on-track band is the first figure read, and attention, next actions
+        and the entity matrix follow it. Zone 2 is the consolidation surface,
+        unchanged, beginning below the matrix with the employer cost figure at
+        its existing weight.
+
+      reasoning: >
+        The two specifications answer different questions and neither is wrong.
+        Demoting employer cost would discard an accepted surface to satisfy a
+        hierarchy rule; ignoring §15.2 would leave the operator without the
+        state the page exists to report. Separating them by the matrix means
+        neither is a competing focal point in one viewport, which is the actual
+        constraint behind "spend emphasis once".
+
+      binding: >
+        This resolution is settled. It MUST NOT be re-litigated at each review.
+        Reversing it requires a new divergence entry stating what changed.
+
+      constraint: >
+        The zone-1 band and the zone-2 60px figure MUST NOT be simultaneously
+        visible as two focal points. The entity matrix separates them.
+
+  # ---------------------------------------------------------------------------
+  # BENCHMARK LESSONS — principles borrowed, never layouts
+  # ---------------------------------------------------------------------------
+
+  benchmark:
+    rule: 'Borrow operating principles. Do not copy visual implementations.'
+
+    workday:
+      borrow:
+        [
+          centralized_payroll_status,
+          pay_cycle_command_centre_thinking,
+          employee_change_visibility,
+          payroll_status_monitoring,
+          recommended_work_and_tasks,
+          anomaly_drill_down
+        ]
+
+    sap_payroll_control_center:
+      borrow:
+        [exception_first_operation, validation_discipline, issue_remediation, alert_ownership, payroll_kpi_monitoring]
+      strongest_lesson: 'Payroll problems should become resolvable work, not merely report rows.'
+
+    oracle_payroll_activity_center:
+      borrow:
+        [
+          current_vs_prior_period_comparison,
+          gross_deduction_contribution_net_comparison,
+          variance_clarity,
+          detailed_reconciliation
+        ]
+
+    deel_and_modern_global_payroll:
+      borrow: [global_legal_entity_visibility, jurisdiction_awareness, modern_presentation, payroll_cost_visibility]
+
+    synthesis: >
+      Workday command-centre thinking, SAP exception discipline, Oracle
+      reconciliation clarity, modern global visibility, and Afenda simplicity
+      with contextual operation.
+
+  # ---------------------------------------------------------------------------
+  # INFORMATION HIERARCHY
+  # ---------------------------------------------------------------------------
+
+  information_hierarchy:
+    rule: 'This vertical order matters more than the individual components.'
+
+    order:
+      - where_when_scope
+      - are_we_on_track
+      - what_needs_attention
+      - which_entity_needs_action
+      - what_changed
+      - what_must_be_funded_or_paid
+      - what_happens_next
+
+  # ---------------------------------------------------------------------------
+  # ANATOMY
+  # ---------------------------------------------------------------------------
+
+  anatomy:
+    zone_1:
+      name: 'Operate'
+      question: 'Is the group on track, and where must I act?'
+
+      sections:
+        - id: 'header'
+          must_show:
+            [payroll, selected_payroll_period, group_scope, legal_employer_count, jurisdiction_count, currency_count]
+          scope_controls: [period, company, jurisdiction, currency_basis]
+          primary_action: 'Open run queue'
+          rule: 'Limit permanent global filters. Lower-frequency actions belong in overflow.'
+
+        - id: 'on_track_band'
+          dominant_message: 'X of Y companies on track'
+          supporting: [total_employees, ready, needs_review, blocked, next_payroll_deadline]
+          rule: 'This is zone 1 leading figure. It is not a card grid.'
+
+        - id: 'needs_attention'
+          max_items: 5
+          min_items: 3
+          each_item_exposes:
+            [severity, affected_object_or_scope, plain_language_reason, consequence, deadline_when_relevant, one_action]
+          MUST_NOT: 'expose a giant alert archive'
+
+        - id: 'next_actions'
+          shows: [ranked_work, actual_task, affected_scope, due_context, direct_destination]
+          MUST_NOT:
+            - 'be a Quick Actions grid of generic links to Reports, Payments, Compliance, Settings'
+          rule: 'Navigation is not work.'
+
+        - id: 'entity_control_matrix'
+          role: 'centrepiece of P01'
+          columns: [company, payroll_period, people, ready, issues, payday, net_pay, payroll_state]
+          optional_columns: [employer_cost, funding_state, approval_state, statutory_readiness]
+          row_opens: 'P02 Entity Payroll Workspace'
+          rule: 'Remains a proper dense table. MUST NOT become a card grid.'
+
+    zone_2:
+      name: 'Reconcile'
+      question: 'What does the group cost, what is in that number, and how did it move?'
+
+      sections:
+        - id: 'group_employer_cost'
+          rule: 'The consolidated figure at its accepted weight, always carrying coverage beside it.'
+          constitutional_rules:
+            - 'No consolidated number without coverage.'
+            - 'No financial number without explanation.'
+
+        - id: 'net_pay_and_readiness'
+          shows: [net_pay, gross_pay, state_breakdown_by_named_company]
+
+        - id: 'funding_and_payment_exposure'
+          rule: 'By currency. Never one converted group total.'
+          MUST_NOT:
+            - 'show Group Payroll Total = X unless a governed FX methodology exists'
+            - 'imply balances held by different companies are freely transferable'
+
+        - id: 'variance'
+          question: 'What changed from the previous comparable payroll?'
+          measures: [employees, gross_payroll, net_payroll, employer_cost]
+          drivers: [new_hires, salary_changes, overtime, terminations, bonus]
+          prefer: 'exact values and explanation before charts'
+          employer_cost_direction: 'neutral'
+          note: 'Higher employer cost is not automatically bad.'
+
+        - id: 'consolidate_by'
+          dimensions: [entity, country, currency, department, cost_centre, component]
+
+        - id: 'statutory_snapshot'
+          question: 'Is statutory readiness threatening payroll delivery?'
+          shows:
+            [
+              ready_companies,
+              companies_requiring_review,
+              capability_gaps,
+              nearest_material_statutory_deadline_when_known
+            ]
+          rule: 'Deliberately compact. MUST NOT duplicate the Compliance workspace.'
+
+        - id: 'payroll_timeline'
+          shows: [payroll_payday, approval_deadline, funding_deadline, statutory_deadline, close_deadline]
+          form: 'short chronological list or rail'
+          MUST_NOT: 'default to a full monthly calendar'
+
+        - id: 'changes_affecting_payroll'
+          categories:
+            [
+              new_joiners,
+              terminations,
+              inter_company_transfers,
+              salary_changes,
+              pay_group_changes,
+              unpaid_leave,
+              bank_changes
+            ]
+          form: 'compact list or matrix'
+          MUST_NOT: 'create one card per change category'
+          note: 'Inter-company transfer deserves group-level visibility because it affects multiple legal employers.'
+
+  # ---------------------------------------------------------------------------
+  # ENTITY STATE MODEL
+  # ---------------------------------------------------------------------------
+
+  entity_state_model:
+    payroll_states:
+      [not_started, preparing, needs_review, blocked, ready, in_review, approved, payment_processing, paid, closed]
+
+    rule: >
+      Payroll lifecycle state MUST NOT be confused with payment or compliance
+      sub-state. "Payroll: Ready", "Payments: 3 held" and "Compliance: Review"
+      may all be simultaneously true.
+
+    processing_readiness: [ready, needs_review, blocked, excluded]
+    settlement_lifecycle: [not_released, released, processing, paid]
+
+    MUST_NOT: 'combine processing readiness and settlement lifecycle into one overloaded status vocabulary'
+
+  # ---------------------------------------------------------------------------
+  # RESPONSIVE
+  # ---------------------------------------------------------------------------
+
+  responsive:
+    rule: 'Compact MUST NOT simply stack every desktop block indefinitely.'
+
+    preserved_spine:
+      - group_state
+      - attention
+      - companies
+      - next_actions
+
+    secondary_may_collapse: true
+
+    test: 'The compact page still allows the operator to understand the situation within seconds.'
+
+  # ---------------------------------------------------------------------------
+  # ANTI-PATTERNS
+  # ---------------------------------------------------------------------------
+
+  anti_patterns:
+    challenge_or_reject:
+      - giant_donut_charts
+      - eight_to_twelve_equal_kpi_cards
+      - generic_quick_action_grids
+      - mixed_currency_totals
+      - decorative_colour
+      - ai_summary_boxes_without_operational_value
+      - full_employee_tables
+      - duplicated_compliance_payment_or_report_work
+      - card_grid_replacement_for_legal_entity_control
+      - navigation_disguised_as_tasks
+      - charts_that_hide_exact_values
+      - charts_created_merely_to_look_analytical
+
+  # ---------------------------------------------------------------------------
+  # CONTRACT GAPS — recorded, never rendered
+  # ---------------------------------------------------------------------------
+
+  contract_gaps:
+    rule: >
+      Each entry is a FRONTEND CONTRACT GAP under architecture A01. The affected
+      section ships in its provable form only. Rendering the missing state in
+      any form violates truth_before_convenience.
+
+    open:
+      - id: 'P01-GAP-001'
+        subject: 'inter-company transfer records'
+        blocks: 'changes_affecting_payroll'
+        evidence: 'No movement or transfer model exists in the domain. Architecture A07 forbids reconstructing transfer history from current values alone.'
+        consequence: 'Changes ships joiners and terminations only — two categories, not seven.'
+
+      - id: 'P01-GAP-002'
+        subject: 'approval, funding and close deadlines'
+        blocks: 'payroll_timeline'
+        evidence: 'PaySchedule carries periodStart, periodEnd, cutoff, payDate and status. It carries no approval, funding or close deadline.'
+        consequence: 'Timeline shows cut-off, payday and statutory due dates only.'
+
+      - id: 'P01-GAP-003'
+        subject: 'compensation history'
+        blocks: 'variance drivers — salary changes'
+        evidence: 'Compensation.effectiveFrom is the currently-effective record only. There is no prior value, so a change magnitude cannot be stated.'
+        consequence: 'A compensation effective date inside the period may be stated. An increase amount may not.'
+
+      - id: 'P01-GAP-004'
+        subject: 'pay-group, bank-detail and unpaid-leave change history'
+        blocks: 'changes_affecting_payroll'
+        evidence: 'No history records exist for these dimensions.'
+        consequence: 'These categories are omitted rather than inferred from current values.'
+
+  # ---------------------------------------------------------------------------
+  # EVALUATION
+  # ---------------------------------------------------------------------------
+
+  evaluation:
+    scoring:
+      immediate_orientation: 15
+      payroll_operational_usefulness: 20
+      issue_and_action_clarity: 15
+      entity_level_control: 15
+      drill_down_quality: 10
+      information_hierarchy_and_density: 10
+      domain_and_financial_truth: 10
+      visual_and_responsive_quality: 5
+
+    minimum: 85
+
+    rule: 'Hard failures override the numerical score.'
+
+    hard_failures:
+      - 'a consolidated figure rendered without its coverage'
+      - 'a mixed-currency total without a governed FX basis'
+      - 'a state the domain cannot prove'
+      - 'navigation presented as ranked work'
+      - 'the entity matrix rendered as a card grid'
+      - 'zone 1 and zone 2 focal points competing in one viewport'
+
+    gates:
+      - 'pnpm check-types'
+      - 'pnpm lint'
+      - 'pnpm build'
+      - 'python .claude/skills/xforge-design-system/scripts/audit.py'
+      - 'scripts/measure.js in both themes, renderedOk true'
+      - 'rendered validation per architecture A15 visual_validation_method'
+
+    unverifiable_interactions: >
+      Any keyboard or pointer gate the browser automation cannot exercise is
+      recorded in .architecture/ux/manual-acceptance-ledger.md as NOT VERIFIED.
+      Construction evidence is never a PASS.
