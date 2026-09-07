@@ -102,10 +102,11 @@ observed is focus order through them, because the automation degraded partway th
 pass: `javascript_tool` began reporting zero cards on a page that screenshots showed rendering
 correctly, and two tabs went blank and had to be replaced.
 
-| #   | Surface       | Interaction                           | Expected                                                                                      |
-| --- | ------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 12  | Group payroll | Tab through Needs attention           | Reaches each item's single action button in list order, worst item first                      |
-| 13  | Group payroll | Tab through Next actions and the rail | Each row is one stop, in the displayed order; the whole row is the control, not a label in it |
+| #   | Surface       | Interaction                           | Expected                                                                                                                                                             |
+| --- | ------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 12  | Group payroll | Tab through Needs attention           | Reaches each item's single action button in list order, worst item first                                                                                             |
+| 13  | Group payroll | Tab through Next actions and the rail | Each row is one stop, in the displayed order; the whole row is the control, not a label in it                                                                        |
+| 14  | Group payroll | Column menu on the company matrix     | Opens, toggles In the total / Employer cost / Change, and closes by keyboard. Row 11's gate, which now applies to P01: the matrix earned a column menu on 2026-09-08 |
 
 What construction evidence does support: every row is a real `Button` with `render={<Link/>}` and
 `nativeButton={false}`, so each is one tab stop with the app's own focus ring rather than a

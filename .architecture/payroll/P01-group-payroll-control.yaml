@@ -163,9 +163,51 @@ p01_group_payroll_control:
         - id: 'header'
           must_show:
             [payroll, selected_payroll_period, group_scope, legal_employer_count, jurisdiction_count, currency_count]
-          scope_controls: [period, company, jurisdiction, currency_basis]
           primary_action: 'Open run queue'
           rule: 'Limit permanent global filters. Lower-frequency actions belong in overflow.'
+
+          # Corrected 2026-09-08. The earlier list — period, company, jurisdiction, currency basis
+          # — predates the two-zone architecture and mixed three different jobs into one row.
+          # Grouped by what each control actually decides:
+          scope_controls:
+            operational_scope:
+              controls:
+                - id: 'period'
+                  decides: 'which payroll the whole page is about'
+              note: 'The only control that changes what zone 1 reports.'
+
+            reconciliation_interpretation:
+              controls:
+                - id: 'reporting_currency'
+                  decides: 'what consolidated figures are stated in'
+                - id: 'exchange_rate_basis'
+                  decides: 'which rate they are translated at'
+                - id: 'comparison'
+                  decides: 'what the movement is measured against'
+              note: >
+                These three change how zone 2 reads and never what zone 1 reports. Readiness,
+                attention and next actions are the same facts in any currency.
+
+            perspective:
+              controls:
+                - id: 'view'
+                  decides: 'operational payroll, with the financial allocation seam declared and disabled'
+              note: 'The seam is rendered and disabled, so the divergence between legal employer and cost allocation stays visible.'
+
+          rejected_controls:
+            - id: 'company'
+              reason: >
+                P01 is group-oriented. A company filter would turn it into a single-company
+                dashboard, which is P02 Entity Payroll Workspace. Every matrix row already drills
+                there, carrying the analytical context back.
+
+            - id: 'jurisdiction'
+              reason: >
+                Does not earn a permanent global filter. Country is already available as a
+                consolidation dimension, which is the analytical job it was wanted for, and the
+                doctrine's capability_without_chrome rule forbids keeping a control merely because
+                an earlier target listed it. Revisit only if a jurisdiction genuinely gates
+                operational work at group level.
 
         - id: 'on_track_band'
           dominant_message: 'X of Y companies on track'
@@ -174,10 +216,27 @@ p01_group_payroll_control:
 
         - id: 'needs_attention'
           max_items: 5
-          min_items: 3
           each_item_exposes:
             [severity, affected_object_or_scope, plain_language_reason, consequence, deadline_when_relevant, one_action]
-          MUST_NOT: 'expose a giant alert archive'
+
+          ordering: >
+            By consequence, worst first. A company that cannot fund its own payroll outranks one
+            that cannot approve it, which outranks one carrying unacknowledged warnings, which
+            outranks a company missing from the total.
+
+          empty_state: >
+            Zero items is a legitimate and good answer. The section says nothing is holding up the
+            period and names what it checked.
+
+          MUST_NOT:
+            - 'expose a giant alert archive'
+            - 'pad the list to reach a count'
+
+          # Removed 2026-09-08. `min_items: 3` required at least three items on a surface whose
+          # items are supposed to be genuine blockers. A month can legitimately contain zero, one
+          # or two, and a floor makes the interface manufacture work to fill a layout — which is
+          # truth_before_convenience inverted. The maximum stays; only the minimum was the defect.
+          no_minimum: true
 
         - id: 'next_actions'
           shows: [ranked_work, actual_task, affected_scope, due_context, direct_destination]
@@ -187,14 +246,72 @@ p01_group_payroll_control:
 
         - id: 'entity_control_matrix'
           role: 'centrepiece of P01'
-          columns: [company, payroll_period, people, ready, issues, payday, net_pay, payroll_state]
-          optional_columns: [employer_cost, funding_state, approval_state, statutory_readiness]
           row_opens: 'P02 Entity Payroll Workspace'
-          rule: 'Remains a proper dense table. MUST NOT become a card grid.'
+
+          rule: >
+            One table, dense, company-first, URL and context preserving, drillable to P02, and
+            truthful. MUST NOT become a card grid, a second entity table, or a second table engine.
+
+          # Corrected 2026-09-08. The default columns were reconciliation-oriented — In the total,
+          # Employer cost, Change — on the centrepiece of the Operate zone, so the table could not
+          # answer which company needs action, how many people are affected, or when payday is.
+          # One table still: the reconciliation columns are hideable rather than removed, and the
+          # engine's own column menu turns them back on without losing sort, selection or scroll.
+          default_columns: [company, people, ready, issues, payday, net_pay, payroll_state]
+
+          hideable_columns: [in_the_total, employer_cost, change]
+
+          column_notes:
+            ready: >
+              People not stopped by an open blocking or error exception. Stated as unknown, never
+              as a number, when the run has a blocker naming a department rather than a person —
+              that affects an unknown count, and subtracting only the named ones would report more
+              people ready than the run can prove.
+            issues: >
+              Open exceptions as severity badges. A rank for sorting, not a figure.
+            net_pay: >
+              Reporting currency, with the company's own currency beneath. Totalled in the footer
+              because every row is already converted.
+
+          narrowed_columns:
+            - id: 'payroll_period'
+              reason: >
+                The page selects one period globally, so a per-row period column would repeat the
+                same value on every row. The doctrine forbids meaningless columns.
+
+            - id: 'funding_state'
+              reason: >
+                Belongs to "Can the group pay?", which states it per company in that company's own
+                currency. Duplicating it here would either repeat that card or compress a
+                per-currency fact into one column.
+
+            - id: 'approval_state'
+              reason: 'Already carried by payroll_state, whose vocabulary includes review, ready and paid.'
+
+            - id: 'statutory_readiness'
+              reason: >
+                Not provable per company on this table without duplicating the Compliance
+                workspace. Statutory readiness has its own compact section in zone 2.
 
     zone_2:
       name: 'Reconcile'
       question: 'What does the group cost, what is in that number, and how did it move?'
+
+      # Corrected 2026-09-08 to the rendered order, which was visually validated and reads better
+      # than the order this file previously declared. The old sequence put consolidate_by — the
+      # deepest analytical surface on the page — above statutory and the timeline, and separated
+      # the two "what changed" sections with three cards. The order below runs state, then
+      # explanation, then movement in money and in people, then exposure, then the forward-looking
+      # pair, then the deepest breakdown last. `sections` below is listed in this order.
+      order:
+        - group_employer_cost
+        - net_pay_and_readiness
+        - variance
+        - changes_affecting_payroll
+        - funding_and_payment_exposure
+        - statutory_snapshot
+        - payroll_timeline
+        - consolidate_by
 
       sections:
         - id: 'group_employer_cost'
@@ -206,12 +323,6 @@ p01_group_payroll_control:
         - id: 'net_pay_and_readiness'
           shows: [net_pay, gross_pay, state_breakdown_by_named_company]
 
-        - id: 'funding_and_payment_exposure'
-          rule: 'By currency. Never one converted group total.'
-          MUST_NOT:
-            - 'show Group Payroll Total = X unless a governed FX methodology exists'
-            - 'imply balances held by different companies are freely transferable'
-
         - id: 'variance'
           question: 'What changed from the previous comparable payroll?'
           measures: [employees, gross_payroll, net_payroll, employer_cost]
@@ -220,8 +331,26 @@ p01_group_payroll_control:
           employer_cost_direction: 'neutral'
           note: 'Higher employer cost is not automatically bad.'
 
-        - id: 'consolidate_by'
-          dimensions: [entity, country, currency, department, cost_centre, component]
+        - id: 'changes_affecting_payroll'
+          categories:
+            [
+              new_joiners,
+              terminations,
+              inter_company_transfers,
+              salary_changes,
+              pay_group_changes,
+              unpaid_leave,
+              bank_changes
+            ]
+          form: 'compact list or matrix'
+          MUST_NOT: 'create one card per change category'
+          note: 'Inter-company transfer deserves group-level visibility because it affects multiple legal employers.'
+
+        - id: 'funding_and_payment_exposure'
+          rule: 'By currency. Never one converted group total.'
+          MUST_NOT:
+            - 'show Group Payroll Total = X unless a governed FX methodology exists'
+            - 'imply balances held by different companies are freely transferable'
 
         - id: 'statutory_snapshot'
           question: 'Is statutory readiness threatening payroll delivery?'
@@ -239,20 +368,9 @@ p01_group_payroll_control:
           form: 'short chronological list or rail'
           MUST_NOT: 'default to a full monthly calendar'
 
-        - id: 'changes_affecting_payroll'
-          categories:
-            [
-              new_joiners,
-              terminations,
-              inter_company_transfers,
-              salary_changes,
-              pay_group_changes,
-              unpaid_leave,
-              bank_changes
-            ]
-          form: 'compact list or matrix'
-          MUST_NOT: 'create one card per change category'
-          note: 'Inter-company transfer deserves group-level visibility because it affects multiple legal employers.'
+        - id: 'consolidate_by'
+          dimensions: [entity, country, currency, department, cost_centre, component]
+          note: 'Last on the page. The deepest analytical surface, reached after the state it explains.'
 
   # ---------------------------------------------------------------------------
   # ENTITY STATE MODEL
@@ -377,6 +495,32 @@ p01_group_payroll_control:
       - 'python .claude/skills/xforge-design-system/scripts/audit.py'
       - 'scripts/measure.js in both themes, renderedOk true'
       - 'rendered validation per architecture A15 visual_validation_method'
+
+    known_defects:
+      - id: 'P01-DEF-001'
+        subject: 'severity and state badge contrast in light theme'
+        severity: 'WCAG AA failure, systemic, not introduced by P01'
+
+        measured: >
+          On a light background, `text-warning` on `bg-warning/15` renders at 2.28:1 and
+          `text-destructive` on `bg-destructive/10` at 3.72:1, both below the 4.5:1 floor for
+          12px text. Dark theme passes. Measured 2026-09-08 on /payroll in both themes.
+
+        affected: >
+          `ExceptionBadge` and `ENTITY_STATE_STYLES`, so every surface that renders an exception
+          severity or a pay-run state — /payroll, /payroll/runs, /payroll/runs/[runId] and the
+          entity workspace. P01 exhibited it before this phase through the state badges and now
+          shows more instances through the matrix's Issues column.
+
+        why_not_fixed_here: >
+          The fix is a token change to --warning and --destructive, or to the tint ratio the badge
+          variants use. That is a design-system change with app-wide blast radius, and forking the
+          badge for one page would create a second way to render the same object — the drift this
+          repo's reuse rule exists to prevent. Recorded rather than worked around.
+
+        not_a_colour_only_failure: >
+          Every badge pairs its tint with an icon and a number, and the same fact is repeated as
+          text in the State column detail, so no meaning rests on the colour alone.
 
     unverifiable_interactions: >
       Any keyboard or pointer gate the browser automation cannot exercise is
