@@ -382,34 +382,48 @@ afenda_ux_doctrine:
   workspace_grid:
     id: 'D08'
     rule: >
-      Afenda SHOULD provide excellent preset workspaces while allowing users to
-      show, hide, move, and resize approved components on a constrained grid.
+      Afenda SHOULD provide an excellent default workspace while allowing users
+      to show, hide, move, and resize approved modules on a constrained grid.
 
-    layout_model: 'fixed_grid'
+    layout_model: 'six_column_width_only'
 
-    component_sizes:
-      metric:
-        allowed:
-          - '2x2'
-          - '4x2'
+    # Amended in Phase 05A against what the product had already built. The earlier model named
+    # sizes as `width x height` on a twelve-column grid; every workspace in this app is six
+    # columns, and no module anywhere takes a height — a chart, a status card and a table each
+    # size to their own content. Naming a height would have meant inventing one for ten
+    # components that do not have one, and then fighting them.
+    module_sizes:
+      vocabulary:
+        one-third: '2 of 6'
+        half: '3 of 6'
+        two-thirds: '4 of 6'
+        full: '6 of 6'
 
-      small_card:
-        allowed:
-          - '2x2'
-          - '4x2'
-          - '4x4'
+      height: 'intrinsic'
 
-      chart:
-        allowed:
-          - '4x4'
-          - '8x4'
-          - '8x8'
+      rule: >
+        A module declares which of the four widths are semantically legal for it
+        and which is its default. A width that destroys the module — a table at
+        one-third, a waterfall too narrow to read — MUST NOT be offered.
 
-      table:
-        allowed:
-          - '8x4'
-          - '8x8'
-          - '12x8'
+    layout:
+      default_required: true
+
+      # A workspace MUST ship one good layout its domain authored. Everything a user
+      # does is a departure from that, and Reset returns to it.
+      default_owner: 'domain'
+
+      presets:
+        required: false
+
+        rule: >
+          Named presets beyond the domain default are OPTIONAL and MUST be
+          justified by observed product work — a role or task that genuinely
+          wants different modules, not a list of role names.
+
+        MUST_NOT:
+          - 'ship preset names that no observed task or role distinguishes'
+          - 'let users author or name presets, which is a dashboard builder'
 
     user_actions:
       - show
@@ -420,15 +434,10 @@ afenda_ux_doctrine:
 
     MUST_NOT:
       - 'allow arbitrary pixel-perfect freeform placement'
-      - 'allow component sizes that destroy usability'
-
-    presets_SHOULD_include:
-      - recommended
-      - finance
-      - payroll
-      - people
-      - operations
-      - management
+      - 'express placement as coordinates, rows, or width-by-height'
+      - 'allow module sizes that destroy usability'
+      - 'let a module carry a fixed height rather than sizing to its content'
+      - 'permit a module to be hidden when the domain has declared it required'
 
   # ---------------------------------------------------------------------------
   # 11. ANALYTICS BUILDER

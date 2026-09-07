@@ -5,18 +5,19 @@ import { notFound } from 'next/navigation'
 // Third-party Imports
 import { BanknoteIcon, ChevronLeftIcon, UsersIcon, WalletIcon } from 'lucide-react'
 
+// Type Imports
+import type { KpiMetric } from '@/views/dashboards/payroll/payroll-kpi-strip'
+import type { OvertimePoint } from '@/views/dashboards/payroll/payroll-overtime-trend'
+import type { DepartmentRow } from '@/views/dashboards/payroll/payroll-by-department'
+import type { ExceptionRow } from '@/views/dashboards/payroll/payroll-exception-queue'
+
 // Component Imports
-import PayrollKpiStrip, { type KpiMetric } from '@/views/dashboards/payroll/payroll-kpi-strip'
-import PayrollOvertimeTrend, { type OvertimePoint } from '@/views/dashboards/payroll/payroll-overtime-trend'
-import PayrollByDepartment, { type DepartmentRow } from '@/views/dashboards/payroll/payroll-by-department'
-import PayrollCostTrend from '@/views/dashboards/payroll/payroll-cost-trend'
-import PayrollExceptionQueue, { type ExceptionRow } from '@/views/dashboards/payroll/payroll-exception-queue'
-import PayrollGrossToNet from '@/views/dashboards/payroll/payroll-gross-to-net'
-import PayrollRunHistory from '@/views/dashboards/payroll/payroll-run-history'
-import PayrollRunStatus from '@/views/dashboards/payroll/payroll-run-status'
-import PaymentReadiness from '@/views/payroll/payments/payment-readiness'
+import WorkspaceGrid from '@/components/shared/WorkspaceGrid'
 import { Button } from '@/components/ui/button'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
+// Workspace Imports
+import { entityWorkspace } from '@/views/payroll/entity-workspace'
 
 // Action Imports
 import {
@@ -337,69 +338,31 @@ const EntityPayrollPage = async ({ params, searchParams }: Props) => {
         </Card>
       )}
 
-      <div className='grid grid-cols-6 gap-6'>
-      <PayrollRunStatus
-        run={currentRun}
-        daysToCutoff={daysToCutoff}
-        blockingCount={exceptionCounts.blocking}
-        className='col-span-full lg:col-span-4'
+      <WorkspaceGrid
+        definition={entityWorkspace({
+          run: currentRun,
+          runs: [...runs].reverse(),
+          basePath,
+          currencySymbol: symbol,
+          daysToCutoff,
+          blockingCount: exceptionCounts.blocking,
+          exceptions: filteredExceptionRows,
+          departmentFilter: selectedDepartment && { id: selectedDepartment.id, name: selectedDepartment.name },
+          metrics,
+          kpiCaption: `${currentRun.reference} · ${currentRun.periodStart} to ${currentRun.periodEnd}`,
+          grossToNet: grossToNetBridge(currentRun),
+          readiness: { percent: readiness.percent, checks: readiness.checks },
+          overtime: {
+            points: overtimePoints,
+            target: OVERTIME_TARGET_SHARE,
+            hours: overtime.hours,
+            cost: formatMoney(overtime.cost)
+          },
+          departments: departmentRows,
+          selectedDepartmentId: selectedDepartment?.id,
+          costTrend
+        })}
       />
-
-      <PayrollExceptionQueue
-        exceptions={filteredExceptionRows}
-        departmentFilter={selectedDepartment && { id: selectedDepartment.id, name: selectedDepartment.name }}
-        runReference={currentRun.reference}
-        runId={currentRun.id}
-        basePath={basePath}
-        className='col-span-full lg:col-span-2'
-      />
-
-      <PayrollKpiStrip
-        metrics={metrics}
-        caption={`${currentRun.reference} · ${currentRun.periodStart} to ${currentRun.periodEnd}`}
-        className='col-span-full'
-      />
-
-      <PayrollGrossToNet
-        steps={grossToNetBridge(currentRun)}
-        currencySymbol={symbol}
-        className='col-span-full lg:col-span-4'
-      />
-
-      <PaymentReadiness percent={readiness.percent} checks={readiness.checks} className='col-span-full lg:col-span-2' />
-
-      <PayrollRunHistory
-        runs={[...runs].reverse()}
-        selectedReference={currentRun.reference}
-        basePath={basePath}
-        className='col-span-full'
-      />
-
-      <div className='col-span-full mt-2 flex flex-col gap-0.5 border-t pt-6'>
-        <h2 className='text-lg font-semibold tracking-tight'>Trends</h2>
-        <p className='text-muted-foreground text-sm'>
-          How this run compares with the six before it. Nothing here needs action today.
-        </p>
-      </div>
-
-      <PayrollOvertimeTrend
-        points={overtimePoints}
-        target={OVERTIME_TARGET_SHARE}
-        currentHours={overtime.hours}
-        currentCost={formatMoney(overtime.cost)}
-        className='col-span-full lg:col-span-3'
-      />
-
-      <PayrollByDepartment
-        departments={departmentRows}
-        runReference={currentRun.reference}
-        selectedDepartmentId={selectedDepartment?.id}
-        basePath={basePath}
-        className='col-span-full lg:col-span-3'
-      />
-
-      <PayrollCostTrend points={costTrend} currencySymbol={symbol} className='col-span-full' />
-      </div>
     </div>
   )
 }
