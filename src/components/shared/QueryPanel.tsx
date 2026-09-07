@@ -121,6 +121,9 @@ const QueryPanel = () => {
   const returnFocus = useRef<HTMLElement | null>(null)
 
   const [mode, setMode] = useState<QueryMode>('search')
+
+  /** What this subject can be asked. `null` until the provider has said. */
+  const [suggestions, setSuggestions] = useState<QuerySuggestion[] | null>(null)
   const [question, setQuestion] = useState<QuerySuggestion | null>(null)
   const [answer, setAnswer] = useState<QueryAnswer | null>(null)
   const [status, setStatus] = useState<AnswerStatus>('idle')
@@ -156,13 +159,39 @@ const QueryPanel = () => {
         asked.current += 1
         setShown(next)
         returnFocus.current = next.returnFocus
-
-        // The provider decides where a conversation starts, because it decides which modes exist.
-        setMode(target.modes[0] ?? 'search')
+        setSuggestions(null)
         setQuestion(null)
         setAnswer(null)
         setStatus('idle')
         setFilter('')
+
+        /*
+         * What this particular object can be asked, which the provider has to go and find out.
+         *
+         * A question is gated on the record rather than on the type — a payment that has not failed
+         * cannot be asked what else failed for the same reason — so the list arrives after the panel
+         * does. Where the conversation starts follows from what came back: the first mode the
+         * provider actually published a question in, not the first it declares support for, so a
+         * reader never lands on a mode with nothing behind it.
+         *
+         * A provider that throws leaves the panel saying there is nothing to ask, which is the same
+         * thing a reader is told when there genuinely is not. Why it failed is the server's business.
+         */
+        const token = asked.current
+
+        void target
+          .suggestions(next.object)
+          .then(published => {
+            if (asked.current !== token) return
+
+            setSuggestions(published)
+            setMode(target.modes.find(candidate => published.some(one => one.mode === candidate)) ?? target.modes[0])
+          })
+          .catch(() => {
+            if (asked.current !== token) return
+
+            setSuggestions([])
+          })
       }),
     []
   )
@@ -202,19 +231,20 @@ const QueryPanel = () => {
   }, [setAsk])
 
   /*
-   * The address never claims a question is open when nothing can own it.
+   * The address never claims a question is open when none is.
    *
-   * `ask` names a question, and a question needs a subject the panel is holding — which is not
-   * something the address carries, deliberately: a cold load, a shared link or a back button can
-   * all arrive with an `ask` and no panel. Rather than restoring a subject from the URL, which
-   * would be a persistence model nobody has asked for yet, the orphan is cleared. Only this one
-   * parameter is touched.
+   * `ask` names a question, and a question needs both a subject the panel is holding and a
+   * selection — neither of which the address carries, deliberately. A cold load, a shared link or a
+   * back button can arrive with an `ask` and no panel; asking about a second object leaves the
+   * previous object's question named in a URL nobody is looking at. Rather than restoring a subject
+   * from the address, which would be a persistence model nobody has asked for yet, the orphan is
+   * cleared. Only this one parameter is touched.
    */
   useEffect(() => {
-    if (!ask || open) return
+    if (!ask || (open && question)) return
 
     void setAsk(null)
-  }, [ask, open, setAsk])
+  }, [ask, open, question, setAsk])
 
   /*
    * The question, mirrored into the address.
@@ -285,11 +315,14 @@ const QueryPanel = () => {
 
   const subject = shown?.object
   const shownProvider = shown ? queryProviderFor(shown.object.type) : undefined
-  const modes = shownProvider?.modes ?? []
 
-  const suggestions = (shown && shownProvider ? shownProvider.suggestions(shown.object) : []).filter(
-    suggestion => suggestion.mode === mode
-  )
+  /*
+   * A mode is shown when the provider published a question in it, never merely because it declares
+   * support for it. Support is not show, and a switch with nothing behind one of its options is a
+   * control that misstates what the object can be asked.
+   */
+  const modes = (shownProvider?.modes ?? []).filter(candidate => suggestions?.some(one => one.mode === candidate))
+  const asking = suggestions?.filter(suggestion => suggestion.mode === mode) ?? []
 
   return (
     <Dialog.Root
@@ -376,8 +409,24 @@ const QueryPanel = () => {
           >
             <CommandInput ref={inputRef} placeholder='Filter questions...' value={filter} onValueChange={setFilter} />
             <CommandList className='max-h-48'>
-              <CommandEmpty>No matching question.</CommandEmpty>
-              {suggestions.map(suggestion => (
+              {suggestions === null ? (
+                <div className='flex flex-col gap-2 p-2' aria-busy='true'>
+                  <Skeleton className='h-5 w-3/4' />
+                  <Skeleton className='h-5 w-1/2' />
+                </div>
+              ) : null}
+
+              {/*
+                Nothing to ask is a real state, not a failure. A provider exists for this type, so
+                the command was offered — but this particular record has no question it can answer,
+                and saying so is better than listing one that could only reply "not applicable".
+              */}
+              {suggestions?.length === 0 ? (
+                <p className='text-muted-foreground px-2 py-3 text-sm'>Nothing can be asked about this yet.</p>
+              ) : null}
+
+              {asking.length > 0 ? <CommandEmpty>No matching question.</CommandEmpty> : null}
+              {asking.map(suggestion => (
                 <CommandItem
                   key={suggestion.id}
                   value={suggestion.label}

@@ -14,10 +14,11 @@
 
 import type { QueryProvider } from '@/types/common/query-types'
 
-import { payRunQueryProvider } from '@/views/payroll/payroll-query'
+import { payRunQueryProvider, settlementQueryProvider } from '@/views/payroll/payroll-query'
 
 const QUERY_PROVIDERS: Record<string, QueryProvider> = {
-  [payRunQueryProvider.type]: payRunQueryProvider
+  [payRunQueryProvider.type]: payRunQueryProvider,
+  [settlementQueryProvider.type]: settlementQueryProvider
 }
 
 export const queryProviderFor = (type: string): QueryProvider | undefined => QUERY_PROVIDERS[type]

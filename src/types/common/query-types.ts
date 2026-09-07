@@ -73,7 +73,16 @@ export type QueryProvider = {
   /** Modes with at least one real question behind them. Never padded to complete the acronym. */
   modes: readonly QueryMode[]
 
-  suggestions: (object: ObjectContext) => QuerySuggestion[]
+  /**
+   * Which questions this object can actually be asked, right now.
+   *
+   * Async because availability is a fact about the record, not about the type. A payment that has
+   * not failed cannot be asked what else failed for the same reason, and four identity fields are
+   * not enough to know that — so the provider asks its own domain, server-side and under the actor,
+   * before publishing a question. The alternative was offering the question to everything and
+   * answering "not applicable", which is a dead question and worse than no question.
+   */
+  suggestions: (object: ObjectContext) => Promise<QuerySuggestion[]>
 
   /** Executes one published question. Unknown ids are the caller's bug, and reject. */
   run: (object: ObjectContext, suggestionId: string) => Promise<QueryAnswer>
