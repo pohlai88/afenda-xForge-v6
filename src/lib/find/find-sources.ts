@@ -48,6 +48,14 @@ const asResults = (hits: FindObjectHit[], fallbackIcon: LucideIcon): FindResult[
  * maintains, and the breadcrumb keeps its own segment labels because hierarchy and index read
  * differently on purpose — a third vocabulary would be the one that drifts.
  */
+/**
+ * A route key resolved to where that destination lives today.
+ *
+ * The one place a key becomes a path, so a route that moves is corrected here and every stored
+ * favourite pointing at it follows without being touched.
+ */
+const routeByKey = (key: string) => searchData.flatMap(group => group.data).find(item => item.key === key)
+
 const routeSource: FindSource = {
   id: 'routes',
   kind: 'route',
@@ -55,7 +63,7 @@ const routeSource: FindSource = {
   search: async () =>
     searchData.flatMap(group =>
       group.data.map(item => ({
-        target: { kind: 'route' as const, path: item.href },
+        target: { kind: 'route' as const, key: item.key },
         label: item.name,
         icon: item.icon,
 
@@ -147,7 +155,7 @@ export const resolveTargets = async (
     }
 
     if (target.kind === 'route') {
-      const item = searchData.flatMap(group => group.data).find(candidate => candidate.href === target.path)
+      const item = routeByKey(target.key)
 
       if (item) results.push({ target, label: item.name, icon: item.icon, keywords: item.tags })
       else unresolved.push(target)
@@ -174,7 +182,7 @@ export const resolveTargets = async (
 /** Where a non-object target opens. Objects carry their own resolved address. */
 export const hrefForTarget = (result: FindResult): string | null => {
   if (result.object) return result.object.href ?? null
-  if (result.target.kind === 'route') return result.target.path
+  if (result.target.kind === 'route') return routeByKey(result.target.key)?.href ?? null
   if (result.target.kind === 'report') return `/payroll/reports?report=${encodeURIComponent(result.target.key)}`
 
   return null

@@ -30,7 +30,7 @@ import type { ObjectContext } from '@/types/common/object-context-types'
  */
 export type FindTarget =
   | { kind: 'object'; type: string; id: string }
-  | { kind: 'route'; path: string }
+  | { kind: 'route'; key: string }
   | { kind: 'report'; key: string }
   | { kind: 'command'; key: string }
 
@@ -40,7 +40,6 @@ export type FindKind = FindTarget['kind']
 export const sameTarget = (a: FindTarget, b: FindTarget): boolean => {
   if (a.kind !== b.kind) return false
   if (a.kind === 'object' && b.kind === 'object') return a.type === b.type && a.id === b.id
-  if (a.kind === 'route' && b.kind === 'route') return a.path === b.path
 
   return 'key' in a && 'key' in b && a.key === b.key
 }

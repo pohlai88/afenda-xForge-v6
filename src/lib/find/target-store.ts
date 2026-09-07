@@ -53,8 +53,10 @@ const isTarget = (value: unknown): value is FindTarget => {
   const candidate = value as Record<string, unknown>
 
   if (candidate.kind === 'object') return typeof candidate.type === 'string' && typeof candidate.id === 'string'
-  if (candidate.kind === 'route') return typeof candidate.path === 'string'
-  if (candidate.kind === 'report' || candidate.kind === 'command') return typeof candidate.key === 'string'
+
+  if (candidate.kind === 'route' || candidate.kind === 'report' || candidate.kind === 'command') {
+    return typeof candidate.key === 'string'
+  }
 
   return false
 }
