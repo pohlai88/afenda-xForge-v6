@@ -68,7 +68,9 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className='text-lg font-semibold'>Can the group pay?</CardTitle>
+        <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+          Can the group pay?
+        </CardTitle>
         <CardDescription>
           Net pay still to leave each company&apos;s account, in that company&apos;s own currency
         </CardDescription>
@@ -106,8 +108,8 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
         {withoutRun.length > 0 && (
           <p className='text-warning text-sm'>
             {withoutRun.map(row => row.entity.name).join(', ')} {withoutRun.length === 1 ? 'has' : 'have'} no
-            calculation for this period, so {withoutRun.length === 1 ? 'its' : 'their'} funding requirement is not
-            yet known. This card covers {exposures.length} of {consolidation.entityCount} companies.
+            calculation for this period, so {withoutRun.length === 1 ? 'its' : 'their'} funding requirement is not yet
+            known. This card covers {exposures.length} of {consolidation.entityCount} companies.
           </p>
         )}
 
@@ -176,4 +178,3 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
 }
 
 export default GroupPaymentExposure
-

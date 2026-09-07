@@ -41,7 +41,9 @@ const GroupReadiness = ({ consolidation, className }: Props) => {
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className='text-lg font-semibold'>Net pay and readiness</CardTitle>
+        <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+          Net pay and readiness
+        </CardTitle>
         <CardDescription>
           {periodLabel(consolidation.period)} · {coverage.entities.included} of {entityCount} included
         </CardDescription>

@@ -39,7 +39,7 @@ button, the filing name button — never against the row, which is deliberately 
 | 7   | Payments          | `⋮` by pointer and by keyboard     | As row 2, on a payment that has one. A payment with no bank reference has no `⋮` — check right-click there   |
 | 8   | Group payroll     | `Shift+F10` on a company name      | As row 1. No `⋮` — `Open company` is the whole vocabulary, so right-click is the only menu                   |
 | 9   | Group payroll     | Selection by keyboard              | Space toggles a checkbox, the engine's bar and the truth strip below the table both update                   |
-| 10  | Run history       | `⋮` by pointer and by keyboard     | As row 2. The run the page is showing has a `⋮` but no `Open run` — it is already open                        |
+| 10  | Run history       | `⋮` by pointer and by keyboard     | As row 2. The run the page is showing has a `⋮` but no `Open run` — it is already open                       |
 | 11  | All six           | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
 
 ### Note on row 7 — a row without a trigger
@@ -55,20 +55,20 @@ the manual pass should check one of each.
 Observed with working key delivery on two surfaces: **Run history**
 (`/payroll/entities/ent-sg`) and the **Run queue** (`/payroll/runs`), the queue twice.
 
-| Gate | Run history | Run queue |
-| --- | --- | --- |
-| `Shift+F10` opens the right menu | PASS | PASS |
-| Focus lands on the first enabled command | PASS | PASS |
-| Arrows move through the items | PASS | PASS |
-| Escape closes | PASS | PASS |
-| Escape returns focus to the exact originating control | PASS | PASS |
+| Gate                                                  | Run history | Run queue |
+| ----------------------------------------------------- | ----------- | --------- |
+| `Shift+F10` opens the right menu                      | PASS        | PASS      |
+| Focus lands on the first enabled command              | PASS        | PASS      |
+| Arrows move through the items                         | PASS        | PASS      |
+| Escape closes                                         | PASS        | PASS      |
+| Escape returns focus to the exact originating control | PASS        | PASS      |
 
 Right-click is unchanged: opens for the correct object with Properties last, focus stays on the
 document, nothing is highlighted, and the keyboard restoration does not run.
 
 The `⋮` **opens by keyboard** — Enter on the focused trigger, `aria-expanded` true — and Escape
 returns focus to the trigger, Base UI's own behaviour. Observed, so rows 2, 4, 7 and 10 are now
-covered for the keyboard path. Opening it by *synthetic pointer event* still fails in this harness
+covered for the keyboard path. Opening it by _synthetic pointer event_ still fails in this harness
 and remains the one thing construction evidence alone supports.
 
 ### What the fix had to work around, from the installed source
@@ -93,6 +93,24 @@ Recorded so the manual pass only has to cover what is genuinely unknown.
   and a 36×36 target, above the 24×24 WCAG 2.2 AA minimum.
 - Both surfaces render the same `ObjectCommandItems` over the same descriptors, so parity is
   structural rather than duplicated — there is no second command list that could drift.
+
+## Open 2026-09-08 — P01 operational sections, focus order
+
+The four sections added to `/payroll` — the on-track band, Needs attention, Next actions and the
+timeline rail — introduce no context menu, so rows 1–11 above do not grow. What was **not**
+observed is focus order through them, because the automation degraded partway through the visual
+pass: `javascript_tool` began reporting zero cards on a page that screenshots showed rendering
+correctly, and two tabs went blank and had to be replaced.
+
+| #   | Surface       | Interaction                           | Expected                                                                                      |
+| --- | ------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 12  | Group payroll | Tab through Needs attention           | Reaches each item's single action button in list order, worst item first                      |
+| 13  | Group payroll | Tab through Next actions and the rail | Each row is one stop, in the displayed order; the whole row is the control, not a label in it |
+
+What construction evidence does support: every row is a real `Button` with `render={<Link/>}` and
+`nativeButton={false}`, so each is one tab stop with the app's own focus ring rather than a
+container `onClick`; and no target is under 24×24, measured at 0 undersized controls across the
+four sections.
 
 ## Before a release that claims keyboard accessibility
 

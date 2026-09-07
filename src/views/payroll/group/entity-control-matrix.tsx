@@ -326,7 +326,9 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
     <>
       <Card className={cn('gap-0 py-0', className)}>
         <CardHeader className='py-6'>
-          <CardTitle className='text-lg font-semibold'>Companies</CardTitle>
+          <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+            Companies
+          </CardTitle>
           <CardDescription>
             Employer cost in {reporting}, with each company&apos;s own currency beneath it
           </CardDescription>

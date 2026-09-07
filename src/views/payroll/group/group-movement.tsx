@@ -52,17 +52,14 @@ const GroupMovement = ({ consolidation, className }: Props) => {
     <>
       <Card className={className}>
         <CardHeader>
-          <CardTitle className='text-lg font-semibold'>Where the change came from</CardTitle>
+          <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+            Where the change came from
+          </CardTitle>
           <CardDescription>
             Employer cost against {periodLabel(previous.period)}, in {consolidation.reportingCurrency}
           </CardDescription>
           <CardAction className='flex flex-col items-end gap-0.5'>
-            <span
-              className={cn(
-                'flex items-center gap-1 text-2xl font-semibold tabular-nums',
-                'text-foreground'
-              )}
-            >
+            <span className={cn('flex items-center gap-1 text-2xl font-semibold tabular-nums', 'text-foreground')}>
               <TotalIcon className='size-5' aria-hidden='true' />
               {formatMoney(total)}
             </span>
