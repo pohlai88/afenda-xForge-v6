@@ -10,6 +10,7 @@ import { Toaster } from '@/components/ui/sonner'
 import Breadcrumbs from '@/components/layout/Breadcrumbs'
 import Footer from '@/components/layout/Footer'
 import Header from '@/components/layout/Header'
+import RecentRecorder from '@/components/layout/RecentRecorder'
 import Sidebar from '@/components/layout/Sidebar'
 
 // Hook Imports
@@ -28,6 +29,7 @@ const PagesLayout = ({ children }: Readonly<{ children: ReactNode }>) => {
       </Suspense>
       <SidebarInset className='bg-muted flex flex-1 flex-col'>
         <Header />
+        <RecentRecorder />
         <div
           className={cn('mx-auto w-full px-4 pt-4 sm:px-6', settings.layout === 'compact' ? 'max-w-360' : undefined)}
         >

@@ -1,16 +1,16 @@
 'use client'
 
 // React Imports
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 
 // Next Imports
 import { useRouter } from 'next/navigation'
 
 // Third-party Imports
-import { SearchIcon } from 'lucide-react'
+import { SearchIcon, StarIcon } from 'lucide-react'
 
 // Type Imports
-import type { FindResult, FindSource, FindTarget } from '@/types/common/find-types'
+import type { FindResult, FindSource } from '@/types/common/find-types'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
@@ -27,7 +27,10 @@ import {
 import { Kbd } from '@/components/ui/kbd'
 
 // Find Imports
-import { FIND_SOURCES } from '@/lib/find/find-sources'
+import { FIND_SOURCES, hrefForTarget, resolveTargets } from '@/lib/find/find-sources'
+import { favouriteStore, forgetUnresolvedRecent, recentStore } from '@/lib/find/recent-and-favourites'
+import { sameTarget } from '@/types/common/find-types'
+import { cn } from '@/lib/utils'
 
 type ResultGroup = { source: FindSource; results: FindResult[] }
 
@@ -42,14 +45,22 @@ const ASK_AFTER_MS = 120
 
 const isExternal = (path: string) => path.startsWith('http://') || path.startsWith('https://')
 
-/** Only routes carry an address of their own; reports and commands are resolved when they exist. */
-const hrefForRoute = (target: Exclude<FindTarget, { kind: 'object' }>) =>
-  target.kind === 'route' ? target.path : null
-
 const CommandMenu = () => {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [groups, setGroups] = useState<ResultGroup[]>([])
+
+  /** What the palette opens with: things pinned, then things just worked on. */
+  const [pinned, setPinned] = useState<FindResult[]>([])
+  const [recent, setRecent] = useState<FindResult[]>([])
+
+  const favourites = useSyncExternalStore(
+    favouriteStore.subscribe,
+    favouriteStore.list,
+    favouriteStore.getServerSnapshot
+  )
+
+  const isFavourite = (result: FindResult) => favourites.some(target => sameTarget(target, result.target))
 
   const router = useRouter()
 
@@ -130,6 +141,46 @@ const CommandMenu = () => {
     }
   }, [open, query])
 
+  /*
+   * Rebuild the opening lists every time the palette opens on an empty query.
+   *
+   * Deliberately not cached. A pinned run's status, an employee's title and a permission can all
+   * have changed since the target was stored, and the only honest way to show a saved thing is to
+   * ask again. Recent entries that no longer resolve are dropped; favourites are not, because a
+   * pin is a decision and an access change tomorrow should find it still there.
+   */
+  useEffect(() => {
+    if (!open || query.trim()) return
+
+    let cancelled = false
+
+    void (async () => {
+      const [favouriteList, recentList] = await Promise.all([
+        resolveTargets(favouriteStore.list()),
+        resolveTargets(recentStore.list())
+      ])
+
+      if (cancelled) return
+
+      setPinned(favouriteList.results)
+
+      // Something pinned is already at the top of the palette, so Recent does not say it again.
+      // The two lists answer different questions and a row that appears in both answers neither
+      // any better.
+      setRecent(
+        recentList.results.filter(
+          result => !favouriteList.results.some(favourite => sameTarget(favourite.target, result.target))
+        )
+      )
+
+      forgetUnresolvedRecent(recentList.unresolved)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, query, favourites])
+
   /**
    * Opening is resolved here, from the target — never from a stored callback.
    *
@@ -137,7 +188,7 @@ const CommandMenu = () => {
    * be reopened later from a favourite or a recent entry without the palette remembering anything.
    */
   const openResult = (result: FindResult) => {
-    const href = result.object ? result.object.href : hrefForRoute(result.target as Exclude<FindTarget, { kind: 'object' }>)
+    const href = hrefForTarget(result)
 
     if (!href) return
 
@@ -145,6 +196,48 @@ const CommandMenu = () => {
       if (isExternal(href)) window.open(href, '_blank', 'noopener,noreferrer')
       else router.push(href)
     })
+  }
+
+
+  /**
+   * One result row, wherever it appears.
+   *
+   * Pinned, recent and searched results are the same thing shown in different company, so they
+   * render through one component — which is also what stops a favourite becoming a second, subtly
+   * different copy of a result.
+   *
+   * The star is a real button rather than a decoration on the row: it has its own name, its own
+   * focus, and toggling a pin must not open the thing being pinned.
+   */
+  const ResultRow = ({ result, source }: { result: FindResult; source: string }) => {
+    const pinnedHere = isFavourite(result)
+
+    return (
+      <CommandItem
+        key={`${source}:${result.label}:${result.sublabel ?? ''}`}
+        value={result.label}
+        keywords={[...(result.keywords ?? []), result.sublabel ?? '']}
+        onSelect={() => openResult(result)}
+      >
+        <result.icon />
+        <span className='flex min-w-0 flex-1 flex-col'>
+          <span className='truncate'>{result.label}</span>
+          {result.sublabel && <span className='text-muted-foreground truncate text-xs'>{result.sublabel}</span>}
+        </span>
+        <Button
+          variant='ghost'
+          size='icon-sm'
+          aria-label={pinnedHere ? `Remove ${result.label} from favourites` : `Add ${result.label} to favourites`}
+          aria-pressed={pinnedHere}
+          onClick={event => {
+            event.stopPropagation()
+            favouriteStore.toggle(result.target)
+          }}
+        >
+          <StarIcon className={cn('size-4', pinnedHere ? 'fill-current' : 'text-muted-foreground')} />
+        </Button>
+      </CommandItem>
+    )
   }
 
   return (
@@ -214,31 +307,45 @@ const CommandMenu = () => {
                     {index > 0 && <CommandSeparator />}
                     <CommandGroup heading={group.source.heading}>
                       {group.results.map(result => (
-                        <CommandItem
+                        <ResultRow
                           key={`${group.source.id}:${result.label}:${result.sublabel ?? ''}`}
-                          value={result.label}
-                          keywords={[...(result.keywords ?? []), result.sublabel ?? '']}
-                          onSelect={() => openResult(result)}
-                        >
-                          <result.icon />
-                          <span className='flex min-w-0 flex-col'>
-                            <span className='truncate'>{result.label}</span>
-                            {result.sublabel && (
-                              <span className='text-muted-foreground truncate text-xs'>{result.sublabel}</span>
-                            )}
-                          </span>
-                        </CommandItem>
+                          result={result}
+                          source={group.source.id}
+                        />
                       ))}
                     </CommandGroup>
                   </Fragment>
                 ))}
               </>
+            ) : pinned.length > 0 || recent.length > 0 ? (
+              <>
+                {pinned.length > 0 && (
+                  <CommandGroup heading='Favourites'>
+                    {pinned.map(result => (
+                      <ResultRow
+                        key={`fav:${result.label}:${result.sublabel ?? ''}`}
+                        result={result}
+                        source='fav'
+                      />
+                    ))}
+                  </CommandGroup>
+                )}
+                {pinned.length > 0 && recent.length > 0 && <CommandSeparator />}
+                {recent.length > 0 && (
+                  <CommandGroup heading='Recent'>
+                    {recent.map(result => (
+                      <ResultRow
+                        key={`recent:${result.label}:${result.sublabel ?? ''}`}
+                        result={result}
+                        source='recent'
+                      />
+                    ))}
+                  </CommandGroup>
+                )}
+              </>
             ) : (
-
-              // Recent and favourites belong here, and until they exist this says what to type
-              // rather than showing a set of destinations nobody chose.
               <p className='text-muted-foreground px-4 py-6 text-center text-sm'>
-                Search for a run, a person or a page.
+                Search for people, payroll runs, reports, or pages.
               </p>
             )}
           </CommandList>

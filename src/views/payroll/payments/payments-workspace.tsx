@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 
 // Third-party Imports
 import { AlertTriangleIcon, CheckCircle2Icon, RotateCcwIcon } from 'lucide-react'
@@ -19,6 +19,10 @@ import { Button } from '@/components/ui/button'
 import SettlementInspector from './settlement-inspector'
 import SettlementStatusBadge from './settlement-status-badge'
 import SettlementTable from './settlement-table'
+
+// Find Imports
+import { recordRecentObject } from '@/lib/find/recent-and-favourites'
+import { settlementObject } from '@/views/payroll/payroll-objects'
 
 // Action Imports
 import { reissueSettlement } from '@/app/server/actions'
@@ -70,6 +74,11 @@ const PaymentsWorkspace = ({ rows: initialRows, batches, runs, mayReissue }: Pro
   const [statusFilter] = useQueryState('status', parseAsStringLiteral(STATUS_FILTERS))
 
   const selected = selectedId ? (rows.find(row => row.id === selectedId) ?? null) : null
+
+  // Remembered from the URL, so a payment opened by link counts exactly as one opened from the table.
+  useEffect(() => {
+    if (selected) recordRecentObject(settlementObject(selected))
+  }, [selected])
   const batchById = new Map(batches.map(b => [b.id, b]))
   const failures = openFailures(rows)
   const counts = settlementCounts(rows.filter(row => !row.superseded))

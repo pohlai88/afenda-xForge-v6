@@ -2,14 +2,14 @@
 
 // React Imports
 import * as React from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import type { ReactElement, ReactNode } from 'react'
 
 // Next Imports
 import Link from 'next/link'
 
 // Third-party Imports
-import { EllipsisVerticalIcon, InfoIcon } from 'lucide-react'
+import { EllipsisVerticalIcon, InfoIcon, StarIcon, StarOffIcon } from 'lucide-react'
 
 // Type Imports
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
@@ -33,7 +33,12 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 
+// Find Imports
+import { findObjectType } from '@/lib/find/find-object-adapter'
+import { favouriteStore } from '@/lib/find/recent-and-favourites'
+
 // Util Imports
+import { sameTarget } from '@/types/common/find-types'
 import { groupCommands } from '@/types/common/object-context-types'
 
 type MenuParts = {
@@ -77,7 +82,26 @@ const ObjectCommandItems = ({
   const { Group, Item, Separator } = parts
   const groups = groupCommands(commands)
 
-  if (groups.length === 0 && !onOpenProperties) return null
+  /*
+   * Pinning an object is a navigation capability, not a business one.
+   *
+   * So it is composed here rather than added by every domain resolver: no payroll file lists "Add
+   * to favourites", and none of them can forget to. It is offered only for types Find can address —
+   * a pin that resolves to nothing would be a promise the palette cannot keep — and it sits between
+   * the domain's own commands and Properties, which stays last where doctrine pins it.
+   */
+  const target = findObjectType(object.type) ? ({ kind: 'object', type: object.type, id: object.id } as const) : null
+
+  const favourites = useSyncExternalStore(
+    favouriteStore.subscribe,
+    favouriteStore.list,
+    favouriteStore.getServerSnapshot
+  )
+
+  const pinnable = target !== null
+  const pinned = target !== null && favourites.some(candidate => sameTarget(candidate, target))
+
+  if (groups.length === 0 && !onOpenProperties && !pinnable) return null
 
   return (
     <>
@@ -118,9 +142,18 @@ const ObjectCommandItems = ({
           })}
         </Group>
       ))}
-      {onOpenProperties ? (
+      {pinnable ? (
         <Group>
           {groups.length > 0 ? <Separator /> : null}
+          <Item onClick={() => favouriteStore.toggle(target!)}>
+            {pinned ? <StarOffIcon /> : <StarIcon />}
+            {pinned ? 'Remove from favourites' : 'Add to favourites'}
+          </Item>
+        </Group>
+      ) : null}
+      {onOpenProperties ? (
+        <Group>
+          {groups.length > 0 || pinnable ? <Separator /> : null}
           <Item onClick={() => onOpenProperties(object)}>
             <InfoIcon />
             Properties

@@ -4,6 +4,9 @@
 import { useState, useTransition } from 'react'
 
 // Third-party Imports
+import { parseAsStringLiteral, useQueryState } from 'nuqs'
+
+// Third-party Imports
 import { toast } from 'sonner'
 
 // Type Imports
@@ -53,6 +56,9 @@ type Props = {
  * already rendered; the export is then recorded server-side so the trail survives a reload. A
  * refusal to record does not take the file back — the person has it — it just says so.
  */
+/** Valid values for `?report=`, taken from the catalogue so the two cannot disagree. */
+const REPORT_KEYS = REPORTS.map(report => report.key) as [ReportKey, ...ReportKey[]]
+
 const ReportsWorkspace = ({
   runs,
   currentRunId,
@@ -63,7 +69,20 @@ const ReportsWorkspace = ({
   currencySymbol
 }: Props) => {
   const [exports, setExports] = useState(initialExports)
-  const [openKey, setOpenKey] = useState<ReportKey | null>(null)
+
+
+  /*
+   * Which report the sheet is showing, in the URL like every other inspector in payroll.
+   *
+   * A report someone pinned has to be openable from the palette, and a selection held only in
+   * React state has no address to open. Same shape as `?employee=`, `?filing=` and `?payment=`:
+   * replace rather than push, cleared when the sheet closes.
+   */
+  const [openKey, setOpenKey] = useQueryState(
+    'report',
+    parseAsStringLiteral(REPORT_KEYS).withOptions({ clearOnDefault: true, history: 'replace' })
+  )
+
   const [, startTransition] = useTransition()
 
   const people = new Map(
@@ -136,7 +155,7 @@ const ReportsWorkspace = ({
         <ReportCatalogue
           reports={REPORTS}
           lastExports={lastExports}
-          onOpen={setOpenKey}
+          onOpen={key => void setOpenKey(key)}
           className='col-span-full lg:col-span-4'
         />
         <PayrollCostTrend points={costTrend} currencySymbol={currencySymbol} className='col-span-full lg:col-span-2' />
@@ -146,7 +165,9 @@ const ReportsWorkspace = ({
       <ReportSheet
         report={report}
         open={!!report}
-        onOpenChange={open => !open && setOpenKey(null)}
+        onOpenChange={open => {
+          if (!open) void setOpenKey(null)
+        }}
         runs={runs}
         tables={report ? tables[report.key] : {}}
         defaultRunId={currentRunId}

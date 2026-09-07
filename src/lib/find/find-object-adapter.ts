@@ -12,7 +12,7 @@
  * teaches Find how to present and reopen one.
  */
 
-import { BanknoteIcon, UserIcon, type LucideIcon } from 'lucide-react'
+import { BanknoteIcon, LandmarkIcon, UserIcon, WalletIcon, type LucideIcon } from 'lucide-react'
 
 import type { FindTarget } from '@/types/common/find-types'
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
@@ -59,6 +59,21 @@ const FIND_OBJECT_TYPES: Record<string, FindObjectType> = {
   employee: {
     heading: 'People',
     icon: UserIcon,
+    href: object => object.href ?? null
+  },
+
+  // Both are read in an inspector over their workspace, and both became addressable in 03A, so a
+  // saved one can be reopened. Neither carries commands here for the same reason as an employee:
+  // the domain's resolvers close over rows this adapter does not hold.
+  statutory_filing: {
+    heading: 'Filings',
+    icon: LandmarkIcon,
+    href: object => object.href ?? null
+  },
+
+  settlement: {
+    heading: 'Payments',
+    icon: WalletIcon,
     href: object => object.href ?? null
   }
 }

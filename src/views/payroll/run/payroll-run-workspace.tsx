@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useMemo, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 
 // Next Imports
 import { useRouter } from 'next/navigation'
@@ -85,6 +85,9 @@ import {
   reopenException,
   resolveException
 } from '@/app/server/actions'
+
+// Find Imports
+import { recordRecentObject } from '@/lib/find/recent-and-favourites'
 
 // Util Imports
 import { exportPayrollRegisterToCsv } from '@/utils/export-payroll-utils'
@@ -238,6 +241,18 @@ const PayrollRunWorkspace = ({
   /* ---------------------------------------------------------------------------------------- */
 
   const selectedRow = employeeId ? rows.find(row => row.employeeId === employeeId) : undefined
+
+  /*
+   * Remember the employee once one is genuinely open.
+   *
+   * Derived from the URL rather than from the click, so every way in counts the same — a row in the
+   * table, a link someone sent, the back button, a result chosen in the palette. The run itself is
+   * remembered through its published object context; an employee is not published because the
+   * breadcrumb's leaf is the run, and it should stay the run.
+   */
+  useEffect(() => {
+    if (selectedRow) recordRecentObject(employeeObject(selectedRow))
+  }, [selectedRow])
   const rowByEmployee = new Map(rows.map(row => [row.employeeId, row]))
   const departmentNames = new Map(departments.map(d => [d.id, d.name]))
 

@@ -1,7 +1,7 @@
 'use client'
 
 // React Imports
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 
 // Third-party Imports
 import { parseAsString, useQueryState } from 'nuqs'
@@ -17,6 +17,10 @@ import ComplianceFocus, { type InspectorMode } from './compliance-focus'
 import ComplianceYear from './compliance-year'
 import FilingInspector from './filing-inspector'
 import FilingsTable from './filings-table'
+
+// Find Imports
+import { recordRecentObject } from '@/lib/find/recent-and-favourites'
+import { filingObject } from '@/views/payroll/payroll-objects'
 
 // Action Imports
 import { applyFilingTransition } from '@/app/server/actions'
@@ -82,6 +86,11 @@ const ComplianceWorkspace = ({ filings: initialFilings, employees, rules, today 
   const rows = buildFilingRows({ filings, employees, today })
   const summary = complianceSummary(rows)
   const selected = selectedId ? (rows.find(row => row.id === selectedId) ?? null) : null
+
+  // Remembered from the URL, so a filing opened by link counts exactly as one opened from the table.
+  useEffect(() => {
+    if (selected) recordRecentObject(filingObject(selected))
+  }, [selected])
 
   const names = new Map(employees.map(employee => [employee.id, `${employee.firstName} ${employee.lastName}`]))
   const nameOf = (id: string) => names.get(id) ?? id

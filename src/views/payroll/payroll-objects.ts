@@ -305,7 +305,7 @@ export const employeeProperties = (row: PayrollRunRow): PropertySection[] => [
  * own. The label names it the way a person does — the return and the period it covers, which is
  * what distinguishes two rows of the same kind.
  */
-export const filingObject = (row: FilingRow): ObjectContext => ({
+export const filingObject = (row: Pick<FilingRow, 'id' | 'kind' | 'periodStart' | 'periodEnd'>): ObjectContext => ({
   type: 'statutory_filing',
   id: row.id,
   label: `${FILING_KIND_LABELS[row.kind]} · ${formatPeriod(row.periodStart, row.periodEnd)}`

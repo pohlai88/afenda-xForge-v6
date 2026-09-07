@@ -9,14 +9,17 @@ import type { FindObjectHit } from '@/types/common/find-types'
 
 // Data Imports
 import { employees } from '@/fake-db/hrm/employees'
+import { filings } from '@/fake-db/payroll/filings'
 import { payRuns } from '@/fake-db/payroll/pay-runs'
 import { payrollSettings } from '@/fake-db/payroll/settings'
+import { settlements } from '@/fake-db/payroll/settlements'
 
 // Util Imports
+import { FILING_AUTHORITIES } from '@/utils/payroll-compliance'
 import { PAY_RUN_STATUS_LABELS } from '@/utils/payroll-metrics'
 import { actorFor, can } from '@/utils/payroll-permissions'
-import { formatPeriod } from '@/utils/payroll-workspace'
-import { employeeObject, payRunObject } from '@/views/payroll/payroll-objects'
+import { PAYMENT_STATUS_LABELS, formatPeriod } from '@/utils/payroll-workspace'
+import { employeeObject, filingObject, payRunObject } from '@/views/payroll/payroll-objects'
 
 /** Matches `currentActor` in `actions.ts`; both stand in until there is a session. */
 const CURRENT_USER_ID = 'emp-020'
@@ -119,6 +122,102 @@ export const findEmployees = async (query: string): Promise<FindObjectHit[]> => 
       sublabel: `${employee.employeeNumber} · ${employee.positionTitle}`,
       keywords: [employee.employeeNumber, run.reference]
     })
+  }
+
+  return hits
+}
+
+/**
+ * Turn stored targets back into something showable, under today's actor.
+ *
+ * This is what makes a saved target safe to keep. Nothing about a favourite or a recent entry is
+ * trusted except the pair of strings naming it: the label, the figures and the address are all
+ * resolved again here, so a renamed run, a moved employee or a permission taken away are reflected
+ * the next time the palette opens rather than the next time somebody notices.
+ *
+ * Targets the actor may not see come back missing, exactly like targets that no longer exist. The
+ * caller cannot tell the two apart, and neither can the reader — which is the point.
+ */
+export const resolveObjectTargets = async (
+  targets: readonly { type: string; id: string }[]
+): Promise<FindObjectHit[]> => {
+  if (!can(actor(), 'payroll.view')) return []
+
+  const hits: FindObjectHit[] = []
+
+  for (const target of targets) {
+    if (target.type === 'payroll_run') {
+      const run = payRuns.find(candidate => candidate.id === target.id)
+
+      if (!run) continue
+
+      hits.push({
+        object: payRunObject(run),
+        sublabel: `${formatPeriod(run.periodStart, run.periodEnd)} · ${PAY_RUN_STATUS_LABELS[run.status]}`
+      })
+
+      continue
+    }
+
+    if (target.type === 'employee') {
+      const employee = employees.find(candidate => candidate.id === target.id)
+
+      if (!employee) continue
+
+      const run = [...payRuns]
+        .filter(candidate => candidate.entityId === employee.entityId)
+        .sort((a, b) => a.periodStart.localeCompare(b.periodStart))
+        .at(-1)
+
+      if (!run) continue
+
+      hits.push({
+        object: {
+          ...employeeObject({ employeeId: employee.id, name: `${employee.firstName} ${employee.lastName}` }),
+          href: `/payroll/runs/${run.id}?employee=${encodeURIComponent(employee.id)}`
+        },
+        sublabel: `${employee.employeeNumber} · ${employee.positionTitle}`
+      })
+
+      continue
+    }
+
+    if (target.type === 'statutory_filing') {
+      const filing = filings.find(candidate => candidate.id === target.id)
+
+      if (!filing) continue
+
+      hits.push({
+        object: {
+          ...filingObject({ id: filing.id, kind: filing.kind, periodStart: filing.periodStart, periodEnd: filing.periodEnd }),
+          href: `/payroll/compliance?filing=${encodeURIComponent(filing.id)}`
+        },
+        sublabel: FILING_AUTHORITIES[filing.kind]
+      })
+
+      continue
+    }
+
+    if (target.type === 'settlement') {
+      const settlement = settlements.find(candidate => candidate.id === target.id)
+
+      if (!settlement) continue
+
+      const employee = employees.find(candidate => candidate.id === settlement.employeeId)
+      const run = payRuns.find(candidate => candidate.id === settlement.payRunId)
+
+      if (!employee || !run) continue
+
+      hits.push({
+        object: {
+          type: 'settlement',
+          id: settlement.id,
+          label: `${employee.firstName} ${employee.lastName} · ${run.reference}`,
+          href: `/payroll/payments?payment=${encodeURIComponent(settlement.id)}`
+        },
+        sublabel: `${employee.employeeNumber} · ${PAYMENT_STATUS_LABELS[settlement.status]}`
+      })
+    }
   }
 
   return hits

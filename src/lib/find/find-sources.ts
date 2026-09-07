@@ -8,12 +8,13 @@
  * index that has always backed the palette — demoted from *the* search to *a* source.
  */
 
-import { FileTextIcon, type LucideIcon } from 'lucide-react'
+import { FileSpreadsheetIcon, FileTextIcon, type LucideIcon } from 'lucide-react'
 
-import { findEmployees, findPayRuns } from '@/app/server/find-actions'
+import { findEmployees, findPayRuns, resolveObjectTargets } from '@/app/server/find-actions'
 import { searchData } from '@/assets/data/search'
 import { findObjectType } from '@/lib/find/find-object-adapter'
-import type { FindObjectHit, FindResult, FindSource } from '@/types/common/find-types'
+import type { FindObjectHit, FindResult, FindSource, FindTarget } from '@/types/common/find-types'
+import { REPORTS } from '@/utils/payroll-reports'
 
 /**
  * A server hit becomes a result.
@@ -66,6 +67,27 @@ const routeSource: FindSource = {
     )
 }
 
+/**
+ * The report catalogue, which is small, fixed and already written down.
+ *
+ * A report is a question somebody asks repeatedly, which makes it worth pinning — so it is a find
+ * target as much as a run is. `purpose` is already one line explaining what each answers, so the
+ * catalogue supplies the sublabel and nothing new has to be authored.
+ */
+const reportSource: FindSource = {
+  id: 'reports',
+  kind: 'report',
+  heading: 'Reports',
+  search: async () =>
+    REPORTS.map(report => ({
+      target: { kind: 'report' as const, key: report.key },
+      label: report.name,
+      sublabel: report.purpose,
+      icon: FileSpreadsheetIcon,
+      keywords: [report.group, report.key.replace(/_/g, ' ')]
+    }))
+}
+
 const payRunSource: FindSource = {
   id: 'pay-runs',
   kind: 'object',
@@ -90,4 +112,70 @@ const employeeSource: FindSource = {
  * — so this is the only ordering decision Find adds, and it is one rule rather than a table of
  * constants nobody can predict.
  */
-export const FIND_SOURCES: readonly FindSource[] = [payRunSource, employeeSource, routeSource]
+export const FIND_SOURCES: readonly FindSource[] = [payRunSource, employeeSource, reportSource, routeSource]
+
+/**
+ * Turn stored targets back into results, forgetting nothing and trusting nothing.
+ *
+ * Presentation is rebuilt every time rather than stored, which is the reason a pinned run shows
+ * today's status and a pinned employee shows the title they hold now. Routes and reports resolve
+ * from the registries that define them; objects go to the server, where the actor is applied.
+ *
+ * Order is the caller's — most recent first, or the order things were pinned — so this preserves
+ * the order it was given rather than the order results happened to come back in.
+ */
+export const resolveTargets = async (
+  targets: readonly FindTarget[]
+): Promise<{ results: FindResult[]; unresolved: FindTarget[] }> => {
+  const objectTargets = targets.filter((target): target is Extract<FindTarget, { kind: 'object' }> => target.kind === 'object')
+
+  const hits = objectTargets.length > 0 ? await resolveObjectTargets(objectTargets) : []
+  const byId = new Map(hits.map(hit => [`${hit.object.type}:${hit.object.id}`, hit]))
+
+  const results: FindResult[] = []
+  const unresolved: FindTarget[] = []
+
+  for (const target of targets) {
+    if (target.kind === 'object') {
+      const hit = byId.get(`${target.type}:${target.id}`)
+      const [built] = hit ? asResults([hit], FileTextIcon) : []
+
+      if (built) results.push(built)
+      else unresolved.push(target)
+
+      continue
+    }
+
+    if (target.kind === 'route') {
+      const item = searchData.flatMap(group => group.data).find(candidate => candidate.href === target.path)
+
+      if (item) results.push({ target, label: item.name, icon: item.icon, keywords: item.tags })
+      else unresolved.push(target)
+
+      continue
+    }
+
+    if (target.kind === 'report') {
+      const report = REPORTS.find(candidate => candidate.key === target.key)
+
+      if (report)
+        results.push({ target, label: report.name, sublabel: report.purpose, icon: FileSpreadsheetIcon })
+      else unresolved.push(target)
+
+      continue
+    }
+
+    unresolved.push(target)
+  }
+
+  return { results, unresolved }
+}
+
+/** Where a non-object target opens. Objects carry their own resolved address. */
+export const hrefForTarget = (result: FindResult): string | null => {
+  if (result.object) return result.object.href ?? null
+  if (result.target.kind === 'route') return result.target.path
+  if (result.target.kind === 'report') return `/payroll/reports?report=${encodeURIComponent(result.target.key)}`
+
+  return null
+}
