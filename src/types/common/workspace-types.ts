@@ -52,7 +52,14 @@ export type WorkspaceModule = {
   /** The domain says this module may not be hidden, because hiding it would mislead. */
   required?: boolean
 
-  /** The domain says this module's position carries meaning. Defaults to movable. */
+  /**
+   * The domain says this module's position carries meaning. Defaults to movable.
+   *
+   * Stronger than "offer no Move command". An immovable module is an anchor: it holds its place in
+   * its band, and a movable one may not cross it. That is what makes a band a sequence of segments
+   * rather than a free list, and it is the only way a domain can say "these three may be shuffled,
+   * but not past that" without the renderer knowing what any of them are.
+   */
   movable?: boolean
 
   /**
@@ -95,18 +102,31 @@ export type WorkspaceDefinition = {
  * A module as everything except the renderer sees it.
  *
  * The declaration carries an element, and an element cannot cross into the part of the app that
- * knows what a person has hidden. So customisation is given the three facts it is entitled to —
- * which module, what to call it in a list, and whether hiding it would mislead — and nothing that
- * would let it decide where a module goes or how wide it is. Those stay the declaration's.
+ * knows what a person has hidden or moved. So customisation is given the facts it is entitled to —
+ * which module, what to call it in a list, which band owns it, whether hiding it would mislead and
+ * whether its position carries meaning — and nothing that would let it decide how wide a module is
+ * or what it renders. Those stay the declaration's.
+ *
+ * `zone` is an identity, not a meaning. Nothing outside the domain file knows what "control" is;
+ * the shared code knows only that two modules carrying the same string may be reordered against
+ * each other and two carrying different ones may not.
  */
 export type WorkspaceModuleSummary = {
   id: string
   title: string
+  zone: string
   required: boolean
+  movable: boolean
 }
 
 /** The declaration, flattened for the parts of the app that must not hold its elements. */
 export const workspaceModules = (definition: WorkspaceDefinition): WorkspaceModuleSummary[] =>
   definition.zones.flatMap(zone =>
-    zone.modules.map(module => ({ id: module.id, title: module.title, required: module.required === true }))
+    zone.modules.map(module => ({
+      id: module.id,
+      title: module.title,
+      zone: zone.id,
+      required: module.required === true,
+      movable: module.movable !== false
+    }))
   )

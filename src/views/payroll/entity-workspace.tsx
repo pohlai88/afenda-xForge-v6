@@ -49,9 +49,11 @@ type Parts = {
  * lifted a trend chart above the exception queue would make the page lie, and a rule written as a
  * heading cannot stop it.
  *
- * Nothing here is customisable yet. Every module carries its truthful sizes and whether it may be
- * hidden or moved, because those are facts about the modules that exist today; what a person may do
- * with them arrives later, against declarations that were already correct.
+ * `required` and `movable` are the two things this file says about what a person may do. Required
+ * means hiding it would mislead. Immovable means more: an immovable module holds its place, and a
+ * movable one may not cross it — so the control band reads as run state and what blocks it, then
+ * the figures, then whether the money can move, then the record of previous runs, and shuffling
+ * inside those groups cannot turn that sentence into a different one.
  */
 export const entityWorkspace = (parts: Parts): WorkspaceDefinition => ({
   id: 'payroll.entity',
@@ -80,8 +82,10 @@ export const entityWorkspace = (parts: Parts): WorkspaceDefinition => ({
           title: 'Exception queue',
 
           // What is stopping the run. A workspace that let this be hidden would be showing figures
-          // it knows to be blocked and saying nothing about it.
+          // it knows to be blocked and saying nothing about it, and one that let it be moved would
+          // let the run's state and the reason it cannot proceed stop being read together.
           required: true,
+          movable: false,
           allowedSizes: ['one-third', 'half'],
           defaultSize: 'one-third',
           content: (
@@ -116,8 +120,10 @@ export const entityWorkspace = (parts: Parts): WorkspaceDefinition => ({
           title: 'Payment readiness',
 
           // Whether the money can actually move. Hiding it would leave a workspace that looks ready
-          // and is not.
+          // and is not — and it is the last thing this run has to say about itself, so it also
+          // holds the line between the run and the record of runs below it.
           required: true,
+          movable: false,
           allowedSizes: ['one-third', 'half'],
           defaultSize: 'one-third',
           content: <PaymentReadiness percent={parts.readiness.percent} checks={parts.readiness.checks} />

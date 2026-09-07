@@ -1,15 +1,11 @@
 // React Imports
-import { Fragment, cloneElement } from 'react'
+import { cloneElement } from 'react'
 
 // Type Imports
 import type { ModuleSize, WorkspaceDefinition } from '@/types/common/workspace-types'
 
 // Component Imports
-import {
-  WorkspaceCustomiseBar,
-  WorkspaceModuleFrame,
-  WorkspaceZoneHeading
-} from '@/components/shared/WorkspaceCustomisation'
+import { WorkspaceCustomiseBar, WorkspaceModuleFrame, WorkspaceZone } from '@/components/shared/WorkspaceCustomisation'
 
 // Util Imports
 import { cn } from '@/lib/utils'
@@ -42,10 +38,11 @@ const SPAN: Record<ModuleSize, string> = {
  * There is nothing here that knows which workspace this is. Sizes arrive as names, zones arrive as
  * data, and the only decision this file makes is which class a name becomes.
  *
- * Customisation is composed rather than branched on: every module goes through the same frame and
- * every titled band through the same heading, and both render exactly what this file passed them
- * until somebody is actually customising. A workspace rendered outside a `WorkspaceCustomisation`
- * gets the inert defaults and this markup unchanged.
+ * Customisation is composed rather than branched on. Each band is handed to one client component
+ * that puts its own modules in whatever order the reader has them and renders nothing else; each
+ * module goes through the same frame. Both render exactly what this file passed them, unchanged and
+ * in declaration order, until somebody is actually customising — and a workspace rendered outside a
+ * `WorkspaceCustomisation` gets the inert defaults and this markup as written.
  *
  * Doctrine: `workspace_grid` (D08).
  */
@@ -55,29 +52,27 @@ const WorkspaceGrid = ({ definition, className }: { definition: WorkspaceDefinit
 
     <div className={cn('grid grid-cols-6 gap-6', className)}>
       {definition.zones.map(zone => (
-        <Fragment key={zone.id}>
-          {zone.title ? (
-            <WorkspaceZoneHeading
-              title={zone.title}
-              description={zone.description}
-              moduleIds={zone.modules.map(module => module.id)}
-            />
-          ) : null}
-
-          {zone.modules.map(module => (
-            <WorkspaceModuleFrame
-              key={module.id}
-              id={module.id}
-              title={module.title}
-              required={module.required === true}
-              span={SPAN[module.defaultSize]}
-            >
-              {cloneElement(module.content, {
-                className: cn(module.content.props.className, SPAN[module.defaultSize])
-              })}
-            </WorkspaceModuleFrame>
-          ))}
-        </Fragment>
+        <WorkspaceZone
+          key={zone.id}
+          title={zone.title}
+          description={zone.description}
+          modules={zone.modules.map(module => ({
+            id: module.id,
+            frame: (
+              <WorkspaceModuleFrame
+                key={module.id}
+                id={module.id}
+                title={module.title}
+                required={module.required === true}
+                span={SPAN[module.defaultSize]}
+              >
+                {cloneElement(module.content, {
+                  className: cn(module.content.props.className, SPAN[module.defaultSize])
+                })}
+              </WorkspaceModuleFrame>
+            )
+          }))}
+        />
       ))}
     </div>
   </>
