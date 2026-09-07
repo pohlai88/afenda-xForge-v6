@@ -214,7 +214,7 @@ export const payRunQueueProperties = (row: PayRunQueueRow): PropertySection[] =>
  * No `href`: an employee within a run has no route of its own. It is reached through
  * `?employee=` on the run workspace, which is why the contract makes `href` optional.
  */
-export const employeeObject = (row: PayrollRunRow): ObjectContext => ({
+export const employeeObject = (row: Pick<PayrollRunRow, 'employeeId' | 'name'>): ObjectContext => ({
   type: 'employee',
   id: row.employeeId,
   label: row.name

@@ -94,12 +94,6 @@ export const searchData: SearchData[] = [
         tags: ['payroll', 'pay run', 'register']
       },
       {
-        icon: BanknoteIcon,
-        name: 'Current Payroll Run',
-        href: '/payroll/runs/run-sg-2026-09',
-        tags: ['payroll', 'approve', 'exceptions', 'workspace']
-      },
-      {
         icon: CreditCardIcon,
         name: 'Payroll Payments',
         href: '/payroll/payments',

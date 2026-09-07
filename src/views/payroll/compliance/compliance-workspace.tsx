@@ -4,6 +4,7 @@
 import { useState, useTransition } from 'react'
 
 // Third-party Imports
+import { parseAsString, useQueryState } from 'nuqs'
 import { toast } from 'sonner'
 
 // Type Imports
@@ -55,7 +56,26 @@ type Props = {
  */
 const ComplianceWorkspace = ({ filings: initialFilings, employees, rules, today }: Props) => {
   const [filings, setFilings] = useState(initialFilings)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  /*
+   * Which filing the inspector is showing, in the URL rather than in state.
+   *
+   * The same shape the run workspace uses for `?employee=`, for the same reason: an inspector that
+   * only exists in React state cannot be linked to, reloaded, or reached from anywhere but this
+   * page. Find has to be able to open a filing from the palette, and a favourite has to be able to
+   * point at one, so the selection has to be addressable.
+   *
+   * `history: 'replace'` matches the employee pattern deliberately — opening a side panel is not a
+   * navigation, so it should not add a Back step. `clearOnDefault` keeps the URL clean once the
+   * inspector closes.
+   *
+   * The mode stays local: a link opens a filing to read, never mid-action.
+   */
+  const [selectedId, setSelectedId] = useQueryState(
+    'filing',
+    parseAsString.withOptions({ clearOnDefault: true, history: 'replace' })
+  )
+
   const [mode, setMode] = useState<InspectorMode>('view')
   const [, startTransition] = useTransition()
 
@@ -68,7 +88,7 @@ const ComplianceWorkspace = ({ filings: initialFilings, employees, rules, today 
 
   const openFiling = (id: string, nextMode: InspectorMode = 'view') => {
     setMode(nextMode)
-    setSelectedId(id)
+    void setSelectedId(id)
   }
 
   const replace = (next: StatutoryFiling) =>
@@ -157,7 +177,9 @@ const ComplianceWorkspace = ({ filings: initialFilings, employees, rules, today 
         filing={selected}
         open={!!selected}
         mode={mode}
-        onOpenChange={open => !open && setSelectedId(null)}
+        onOpenChange={open => {
+          if (!open) void setSelectedId(null)
+        }}
         rules={rules}
         nameOf={nameOf}
         onAction={action => selected && handleAction(selected.id, action)}

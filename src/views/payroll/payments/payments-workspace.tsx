@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react'
 
 // Third-party Imports
 import { AlertTriangleIcon, CheckCircle2Icon, RotateCcwIcon } from 'lucide-react'
-import { parseAsStringLiteral, useQueryState } from 'nuqs'
+import { parseAsString, parseAsStringLiteral, useQueryState } from 'nuqs'
 import { toast } from 'sonner'
 
 // Type Imports
@@ -54,7 +54,18 @@ type Props = {
  */
 const PaymentsWorkspace = ({ rows: initialRows, batches, runs, mayReissue }: Props) => {
   const [rows, setRows] = useState(initialRows)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  /*
+   * Which payment the inspector is showing, in the URL beside the filter that is already there.
+   *
+   * Same shape as the run workspace's `?employee=` and compliance's `?filing=`: a payment read in a
+   * sheet held only in React state is unreachable from Find, unlinkable, and lost on reload. The
+   * selection is identity, so it belongs in the address.
+   */
+  const [selectedId, setSelectedId] = useQueryState(
+    'payment',
+    parseAsString.withOptions({ clearOnDefault: true, history: 'replace' })
+  )
 
   const [statusFilter] = useQueryState('status', parseAsStringLiteral(STATUS_FILTERS))
 
@@ -91,7 +102,7 @@ const PaymentsWorkspace = ({ rows: initialRows, batches, runs, mayReissue }: Pro
         superseded: false
       }
     ])
-    setSelectedId(null)
+    void setSelectedId(null)
 
     startTransition(async () => {
       const result = await reissueSettlement(row.id)
@@ -147,7 +158,7 @@ const PaymentsWorkspace = ({ rows: initialRows, batches, runs, mayReissue }: Pro
                     <Button
                       variant='link'
                       className='h-auto p-0 text-sm font-medium'
-                      onClick={() => setSelectedId(row.id)}
+                      onClick={() => void setSelectedId(row.id)}
                     >
                       {row.employeeName}
                     </Button>
@@ -172,7 +183,7 @@ const PaymentsWorkspace = ({ rows: initialRows, batches, runs, mayReissue }: Pro
         rows={rows}
         runs={runs}
         selectedId={selectedId}
-        onSelect={row => setSelectedId(row.id)}
+        onSelect={row => void setSelectedId(row.id)}
         initialStatus={statusFilter}
       />
 
@@ -180,7 +191,9 @@ const PaymentsWorkspace = ({ rows: initialRows, batches, runs, mayReissue }: Pro
         row={selected}
         batch={selected ? batchById.get(selected.batchId) : undefined}
         open={!!selected}
-        onOpenChange={open => !open && setSelectedId(null)}
+        onOpenChange={open => {
+          if (!open) void setSelectedId(null)
+        }}
         onReissue={mayReissue ? handleReissue : undefined}
       />
     </div>

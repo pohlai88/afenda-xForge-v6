@@ -81,8 +81,11 @@ export const navItems: NavItem[] = [
         icon: 'Banknote',
         label: 'Payroll',
         childItems: [
-          { label: 'Group', href: '/payroll' },
-          { label: 'Companies', href: '/payroll/entities/ent-sg', activePath: '/payroll/entities' },
+          // Group payroll is the list of companies, and each row opens one. There is deliberately
+          // no 'Companies' leaf: it pointed at a single hard-coded entity, which made one arbitrary
+          // company the canonical one for everybody. Reaching a particular company is Find's job,
+          // and pinning one will be a favourite's.
+          { label: 'Group', href: '/payroll', activePath: '/payroll/entities' },
           { label: 'Runs', href: '/payroll/runs', activePath: '/payroll/runs' },
           { label: 'Payments', href: '/payroll/payments' },
           { label: 'Compliance', href: '/payroll/compliance' },
