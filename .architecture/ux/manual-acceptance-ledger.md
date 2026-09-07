@@ -102,16 +102,42 @@ observed is focus order through them, because the automation degraded partway th
 pass: `javascript_tool` began reporting zero cards on a page that screenshots showed rendering
 correctly, and two tabs went blank and had to be replaced.
 
-| #   | Surface       | Interaction                           | Expected                                                                                                                                                             |
-| --- | ------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 12  | Group payroll | Tab through Needs attention           | Reaches each item's single action button in list order, worst item first                                                                                             |
-| 13  | Group payroll | Tab through Next actions and the rail | Each row is one stop, in the displayed order; the whole row is the control, not a label in it                                                                        |
-| 14  | Group payroll | Column menu on the company matrix     | Opens, toggles In the total / Employer cost / Change, and closes by keyboard. Row 11's gate, which now applies to P01: the matrix earned a column menu on 2026-09-08 |
+| #   | Surface       | Interaction                           | Expected                                                                                      |
+| --- | ------------- | ------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 12  | Group payroll | Tab through Needs attention           | Reaches each item's single action button in list order, worst item first                      |
+| 13  | Group payroll | Tab through Next actions and the rail | Each row is one stop, in the displayed order; the whole row is the control, not a label in it |
+
+Row 14 — the company matrix column menu — was opened here on 2026-09-08 and is **closed below**.
 
 What construction evidence does support: every row is a real `Button` with `render={<Link/>}` and
 `nativeButton={false}`, so each is one tab stop with the app's own focus ring rather than a
 container `onClick`; and no target is under 24×24, measured at 0 undersized controls across the
 four sections.
+
+## Closed 2026-09-08 — row 14, the company matrix column menu
+
+Observed end to end on `/payroll` in dark theme, with working key delivery. Every step watched in
+the rendered page; nothing here is inferred from the implementation.
+
+| Gate                                          | Result                                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------- |
+| Columns trigger focused                       | PASS — focus ring visible on the trigger after Escape                           |
+| Enter opens the menu from the focused trigger | PASS                                                                            |
+| Focus enters the menu                         | PASS — first item highlighted on open                                           |
+| ArrowDown navigates                           | PASS — In the total → Employer cost → Change                                    |
+| ArrowUp navigates                             | PASS — Change → Employer cost                                                   |
+| Enter toggles Employer cost on                | PASS — column appears after Net pay, menu stays open, item shows a check        |
+| Footer realigns without structural error      | PASS — net pay and employer cost totals each under their own heading            |
+| Enter toggles Employer cost off               | PASS — column disappears, footer returns to the net pay total alone             |
+| A second hidden column, by Space              | PASS — Change toggled on and off; it carries no total and the footer added none |
+| Escape closes                                 | PASS                                                                            |
+| Escape returns focus to the Columns trigger   | PASS — focus ring observed on the trigger                                       |
+
+The menu lists exactly the three hideable columns and none of the seven operational ones, which is
+the engine deriving the menu from `hideable` rather than a hand-kept list.
+
+Rows 12 and 13 remain open. Key delivery was working during this pass, so they are worth closing in
+the same sitting rather than waiting for another window.
 
 ## Before a release that claims keyboard accessibility
 

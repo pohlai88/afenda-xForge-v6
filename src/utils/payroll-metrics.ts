@@ -198,10 +198,10 @@ export const EXCEPTION_SEVERITY_LABELS: Record<PayRunExceptionSeverity, string> 
 }
 
 export const EXCEPTION_SEVERITY_STYLES: Record<PayRunExceptionSeverity, string> = {
-  blocking: 'bg-destructive/10 text-destructive',
-  error: 'bg-destructive/10 text-destructive',
-  warning: 'bg-warning/15 text-warning',
-  info: 'bg-info/10 text-info'
+  blocking: 'bg-destructive/10 text-destructive-strong',
+  error: 'bg-destructive/10 text-destructive-strong',
+  warning: 'bg-warning/15 text-warning-strong',
+  info: 'bg-info/10 text-info-strong'
 }
 
 /** Blocking first: an exception list is a to-do, and the things that stop the run belong on top. */
@@ -220,8 +220,8 @@ export const EXCEPTION_STATUS_LABELS: Record<PayRunExceptionStatus, string> = {
 
 export const EXCEPTION_STATUS_STYLES: Record<PayRunExceptionStatus, string> = {
   open: 'bg-muted text-foreground',
-  acknowledged: 'bg-info/10 text-info',
-  resolved: 'bg-success/15 text-success'
+  acknowledged: 'bg-info/10 text-info-strong',
+  resolved: 'bg-success/15 text-success-strong'
 }
 
 /**
@@ -253,12 +253,12 @@ export const PAY_RUN_STATUS_STYLES: Record<PayRunStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
   calculating: 'bg-muted text-muted-foreground',
   calculated: 'bg-primary/10 text-primary',
-  pending_approval: 'bg-warning/15 text-warning',
-  approved: 'bg-success/15 text-success',
+  pending_approval: 'bg-warning/15 text-warning-strong',
+  approved: 'bg-success/15 text-success-strong',
   paid: 'bg-primary/10 text-primary',
   closed: 'bg-muted text-muted-foreground',
-  cancelled: 'bg-destructive/10 text-destructive',
-  failed: 'bg-destructive/10 text-destructive'
+  cancelled: 'bg-destructive/10 text-destructive-strong',
+  failed: 'bg-destructive/10 text-destructive-strong'
 }
 
 /**

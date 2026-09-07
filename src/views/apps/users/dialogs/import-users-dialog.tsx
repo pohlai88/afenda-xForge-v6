@@ -130,7 +130,7 @@ export function ImportUsersDialog({ open, onClose, onImport }: ImportUsersDialog
           {fileName ? <p className='text-muted-foreground text-sm'>Selected file: {fileName}</p> : null}
 
           {errorCount > 0 ? (
-            <p className='text-destructive text-sm'>
+            <p className='text-destructive-strong text-sm'>
               {errorCount} row{errorCount === 1 ? '' : 's'} missing required fields (name, email).
             </p>
           ) : null}

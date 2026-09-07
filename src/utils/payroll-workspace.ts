@@ -98,10 +98,10 @@ export const EMPLOYEE_PAYROLL_STATUS_LABELS: Record<EmployeePayrollStatus, strin
 
 export const EMPLOYEE_PAYROLL_STATUS_STYLES: Record<EmployeePayrollStatus, string> = {
   calculated: 'bg-muted text-foreground',
-  needs_review: 'bg-warning/15 text-warning',
-  blocked: 'bg-destructive/10 text-destructive',
-  approved: 'bg-success/15 text-success',
-  paid: 'bg-success/15 text-success'
+  needs_review: 'bg-warning/15 text-warning-strong',
+  blocked: 'bg-destructive/10 text-destructive-strong',
+  approved: 'bg-success/15 text-success-strong',
+  paid: 'bg-success/15 text-success-strong'
 }
 
 export const PAYMENT_STATUS_LABELS: Record<EmployeePaymentStatus, string> = {
@@ -116,12 +116,12 @@ export const PAYMENT_STATUS_LABELS: Record<EmployeePaymentStatus, string> = {
 
 export const PAYMENT_STATUS_STYLES: Record<EmployeePaymentStatus, string> = {
   ready: 'bg-muted text-foreground',
-  released: 'bg-info/10 text-info',
-  processing: 'bg-info/10 text-info',
-  paid: 'bg-success/15 text-success',
-  returned: 'bg-warning/15 text-warning',
-  failed: 'bg-destructive/10 text-destructive',
-  action_required: 'bg-destructive/10 text-destructive'
+  released: 'bg-info/10 text-info-strong',
+  processing: 'bg-info/10 text-info-strong',
+  paid: 'bg-success/15 text-success-strong',
+  returned: 'bg-warning/15 text-warning-strong',
+  failed: 'bg-destructive/10 text-destructive-strong',
+  action_required: 'bg-destructive/10 text-destructive-strong'
 }
 
 /* -------------------------------------------------------------------------------------------- */

@@ -114,7 +114,7 @@ const buildColumns = (onSelect: (row: SettlementRow) => void): ColumnDef<Settlem
       ) : row.original.accountLast4 ? (
         <span className='text-muted-foreground tabular-nums'>···· {row.original.accountLast4}</span>
       ) : (
-        <span className='text-destructive text-xs'>No account on file</span>
+        <span className='text-destructive-strong text-xs'>No account on file</span>
       )
   },
   {

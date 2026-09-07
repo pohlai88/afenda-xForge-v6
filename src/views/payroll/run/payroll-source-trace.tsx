@@ -13,9 +13,9 @@ import { formatMoney } from '@/utils/money'
 import { formatDate, formatInstant } from '@/utils/payroll-workspace'
 
 const INPUT_STATUS: Record<PayrollInput['status'], { icon: typeof CheckIcon; label: string; className: string }> = {
-  ok: { icon: CheckIcon, label: 'On file', className: 'text-success' },
-  changed: { icon: ArrowRightLeftIcon, label: 'Changed since last run', className: 'text-warning' },
-  missing: { icon: AlertCircleIcon, label: 'Missing', className: 'text-destructive' }
+  ok: { icon: CheckIcon, label: 'On file', className: 'text-success-strong' },
+  changed: { icon: ArrowRightLeftIcon, label: 'Changed since last run', className: 'text-warning-strong' },
+  missing: { icon: AlertCircleIcon, label: 'Missing', className: 'text-destructive-strong' }
 }
 
 /**
@@ -35,7 +35,7 @@ export const PayrollInputs = ({ inputs, className }: { inputs: PayrollInput[]; c
             <Icon className='size-3.5' aria-hidden='true' />
             {status.label}
           </dd>
-          <dd className={cn('tabular-nums', input.status === 'missing' && 'text-destructive')}>{input.value}</dd>
+          <dd className={cn('tabular-nums', input.status === 'missing' && 'text-destructive-strong')}>{input.value}</dd>
           <dd className='text-muted-foreground col-span-2 text-xs'>
             {input.source}
             {input.effectiveFrom && ` · effective ${formatDate(input.effectiveFrom)}`}

@@ -36,11 +36,11 @@ export const BATCH_STATUS_LABELS: Record<SettlementBatchStatus, string> = {
 export const BATCH_STATUS_STYLES: Record<SettlementBatchStatus, string> = {
   draft: 'bg-muted text-foreground',
   prepared: 'bg-primary/10 text-primary',
-  released: 'bg-info/10 text-info',
-  accepted: 'bg-info/10 text-info',
-  processing: 'bg-info/10 text-info',
-  settled: 'bg-success/15 text-success',
-  partially_returned: 'bg-warning/15 text-warning'
+  released: 'bg-info/10 text-info-strong',
+  accepted: 'bg-info/10 text-info-strong',
+  processing: 'bg-info/10 text-info-strong',
+  settled: 'bg-success/15 text-success-strong',
+  partially_returned: 'bg-warning/15 text-warning-strong'
 }
 
 /** The batch lifecycle as stages, for the rail. 'draft' is before the first stage. */

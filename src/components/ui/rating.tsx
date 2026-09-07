@@ -19,7 +19,7 @@ const ratingVariants = cva('transition-colors', {
   variants: {
     variant: {
       default: 'text-foreground fill-current',
-      destructive: 'text-destructive fill-current',
+      destructive: 'text-destructive-strong fill-current',
       outline: 'text-muted-foreground fill-transparent stroke-current',
       secondary: 'text-muted-foreground fill-current',
       yellow: 'fill-current text-amber-600 dark:text-amber-400'

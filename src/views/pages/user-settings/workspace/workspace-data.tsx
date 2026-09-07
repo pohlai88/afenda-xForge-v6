@@ -86,7 +86,7 @@ const WorkspaceData = () => {
                     ) : (
                       <div className='flex items-center gap-2'>
                         <span className='text-sm'>Completed</span>
-                        <CheckCircle2Icon className='h-4 w-4 text-success' />
+                        <CheckCircle2Icon className='h-4 w-4 text-success-strong' />
                       </div>
                     )}
                   </TableCell>

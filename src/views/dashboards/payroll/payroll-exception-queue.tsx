@@ -76,7 +76,7 @@ const PayrollExceptionQueue = ({
         </CardDescription>
         <CardAction className='flex flex-col items-end gap-1'>
           <Badge
-            className={cn(open.length === 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive')}
+            className={cn(open.length === 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive-strong')}
           >
             {open.length} open
           </Badge>

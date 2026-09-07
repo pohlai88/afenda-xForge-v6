@@ -82,7 +82,7 @@ const FundingSummary = ({ run, batch, account, summary, className }: Props) => {
             <dt className='text-muted-foreground text-xs tracking-wide uppercase'>
               {short ? 'Shortfall' : 'Headroom'}
             </dt>
-            <dd className={cn('font-semibold tabular-nums', short ? 'text-destructive' : 'text-success')}>
+            <dd className={cn('font-semibold tabular-nums', short ? 'text-destructive-strong' : 'text-success-strong')}>
               {formatMoney({ ...summary.headroom, amount: Math.abs(summary.headroom.amount) })}
             </dd>
           </div>

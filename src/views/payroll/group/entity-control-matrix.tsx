@@ -160,7 +160,7 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
     // unreadable; a mark of a different kind is how the eye tells two facts apart.
     cell: ({ row }) => (
       <span className='flex flex-col gap-0.5 text-xs'>
-        <span className={row.original.included ? 'text-foreground' : 'text-warning'}>
+        <span className={row.original.included ? 'text-foreground' : 'text-warning-strong'}>
           {row.original.included ? 'Included' : 'Missing'}
         </span>
         {row.original.included && (
@@ -389,7 +389,7 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
     label: (
       <span className='font-medium'>
         {visibleIncluded} of {rows.length} included
-        {visibleIncluded < rows.length && <span className='text-warning'> · incomplete</span>}
+        {visibleIncluded < rows.length && <span className='text-warning-strong'> · incomplete</span>}
       </span>
     ),
     cells: [
@@ -519,7 +519,7 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
           </span>
 
           {selectedMissing.length > 0 && (
-            <span className='text-warning text-sm'>
+            <span className='text-warning-strong text-sm'>
               {selectedMissing.map(row => row.entity.name).join(', ')} has no calculation. Selection total is
               incomplete.
             </span>

@@ -790,7 +790,7 @@ function KanbanAddColumn({ onAdd, validate }: KanbanAddColumnProps) {
           aria-invalid={!!error}
           autoFocus
         />
-        {error && <p className='text-destructive text-xs'>{error}</p>}
+        {error && <p className='text-destructive-strong text-xs'>{error}</p>}
         <div className='flex items-center gap-1.5'>
           <Button size='sm' onClick={handleConfirm} disabled={!trimmed || !!error}>
             Add

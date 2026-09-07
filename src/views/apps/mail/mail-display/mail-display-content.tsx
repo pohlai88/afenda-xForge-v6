@@ -199,7 +199,7 @@ export const MailDisplayContent = ({
                     variant='ghost'
                     size='icon'
                     title='Delete permanently'
-                    className='text-destructive hover:text-destructive'
+                    className='text-destructive-strong hover:text-destructive-strong'
                     onClick={() => onPermanentDelete(email.id)}
                   />
                 }

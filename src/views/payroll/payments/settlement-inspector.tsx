@@ -154,7 +154,7 @@ const SettlementInspector = ({ row, batch, open, onOpenChange, onReissue }: Prop
 
         {row.status === 'paid' && (
           <SheetFooter className='flex-row items-center border-t'>
-            <CheckIcon className='text-success size-4' aria-hidden='true' />
+            <CheckIcon className='text-success-strong size-4' aria-hidden='true' />
             <span className='text-muted-foreground text-xs'>Settled. Nothing to do here.</span>
           </SheetFooter>
         )}

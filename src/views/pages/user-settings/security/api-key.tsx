@@ -172,7 +172,7 @@ const ApiKey = () => {
 
               <div className='mt-4 space-y-2'>
                 <Label htmlFor='key-name' className='gap-1'>
-                  Name<span className='text-destructive'>*</span>
+                  Name<span className='text-destructive-strong'>*</span>
                 </Label>
                 <Input
                   id='key-name'
@@ -244,8 +244,8 @@ const ApiKey = () => {
                       variant={apiKey.status === 'active' ? 'default' : 'secondary'}
                       className={
                         apiKey.status === 'active'
-                          ? 'bg-success/10 text-success'
-                          : 'bg-destructive/10 text-destructive'
+                          ? 'bg-success/10 text-success-strong'
+                          : 'bg-destructive/10 text-destructive-strong'
                       }
                     >
                       {apiKey.status}
@@ -271,7 +271,7 @@ const ApiKey = () => {
                             {apiKey.status === 'active' ? 'Disable Key' : 'Enable Key'}
                           </DropdownMenuItem>
 
-                          <DropdownMenuItem className='text-destructive!' onClick={() => deleteKey(apiKey.id)}>
+                          <DropdownMenuItem className='text-destructive-strong!' onClick={() => deleteKey(apiKey.id)}>
                             Delete Key
                           </DropdownMenuItem>
                         </DropdownMenuGroup>

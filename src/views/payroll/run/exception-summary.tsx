@@ -34,7 +34,7 @@ const ExceptionSummary = ({ exceptions, activeSeverity = null, onFilter, classNa
 
   if (counts.open === 0) {
     return (
-      <p className={cn('text-success flex items-center gap-1.5 text-sm', className)} role='status'>
+      <p className={cn('text-success-strong flex items-center gap-1.5 text-sm', className)} role='status'>
         <CheckCircle2Icon className='size-4' aria-hidden='true' />
         Nothing outstanding on this run
       </p>

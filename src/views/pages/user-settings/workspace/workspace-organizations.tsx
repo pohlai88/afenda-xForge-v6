@@ -49,7 +49,7 @@ const WorkspaceOrganizations = () => {
                   <div className='flex items-center gap-4'>
                     <img src={org.img} alt={org.name} className='h-8' />
                     <p className='text-muted-foreground text-sm'>
-                      <Link href='#' className='font-medium text-info hover:underline'>
+                      <Link href='#' className='font-medium text-info-strong hover:underline'>
                         {org.name}
                       </Link>{' '}
                       {org.description}
@@ -60,7 +60,7 @@ const WorkspaceOrganizations = () => {
                       render={
                         <Button
                           variant='outline'
-                          className='border-destructive! text-destructive! hover:bg-destructive/10! focus-visible:ring-destructive/20 max-sm:w-full'
+                          className='border-destructive! text-destructive-strong! hover:bg-destructive/10! focus-visible:ring-destructive/20 max-sm:w-full'
                         />
                       }
                     >

@@ -141,11 +141,11 @@ const PayrollApprovalDialog = ({
         <dl className='divide-y'>
           <Row
             label='Blockers'
-            value={<span className={counts.blocking > 0 ? 'text-destructive' : 'text-success'}>{counts.blocking}</span>}
+            value={<span className={counts.blocking > 0 ? 'text-destructive-strong' : 'text-success-strong'}>{counts.blocking}</span>}
           />
           <Row
             label='Errors'
-            value={<span className={counts.error > 0 ? 'text-destructive' : 'text-success'}>{counts.error}</span>}
+            value={<span className={counts.error > 0 ? 'text-destructive-strong' : 'text-success-strong'}>{counts.error}</span>}
           />
           <Row
             label='Warnings'

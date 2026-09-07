@@ -38,7 +38,7 @@ const GroupNextActions = ({ actions, className }: Props) => (
 
     <CardContent className='flex flex-1 flex-col'>
       {actions.length === 0 ? (
-        <p className='text-success flex items-center gap-2 text-sm'>
+        <p className='text-success-strong flex items-center gap-2 text-sm'>
           <CheckCircle2Icon className='size-4 shrink-0' aria-hidden='true' />
           Nothing outstanding across the group this period.
         </p>

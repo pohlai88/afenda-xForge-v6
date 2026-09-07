@@ -150,7 +150,7 @@ const PayGroupSettings = ({ payGroups: initial, entities }: Props) => {
                   <Badge
                     className={cn(
                       'text-xs',
-                      group.active ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'
+                      group.active ? 'bg-success/15 text-success-strong' : 'bg-muted text-muted-foreground'
                     )}
                   >
                     {group.active ? 'Active' : 'Inactive'}

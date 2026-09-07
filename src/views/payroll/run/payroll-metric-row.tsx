@@ -36,9 +36,9 @@ type Props = {
 
 const TONE_STYLES: Record<NonNullable<PayrollMetric['tone']>, string> = {
   default: 'text-foreground',
-  success: 'text-success',
-  warning: 'text-warning',
-  destructive: 'text-destructive'
+  success: 'text-success-strong',
+  warning: 'text-warning-strong',
+  destructive: 'text-destructive-strong'
 }
 
 /**

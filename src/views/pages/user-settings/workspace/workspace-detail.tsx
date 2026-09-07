@@ -104,7 +104,7 @@ const WorkspaceDetail = () => {
                 <UploadCloudIcon />
                 Upload logo
               </Button>
-              <Button variant='ghost' onClick={remove} disabled={!file} className='text-destructive'>
+              <Button variant='ghost' onClick={remove} disabled={!file} className='text-destructive-strong'>
                 <TrashIcon />
               </Button>
             </div>

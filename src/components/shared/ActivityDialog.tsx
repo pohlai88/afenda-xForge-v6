@@ -129,8 +129,8 @@ const ActivityDialog = ({ defaultOpen = false, trigger, triggerClassName }: Prop
               </div>
               <div className='flex flex-wrap items-center gap-2'>
                 <Badge className='bg-primary/10 text-primary rounded-sm font-normal'>Client-Request</Badge>
-                <Badge className='bg-info/10 text-info rounded-sm font-normal'>Figma</Badge>
-                <Badge className='bg-warning/10 text-warning rounded-sm font-normal'>Redesign</Badge>
+                <Badge className='bg-info/10 text-info-strong rounded-sm font-normal'>Figma</Badge>
+                <Badge className='bg-warning/10 text-warning-strong rounded-sm font-normal'>Redesign</Badge>
               </div>
             </div>
           </div>

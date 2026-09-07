@@ -31,7 +31,7 @@ const PaymentReadiness = ({ percent, checks, className }: Props) => (
       <CardDescription>Every gate has to clear before a payment file can be released.</CardDescription>
       <CardAction>
         <span
-          className={cn('text-2xl font-semibold tabular-nums', percent === 100 ? 'text-success' : 'text-foreground')}
+          className={cn('text-2xl font-semibold tabular-nums', percent === 100 ? 'text-success-strong' : 'text-foreground')}
         >
           {percent}%
         </span>
@@ -53,7 +53,7 @@ const PaymentReadiness = ({ percent, checks, className }: Props) => (
             <span
               className={cn(
                 'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border',
-                check.done ? 'bg-success/15 border-success/40 text-success' : 'border-border text-muted-foreground'
+                check.done ? 'bg-success/15 border-success/40 text-success-strong' : 'border-border text-muted-foreground'
               )}
               aria-hidden='true'
             >
@@ -64,7 +64,7 @@ const PaymentReadiness = ({ percent, checks, className }: Props) => (
                 {check.label}
                 <span className='sr-only'>{check.done ? ' — done' : ' — outstanding'}</span>
               </span>
-              <span className={cn('text-xs', check.done ? 'text-muted-foreground' : 'text-warning')}>
+              <span className={cn('text-xs', check.done ? 'text-muted-foreground' : 'text-warning-strong')}>
                 {check.detail}
               </span>
             </span>

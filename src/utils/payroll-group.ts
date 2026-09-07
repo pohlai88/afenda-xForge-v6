@@ -74,9 +74,9 @@ export const ENTITY_STATE_TIER: Record<EntityPayrollState, EntityStateTier> = {
 export const ENTITY_STATE_STYLES: Record<EntityPayrollState, string> = {
   awaiting_data: 'bg-muted text-muted-foreground',
   in_progress: 'bg-muted text-muted-foreground',
-  blocked: 'bg-destructive/10 text-destructive',
-  review: 'bg-warning/15 text-warning',
-  ready: 'bg-success/15 text-success',
+  blocked: 'bg-destructive/10 text-destructive-strong',
+  review: 'bg-warning/15 text-warning-strong',
+  ready: 'bg-success/15 text-success-strong',
   paid: 'bg-muted text-muted-foreground',
   closed: 'bg-muted text-muted-foreground'
 }

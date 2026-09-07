@@ -105,7 +105,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             <span
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-sm',
-                overdue ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
+                overdue ? 'bg-destructive/10 text-destructive-strong' : 'bg-success/10 text-success-strong'
               )}
             >
               <CalendarClockIcon className='size-4.5' />
@@ -128,7 +128,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             <span
               className={cn(
                 'flex size-9 shrink-0 items-center justify-center rounded-sm',
-                blockingCount > 0 ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'
+                blockingCount > 0 ? 'bg-destructive/10 text-destructive-strong' : 'bg-success/10 text-success-strong'
               )}
             >
               <AlertTriangleIcon className='size-4.5' />

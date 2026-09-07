@@ -18,9 +18,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { cn } from '@/lib/utils'
 
 const INVOICE_STATUS_STYLES: Record<InvoiceStatus, string> = {
-  paid: 'bg-success/10 text-success',
-  pending: 'bg-warning/10 text-warning',
-  cancelled: 'bg-destructive/10 text-destructive',
+  paid: 'bg-success/10 text-success-strong',
+  pending: 'bg-warning/10 text-warning-strong',
+  cancelled: 'bg-destructive/10 text-destructive-strong',
   draft: 'bg-muted text-muted-foreground'
 }
 

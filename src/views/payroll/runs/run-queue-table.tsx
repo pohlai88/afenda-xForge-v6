@@ -106,7 +106,7 @@ const columns: ColumnDef<PayRunQueueRow>[] = [
         <span className='flex flex-col whitespace-nowrap'>
           <span>{formatDate(row.original.payDate)}</span>
           {days !== null && (
-            <span className={cn('text-xs', days < 0 ? 'text-destructive' : 'text-muted-foreground')}>
+            <span className={cn('text-xs', days < 0 ? 'text-destructive-strong' : 'text-muted-foreground')}>
               {days === 0
                 ? 'today'
                 : days < 0
@@ -149,8 +149,8 @@ const columns: ColumnDef<PayRunQueueRow>[] = [
               change === null || change === 0
                 ? 'text-muted-foreground'
                 : change > 0
-                  ? 'text-success'
-                  : 'text-destructive'
+                  ? 'text-success-strong'
+                  : 'text-destructive-strong'
             )}
           >
             {change === null ? 'First run' : `${formatSignedPercent(change)} vs prior`}

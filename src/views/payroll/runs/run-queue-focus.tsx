@@ -49,14 +49,14 @@ const Countdown = ({ row }: { row: PayRunQueueRow }) => {
   }
 
   const overdue = days < 0
-  const tone = overdue ? 'text-destructive' : days <= SOON ? 'text-warning' : 'text-foreground'
+  const tone = overdue ? 'text-destructive-strong' : days <= SOON ? 'text-warning-strong' : 'text-foreground'
 
   return (
     <>
       <span className={cn('text-5xl leading-none font-semibold tracking-tight tabular-nums sm:text-6xl', tone)}>
         {days === 0 ? 'Today' : Math.abs(days)}
       </span>
-      <span className={cn('text-sm', overdue ? 'text-destructive' : 'text-muted-foreground')}>
+      <span className={cn('text-sm', overdue ? 'text-destructive-strong' : 'text-muted-foreground')}>
         {days === 0
           ? `Payday · ${formatDate(row.payDate)}`
           : overdue
@@ -79,7 +79,7 @@ const RunQueueFocus = ({ row, className }: Props) => {
   // Interface writing: say what is in the way and what to do about it, in one sentence.
   const gate = blocked
     ? {
-        tone: 'text-destructive',
+        tone: 'text-destructive-strong',
         Icon: AlertOctagonIcon,
         text: `Payroll cannot be approved. ${counts.blocking + counts.error} ${
           counts.blocking + counts.error === 1 ? 'exception is' : 'exceptions are'
@@ -87,15 +87,15 @@ const RunQueueFocus = ({ row, className }: Props) => {
       }
     : counts.warning > 0
       ? {
-          tone: 'text-warning',
+          tone: 'text-warning-strong',
           Icon: AlertTriangleIcon,
           text: `${counts.warning} ${counts.warning === 1 ? 'warning' : 'warnings'} to acknowledge before approval.`
         }
       : awaitingApproval
-        ? { tone: 'text-success', Icon: CheckCircle2Icon, text: 'Nothing is blocking approval.' }
+        ? { tone: 'text-success-strong', Icon: CheckCircle2Icon, text: 'Nothing is blocking approval.' }
         : row.lifecycle === 'done'
           ? {
-              tone: 'text-success',
+              tone: 'text-success-strong',
               Icon: CheckCircle2Icon,
               text: row.approver ? `Approved by ${row.approver.name} and paid.` : 'Paid.'
             }

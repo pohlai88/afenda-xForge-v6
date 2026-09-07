@@ -87,7 +87,7 @@ const AppDialog = ({ onClose }: AuthDialogProps) => (
 
           <img src='/images/misc/qr-code.webp' alt='QR Code' className='mx-auto w-37.5' />
 
-          <Alert className='border-none bg-warning/10 text-warning'>
+          <Alert className='border-none bg-warning/10 text-warning-strong'>
             <AlertTitle>Enter Authentication Code</AlertTitle>
             <AlertDescription className='text-warning/80'>
               If you&apos;re having trouble using the QR code, select manual entry on your app

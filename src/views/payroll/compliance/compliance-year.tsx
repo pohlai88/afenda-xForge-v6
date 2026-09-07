@@ -48,7 +48,7 @@ const ComplianceYear = ({ summary, className }: Props) => {
       icon: <HourglassIcon />,
       value: formatMoney(outstanding),
       label: 'Still to file',
-      chipClassName: outstanding.amount > 0 ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success'
+      chipClassName: outstanding.amount > 0 ? 'bg-warning/15 text-warning-strong' : 'bg-success/15 text-success-strong'
     },
     {
       key: 'on-time',
@@ -70,7 +70,7 @@ const ComplianceYear = ({ summary, className }: Props) => {
     <Card className={className}>
       <CardHeader>
         <CardTitle className='text-lg font-semibold'>{summary.year} filings</CardTitle>
-        <CardDescription className={cn(attention.length > 0 && 'text-destructive')}>
+        <CardDescription className={cn(attention.length > 0 && 'text-destructive-strong')}>
           {attention.length > 0 ? attention.join(' · ') : 'Nothing overdue or rejected'}
         </CardDescription>
       </CardHeader>

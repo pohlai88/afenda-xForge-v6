@@ -63,7 +63,7 @@ const ExceptionList = ({
             {filtered ? (
               <ListFilterIcon aria-hidden='true' />
             ) : (
-              <CheckCircle2Icon className='text-success' aria-hidden='true' />
+              <CheckCircle2Icon className='text-success-strong' aria-hidden='true' />
             )}
           </EmptyMedia>
           <EmptyTitle>{filtered ? 'Nothing at this severity' : 'Nothing to resolve'}</EmptyTitle>

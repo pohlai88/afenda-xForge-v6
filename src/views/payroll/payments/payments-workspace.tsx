@@ -136,9 +136,9 @@ const PaymentsWorkspace = ({ rows: initialRows, batches, runs, mayReissue }: Pro
         <div className='flex flex-wrap items-center justify-between gap-3 px-4 py-3'>
           <h2 className='flex items-center gap-2 text-sm font-semibold'>
             {failures.length > 0 ? (
-              <AlertTriangleIcon className='text-destructive size-4' aria-hidden='true' />
+              <AlertTriangleIcon className='text-destructive-strong size-4' aria-hidden='true' />
             ) : (
-              <CheckCircle2Icon className='text-success size-4' aria-hidden='true' />
+              <CheckCircle2Icon className='text-success-strong size-4' aria-hidden='true' />
             )}
             {failures.length === 0
               ? 'No returned or failed payments outstanding'

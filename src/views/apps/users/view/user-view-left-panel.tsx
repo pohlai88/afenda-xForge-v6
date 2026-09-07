@@ -107,7 +107,7 @@ export function UserViewLeftPanel({ user, onEdit, onToggleSuspend }: UserViewLef
           </Button>
           <Button
             variant='outline'
-            className='text-destructive hover:bg-destructive/10 hover:text-destructive sm:flex-1'
+            className='text-destructive-strong hover:bg-destructive/10 hover:text-destructive-strong sm:flex-1'
             onClick={onToggleSuspend}
           >
             {isSuspended ? 'Activate' : 'Suspend'}

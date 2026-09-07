@@ -231,7 +231,7 @@ const LineageDrawer = ({ consolidation, open, onOpenChange, measure = 'employer_
                             {row.included && row.reporting ? (
                               formatMoney(reportingOf(row))
                             ) : (
-                              <span className='text-warning text-xs'>Not included</span>
+                              <span className='text-warning-strong text-xs'>Not included</span>
                             )}
                           </TableCell>
                         </TableRow>

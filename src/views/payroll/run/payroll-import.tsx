@@ -135,9 +135,9 @@ const validate = (
 }
 
 const STATUS_STYLES: Record<RowStatus, string> = {
-  valid: 'bg-success/15 text-success',
-  warning: 'bg-warning/15 text-warning',
-  error: 'bg-destructive/10 text-destructive'
+  valid: 'bg-success/15 text-success-strong',
+  warning: 'bg-warning/15 text-warning-strong',
+  error: 'bg-destructive/10 text-destructive-strong'
 }
 
 const STATUS_LABELS: Record<RowStatus, string> = { valid: 'Valid', warning: 'Warning', error: 'Error' }
@@ -260,7 +260,7 @@ const PayrollImport = ({
                   aria-current={active ? 'step' : undefined}
                 >
                   {done ? (
-                    <CheckIcon className='text-success size-3' aria-hidden='true' />
+                    <CheckIcon className='text-success-strong size-3' aria-hidden='true' />
                   ) : (
                     <span className='tabular-nums'>{index + 1}</span>
                   )}
@@ -338,21 +338,21 @@ const PayrollImport = ({
               <dl className='grid grid-cols-2 gap-px overflow-hidden rounded-lg border sm:grid-cols-5'>
                 {[
                   { label: 'Total', value: counts.total, tone: 'text-foreground' },
-                  { label: 'Valid', value: counts.valid, tone: 'text-success' },
+                  { label: 'Valid', value: counts.valid, tone: 'text-success-strong' },
                   {
                     label: 'Warnings',
                     value: counts.warnings,
-                    tone: counts.warnings ? 'text-warning' : 'text-foreground'
+                    tone: counts.warnings ? 'text-warning-strong' : 'text-foreground'
                   },
                   {
                     label: 'Errors',
                     value: counts.errors,
-                    tone: counts.errors ? 'text-destructive' : 'text-foreground'
+                    tone: counts.errors ? 'text-destructive-strong' : 'text-foreground'
                   },
                   {
                     label: 'Rejected',
                     value: counts.errors,
-                    tone: counts.errors ? 'text-destructive' : 'text-foreground'
+                    tone: counts.errors ? 'text-destructive-strong' : 'text-foreground'
                   }
                 ].map(item => (
                   <div key={item.label} className='bg-card flex flex-col px-3 py-2'>

@@ -38,7 +38,7 @@ type Props = {
 const PayrollStageBar = ({ status, onInputsClick, inputsPending = false, className }: Props) => {
   if (status === 'cancelled' || status === 'failed') {
     return (
-      <p className={cn('text-destructive text-sm', className)} role='status'>
+      <p className={cn('text-destructive-strong text-sm', className)} role='status'>
         This run was {status}. It is no longer moving through the payroll lifecycle.
       </p>
     )
@@ -63,8 +63,8 @@ const PayrollStageBar = ({ status, onInputsClick, inputsPending = false, classNa
             <span
               className={cn(
                 'flex size-4 shrink-0 items-center justify-center rounded-full border text-[10px] tabular-nums',
-                flagged && 'bg-warning/15 border-warning/40 text-warning',
-                !flagged && done && 'bg-success/15 border-success/40 text-success',
+                flagged && 'bg-warning/15 border-warning/40 text-warning-strong',
+                !flagged && done && 'bg-success/15 border-success/40 text-success-strong',
                 !flagged && active && 'border-primary-foreground/40',
                 !flagged && !done && !active && 'border-current'
               )}

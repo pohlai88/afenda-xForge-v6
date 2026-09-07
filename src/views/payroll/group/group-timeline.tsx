@@ -75,7 +75,7 @@ const GroupTimeline = ({ events, className }: Props) => (
                   <span
                     className={cn(
                       'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md',
-                      urgent ? 'bg-warning/15 text-warning' : 'bg-muted text-muted-foreground'
+                      urgent ? 'bg-warning/15 text-warning-strong' : 'bg-muted text-muted-foreground'
                     )}
                   >
                     <Icon className='size-4' aria-hidden='true' />
@@ -88,7 +88,7 @@ const GroupTimeline = ({ events, className }: Props) => (
 
                   <span className='flex shrink-0 flex-col items-end'>
                     <span className='text-sm tabular-nums'>{formatDate(event.date)}</span>
-                    <span className={cn('text-xs tabular-nums', urgent ? 'text-warning' : 'text-muted-foreground')}>
+                    <span className={cn('text-xs tabular-nums', urgent ? 'text-warning-strong' : 'text-muted-foreground')}>
                       {event.days === 0 ? 'today' : `in ${event.days} ${event.days === 1 ? 'day' : 'days'}`}
                     </span>
                   </span>

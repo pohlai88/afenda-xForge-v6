@@ -116,12 +116,12 @@ const columns: ColumnDef<Item>[] = [
           <AvatarFallback
             className={
               status === 'downloaded'
-                ? 'bg-info/10 text-info'
+                ? 'bg-info/10 text-info-strong'
                 : status === 'draft'
-                  ? 'bg-success/10 text-success'
+                  ? 'bg-success/10 text-success-strong'
                   : status === 'paid'
-                    ? 'bg-warning/10 text-warning'
-                    : 'bg-destructive/10 text-destructive'
+                    ? 'bg-warning/10 text-warning-strong'
+                    : 'bg-destructive/10 text-destructive-strong'
             }
           >
             {statusIcon}
@@ -194,7 +194,7 @@ const columns: ColumnDef<Item>[] = [
       return (
         <>
           {row.original.balance === 0 ? (
-            <Badge className='h-auto rounded-sm bg-success/10 text-success focus-visible:ring-success/20 [a&]:hover:bg-success/5 dark:[a&]:hover:bg-success/5'>
+            <Badge className='h-auto rounded-sm bg-success/10 text-success-strong focus-visible:ring-success/20 [a&]:hover:bg-success/5 dark:[a&]:hover:bg-success/5'>
               Paid
             </Badge>
           ) : (

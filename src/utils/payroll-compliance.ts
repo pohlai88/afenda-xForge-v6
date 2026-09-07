@@ -49,10 +49,10 @@ export const FILING_STATUS_LABELS: Record<FilingStatus, string> = {
  */
 export const FILING_STATUS_STYLES: Record<FilingStatus, string> = {
   not_started: 'bg-muted text-muted-foreground',
-  prepared: 'bg-info/10 text-info',
-  submitted: 'bg-warning/15 text-warning',
-  accepted: 'bg-success/15 text-success',
-  rejected: 'bg-destructive/10 text-destructive'
+  prepared: 'bg-info/10 text-info-strong',
+  submitted: 'bg-warning/15 text-warning-strong',
+  accepted: 'bg-success/15 text-success-strong',
+  rejected: 'bg-destructive/10 text-destructive-strong'
 }
 
 /** Sort order for a status column: what needs a person first, what is done last. */

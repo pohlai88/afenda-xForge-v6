@@ -126,7 +126,7 @@ const BankingSettings = ({ accounts: initial, entities }: Props) => {
               <div className='flex min-w-0 flex-1 flex-col'>
                 <span className='flex items-center gap-2 text-sm font-medium'>
                   {account.name}
-                  {account.isDefault && <Badge className='bg-success/15 text-success text-xs'>Default</Badge>}
+                  {account.isDefault && <Badge className='bg-success/15 text-success-strong text-xs'>Default</Badge>}
                 </span>
                 <span className='text-muted-foreground text-xs'>
                   {entityById.get(account.entityId)?.name ?? 'Unknown entity'} · {account.bankName} ···· {account.accountLast4} · {account.currency}
