@@ -160,3 +160,33 @@ export const workspaceModules = (definition: WorkspaceDefinition): WorkspaceModu
       defaultSize: module.defaultSize
     }))
   )
+
+/**
+ * A band, cut into the runs of modules that may be shuffled against each other.
+ *
+ * An immovable module is not a member of any run — it is the cut. That is the whole of the anchor
+ * rule, and it is written here rather than anywhere a zone or a module is named: two modules may
+ * be arranged against each other only if they turn up in the same returned run, so a movable
+ * module cannot pass a fixed one and a lone module between two fixed ones has nobody to swap with.
+ *
+ * The live workspace and the reconciliation of a stored layout both read the law from here, so a
+ * stored order cannot express an arrangement the live one would refuse.
+ */
+export const segmentsOf = (ids: readonly string[], movable: (id: string) => boolean): string[][] => {
+  const runs: string[][] = []
+  let run: string[] = []
+
+  for (const id of ids) {
+    if (movable(id)) {
+      run.push(id)
+      continue
+    }
+
+    if (run.length > 0) runs.push(run)
+    run = []
+  }
+
+  if (run.length > 0) runs.push(run)
+
+  return runs
+}

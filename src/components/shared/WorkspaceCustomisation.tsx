@@ -17,6 +17,7 @@ import {
 
 // Type Imports
 import type { ModuleSize, WorkspaceModuleSummary } from '@/types/common/workspace-types'
+import type { WorkspaceLayoutPersistence, WorkspaceLayoutState } from '@/lib/workspace/workspace-layout-persistence'
 
 // Component Imports
 import { Button } from '@/components/ui/button'
@@ -33,7 +34,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 // Util Imports
-import { MODULE_SIZE_LABEL, MODULE_SPAN } from '@/types/common/workspace-types'
+import { MODULE_SIZE_LABEL, MODULE_SPAN, segmentsOf } from '@/types/common/workspace-types'
+import {
+  browserWorkspaceLayoutPersistence,
+  reconcileWorkspaceLayout,
+  workspaceLayoutOf
+} from '@/lib/workspace/workspace-layout-persistence'
 import { cn } from '@/lib/utils'
 
 type WorkspaceCustomisationValue = {
@@ -87,33 +93,6 @@ const NO_OVERRIDES: ReadonlyMap<string, ModuleSize> = new Map()
 const noop = () => {}
 
 /**
- * A band, cut into the runs of modules that may be shuffled against each other.
- *
- * An immovable module is not a member of any segment — it is the cut. That is the whole of the
- * anchor rule, and it is written here rather than anywhere a zone or a module is named: two
- * modules may swap only if they turn up in the same returned run, so a movable module cannot pass
- * a fixed one and a lone module between two fixed ones has nobody to swap with.
- */
-const segmentsOf = (ids: readonly string[], movable: (id: string) => boolean): string[][] => {
-  const runs: string[][] = []
-  let run: string[] = []
-
-  for (const id of ids) {
-    if (movable(id)) {
-      run.push(id)
-      continue
-    }
-
-    if (run.length > 0) runs.push(run)
-    run = []
-  }
-
-  if (run.length > 0) runs.push(run)
-
-  return runs
-}
-
-/**
  * A workspace that was never wrapped is a workspace nobody can customise, which is exactly what
  * every other page rendering a grid wants today — so the default is the whole contract, inert.
  */
@@ -165,15 +144,28 @@ const escapeExits = (exit: () => void) => (event: KeyboardEvent<HTMLElement>) =>
  * wrong. Hidden modules keep their place in it, because whether you can see something and where it
  * sits are different preferences and neither one should quietly decide the other.
  *
- * Ephemeral on purpose. Leaving and re-entering Customise mode keeps it because the provider stays
- * mounted; a reload loses it because nothing writes it anywhere. Persistence is a later phase, and
- * a store that persisted before order and size exist would be storing the wrong shape.
+ * Remembered rather than ephemeral since Phase 05E, through a seam this file depends on and a
+ * browser adapter it never names twice. The three differences are read once after hydration and
+ * written after every mutation that changed one of them — which is why a refused command persists
+ * nothing: it returns before it reaches the write, exactly as it returns before the announcement.
+ *
+ * Restoring happens after the first paint and cannot happen before it. The server has no access to
+ * a reader's browser, so the only deterministic first render is the domain default; the stored
+ * layout arrives on the commit after hydration, reconciled against the declaration. Nothing
+ * outside this component needs to know which of those two renders it is in.
  */
 export const WorkspaceCustomisation = ({
+  workspaceId,
   modules,
+  persistence = browserWorkspaceLayoutPersistence,
   children
 }: {
+  /** Names the layout being kept. Comes from the declaration, so this file never learns a domain. */
+  workspaceId: string
   modules: readonly WorkspaceModuleSummary[]
+
+  /** Overridable so a workspace can be given a different memory, or none. */
+  persistence?: WorkspaceLayoutPersistence
   children: ReactNode
 }) => {
   const [customising, setCustomising] = useState(false)
@@ -196,6 +188,45 @@ export const WorkspaceCustomisation = ({
   const entry = useRef<HTMLButtonElement>(null)
 
   const declared = useMemo(() => new Map(modules.map(module => [module.id, module])), [modules])
+
+  /*
+   * The stored layout, once, on the commit after hydration.
+   *
+   * Guarded by a ref rather than by a dependency list because `modules` is rebuilt by the page on
+   * every render: reading again would hand back a fresh Set and Map, which are new state whatever
+   * they contain, which would ask for another render. Restoring is a single event, so it is written
+   * as one.
+   */
+  const restored = useRef(false)
+
+  useEffect(() => {
+    if (restored.current) return
+
+    restored.current = true
+
+    return persistence.load(workspaceId, stored => {
+      const layout = reconcileWorkspaceLayout(modules, stored)
+
+      const untouched =
+        layout.hidden.size === 0 &&
+        layout.sizes.size === 0 &&
+        layout.order.every((id, index) => id === modules[index]?.id)
+
+      // Nothing stored, or nothing in it survived the declaration. The first render was already
+      // right, so leaving it alone is both cheaper and less to look at.
+      if (untouched) return
+
+      setOrder(layout.order)
+      setHidden(layout.hidden)
+      setOverrides(layout.sizes)
+    })
+  }, [modules, persistence, workspaceId])
+
+  /** Writes what the workspace now is. Only reached by a command that actually changed something. */
+  const persist = useCallback(
+    (next: WorkspaceLayoutState) => persistence.write(workspaceId, workspaceLayoutOf(next)),
+    [persistence, workspaceId]
+  )
 
   /*
    * Where each module currently sits, as a lookup.
@@ -264,12 +295,16 @@ export const WorkspaceCustomisation = ({
       const found = declared.get(id)
 
       if (!found || found.required) return
+      if (hidden.has(id)) return
 
-      setHidden(current => (current.has(id) ? current : new Set(current).add(id)))
+      const next = new Set(hidden).add(id)
+
+      setHidden(next)
       setAnnouncement(`${found.title} hidden.`)
       setFocus(current => ({ token: current.token + 1, target: 'list' }))
+      persist({ order, hidden: next, sizes: overrides })
     },
-    [declared]
+    [declared, hidden, order, overrides, persist]
   )
 
   const restore = useCallback(
@@ -283,13 +318,14 @@ export const WorkspaceCustomisation = ({
       next.delete(id)
       setHidden(next)
       setAnnouncement(`${found.title} restored.`)
+      persist({ order, hidden: next, sizes: overrides })
 
       // Restoring the last one takes the Hidden modules control away with it, and the menu item
       // that did it is already gone. Everything else leaves the trigger standing for Base UI to
       // return focus to, which is where a reader restoring several in a row wants to be.
       if (next.size === 0) setFocus(current => ({ token: current.token + 1, target: 'list' }))
     },
-    [declared, hidden]
+    [declared, hidden, order, overrides, persist]
   )
 
   /*
@@ -328,8 +364,9 @@ export const WorkspaceCustomisation = ({
       setOrder(next)
       setAnnouncement(`${found.title} moved ${direction === 'up' ? 'before' : 'after'} ${neighbour.title}.`)
       setFocus(current => ({ token: current.token + 1, target: 'module', moduleId: id }))
+      persist({ order: next, hidden, sizes: overrides })
     },
-    [declared, order, segmentFor]
+    [declared, hidden, order, overrides, persist, segmentFor]
   )
 
   const sizeOf = useCallback((id: string) => overrides.get(id), [overrides])
@@ -370,8 +407,9 @@ export const WorkspaceCustomisation = ({
       setOverrides(next)
       setAnnouncement(`${found.title} resized to ${MODULE_SIZE_LABEL[size].toLowerCase()}.`)
       setFocus(current => ({ token: current.token + 1, target: 'module', moduleId: id }))
+      persist({ order, hidden, sizes: next })
     },
-    [declared, overrides]
+    [declared, hidden, order, overrides, persist]
   )
 
   const reset = useCallback(() => {
@@ -384,7 +422,16 @@ export const WorkspaceCustomisation = ({
     setOrder(declaration)
     setOverrides(NO_OVERRIDES)
     setAnnouncement('Workspace reset to default.')
-  }, [hidden, modules, order, overrides])
+
+    /*
+     * Cleared, not overwritten with the defaults.
+     *
+     * A stored copy of the declaration would be a second answer to a question the declaration
+     * already answers, and it would go stale the moment the domain changed its mind. Absence is
+     * the more truthful record of "this reader has not customised anything".
+     */
+    persistence.clear(workspaceId)
+  }, [hidden, modules, order, overrides, persistence, workspaceId])
 
   /*
    * Entering has the same problem leaving does: the menu item that started it took its own menu
