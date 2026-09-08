@@ -14,6 +14,7 @@ afenda_payroll_architecture:
 
     outranks:
       - '.architecture/payroll/P01-group-payroll-control.yaml'
+      - '.architecture/payroll/P02-entity-payroll-workspace.yaml'
 
     supersedes:
       - path: '.HITL/dev-branch/Afenda Payroll Frontend Architecture & Future Development Context.md'
@@ -381,6 +382,7 @@ afenda_payroll_architecture:
         workspace: 'Entity Payroll Workspace'
         route: '/payroll/entities/[entityId]'
         purpose: 'Understand and operate payroll for one legal employer.'
+        contract: '.architecture/payroll/P02-entity-payroll-workspace.yaml'
       - id: 'P03'
         workspace: 'Payroll Runs'
         route: '/payroll/runs'

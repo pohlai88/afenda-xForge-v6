@@ -1,0 +1,1194 @@
+p02_entity_payroll_workspace:
+  schema_version: '1.0'
+  status: 'normative'
+  authority: 'page-contract'
+
+  id: 'P02'
+  workspace: 'Entity Payroll Workspace'
+  route: '/payroll/entities/[entityId]'
+  internal_name: 'Entity Payroll Workspace'
+  archetype: 'single-employer operating workspace with an embedded period ledger'
+
+  release:
+    status: 'DRAFT_V1'
+    authored_on: '2026-09-08'
+    note: >
+      Level 1 of the A15 audit model — the target product contract, defined independently of the
+      current implementation. Nothing here is a statement about what the page does today. The
+      current page is evidence, gathered under `current_evidence`, and evidence never becomes
+      authority by being present.
+
+  # ---------------------------------------------------------------------------
+  # AUTHORITY
+  # ---------------------------------------------------------------------------
+
+  authority_chain:
+    outranked_by:
+      - '.architecture/ux/afenda-ui-ux-doctrine.yaml'
+      - '.architecture/payroll/afenda-payroll-architecture.yaml'
+
+    sibling:
+      - path: '.architecture/payroll/P01-group-payroll-control.yaml'
+        relation: >
+          P01 is the surface above. Its entity control matrix opens this page and its
+          `rejected_controls` already delegated single-company work here. Where the two describe
+          the same object — a company's payroll state for a period — they MUST agree, and P01's
+          `entity_state_model` is the shared vocabulary.
+
+    rule: >
+      Where this file and the UX doctrine disagree, the doctrine wins. Where this file and the
+      payroll architecture disagree about the programme, the architecture wins. Within this route,
+      this file decides.
+
+  # ---------------------------------------------------------------------------
+  # IDENTITY AND PURPOSE
+  # ---------------------------------------------------------------------------
+
+  purpose:
+    charter: 'Understand and operate payroll for one legal employer.'
+    source: 'afenda-payroll-architecture.yaml A10 primary_routes P02, quoted verbatim.'
+
+    emphasis: >
+      The charter has two verbs and the current page only honours the first. The correction this
+      contract makes is to `operate`, not to `understand`: understanding is not removed, it is
+      demoted beneath the work it is supposed to serve.
+
+  core_question: >
+    What is this company's payroll doing right now, what is stopping it, and where do I go to
+    move it?
+
+  operator_intent:
+    who: >
+      A payroll operator or controller responsible for one legal employer, arriving either from
+      the P01 matrix carrying group context, or directly because this company is their whole job.
+
+    arrives_asking:
+      - 'Is this company on track for the open period?'
+      - 'What is blocking it, and whose problem is each blocker?'
+      - 'When is cut-off, when is payday, and what is due to an authority?'
+      - 'Can payday actually be funded from this company money?'
+      - 'What does this run contain, and how does it differ from the last one?'
+
+    does_not_arrive_asking:
+      - 'How has employer cost trended over seven runs?'
+      - 'What share of gross was overtime against a target?'
+      - reason: >
+          Both are legitimate questions. Neither is why someone opens a company on a Tuesday with
+          a cut-off approaching, and A03 `one_consequential_primary_action` and the doctrine's
+          `action_hierarchy` both order a surface by consequence, not by availability.
+
+  scope:
+    unit: 'one legal employer'
+    fixed_by_the_entity:
+      - currency
+      - country
+      - statutory_profile
+      - registration_number
+      - timezone
+      - funding_accounts
+      - pay_groups
+    rule: >
+      A legal entity has exactly one payroll currency (`LegalEntity.currency`). This page therefore
+      has no reporting currency, no FX basis and no consolidation. Every figure is stated in the
+      entity's own currency, unconverted. Translation is a group question and belongs to P01.
+
+    period_vs_run:
+      rule: >
+        The open period and the displayed run are two different things and MUST NOT be conflated.
+        A company whose latest calculation is August has nothing for September; the page states the
+        open-period state separately from the run it is showing.
+      url_state:
+        run: '?run=<reference> selects a past run. Unknown or absent falls back to the latest.'
+        dept: '?dept=<departmentId> scopes the attention list to one department. Unknown is dropped.'
+        return: '?return=<path> is the P01 view to come back to. Same-origin /payroll paths only.'
+
+  is_not:
+    - 'a company dashboard'
+    - 'a second group surface with one company selected'
+    - 'the run workspace — selective processing, recalculation, review and approval are P04'
+    - 'the payments centre — funding, release and reconciliation are P07'
+    - 'the compliance surface — filing preparation and submission are P08'
+    - 'an analytics page for payroll cost'
+    - 'a place to configure the entity — that is P10'
+
+  # ---------------------------------------------------------------------------
+  # INFORMATION HIERARCHY
+  # ---------------------------------------------------------------------------
+
+  information_hierarchy:
+    rule: 'This vertical order matters more than the individual components.'
+
+    order:
+      - which_company_and_which_period
+      - what_is_its_payroll_doing_and_what_is_the_next_step
+      - what_is_stopping_it
+      - what_is_dated_and_approaching
+      - can_payday_be_funded_from_this_company_money
+      - what_is_in_this_run
+      - how_this_period_differs_from_the_last
+
+    forbidden_default: >
+      SUMMARY -> CHART -> CHART -> CHART. A figure band followed by charts is the shape of a
+      dashboard, and A04 `cards` already forbids KPI card grids and bento dashboards as defaults.
+
+  operational_hierarchy:
+    rule: >
+      Four bands, in this order, each earning its place by what the operator can do with it. A
+      section may only sit in a band it can serve.
+
+    bands:
+      - band: 'OPERATE'
+        answers: 'What is happening and what is the next step?'
+        may_contain: [entity_identity, period_and_run_scope, payroll_state, the_one_next_step]
+        MUST_NOT_contain: [analysis, comparison, composition]
+
+      - band: 'ATTEND'
+        answers: 'What is stopping it, what is dated, and can it be funded?'
+        may_contain: [ranked_exceptions, dated_obligations, funding_position]
+        rule: 'Every item here names one action or one destination. An item with neither is not attention, it is information.'
+
+      - band: 'INSPECT'
+        answers: 'What is in this run, and what is the record of this company period?'
+        may_contain: [population_composition, gross_to_net_bridge, run_history_ledger]
+        rule: 'Exact values. This band answers questions about the run in front of the operator.'
+
+      - band: 'UNDERSTAND'
+        answers: 'How does this period differ from the one before it?'
+        rule: >
+          The narrowest band, and the only one that may be empty. A section qualifies only if it
+          changes a decision the operator could make on this page. Nothing enters this band merely
+          because it is true, well drawn, or already built.
+
+    demotion_rule: >
+      A section that cannot answer its band's question is moved down a band or removed. It is
+      never kept in place with a caption explaining that it does not need action — a caption
+      admitting a section is inert is an argument for deleting the section.
+
+  # ---------------------------------------------------------------------------
+  # ANATOMY
+  # ---------------------------------------------------------------------------
+
+  anatomy:
+    operate:
+      sections:
+        - id: 'header'
+          must_show:
+            [
+              entity_name,
+              country,
+              payroll_currency,
+              registration_number,
+              open_period,
+              displayed_run_reference,
+              return_to_group
+            ]
+          rule: >
+            The identity line states what the entity fixes, because every figure below inherits it.
+            The return control names where it goes back to rather than saying 'Back'.
+
+          object: >
+            The entity is a first-class business object under A03. Its identity control MUST expose
+            a context menu and Properties like any other object in the product.
+
+        - id: 'payroll_state_band'
+          dominant_message: >
+            One sentence naming the state of this company's payroll for the open period, in the
+            vocabulary P01 already uses: awaiting data, in progress, blocked, review, ready, paid,
+            closed.
+          supporting: [employees_in_run, calculation_version, last_calculated, cutoff, payday]
+          rule: 'This is the leading figure of the page. It is not a card grid and not three stat cards.'
+
+          period_mismatch: >
+            When the displayed run is not the open period's run, the band says so before it says
+            anything else, and names both.
+
+        - id: 'next_step'
+          role: 'the single most consequential thing to do next for this company'
+          rule: >
+            Exactly one, and it navigates rather than mutates. Its label names a destination the
+            domain can prove, and how specific that label may be is governed by
+            `primary_action.run_selection.consequences.primary_next_action_target` — a single open
+            run may be named, several may not be ranked. See `primary_action` for the distinction
+            between a primary next action, which this is, and a primary mutation, which P02 has none of.
+          MUST_NOT:
+            - 'be a row of buttons'
+            - 'be a generic Quick Actions grid'
+            - 'restate a capability that belongs to another surface'
+
+    attend:
+      sections:
+        - id: 'needs_attention'
+          role: 'the entity-level equivalent of P01 needs_attention, scoped to one company'
+          source: 'PayRun.exceptions for the displayed run'
+          each_item_exposes: [severity, affected_object_or_scope, plain_language_reason, consequence, one_destination]
+
+          ordering: >
+            By severity first — blocking, then error, then warning, then info — and within a
+            severity by financial impact where `PayRunException.impact` is present. Blocking is
+            defined by the domain: it must be cleared before the run may be approved.
+
+          scoping_rule: >
+            A07 `smallest_legitimate_blocker_scope` applies. An exception about one employee is
+            presented as one employee's problem, never as the company's. The band states how many
+            people a blocker actually stops.
+
+          empty_state: >
+            Zero exceptions is a good answer and is stated as one, naming what was checked. The
+            list is never padded to fill the layout — the same defect P01 removed as `min_items`.
+
+          composition_decision:
+            verdict: 'ranked attention list, not the governed table engine'
+            reasoning: >
+              A04 `tables` routes payroll populations and large operational datasets through the
+              one engine, and exempts simple lists. A run's exceptions are a short ranked worklist
+              where each item carries one action, which is exactly the shape P01 `needs_attention`
+              already ships. Building a second, table-shaped attention idiom for the same job would
+              create two vocabularies for one concept. The population that does belong in the
+              engine is the employee list, and that is P04's.
+            binding_consequence: >
+              This is a REUSE_EXISTING decision against P01's pattern, not a licence to keep the
+              current card-and-scroll-area composition unexamined.
+
+          contextual_actions: >
+            An exception is an A03 business object. Each item's subject — the employee, the
+            department, the run — MUST expose the same right-click grammar as everywhere else in
+            the product, with Properties last.
+
+        - id: 'dated_obligations'
+          role: 'what is dated for this company and how close it is'
+          may_show:
+            - source: 'PayRun.cutoffAt'
+              states: 'cut-off, suppressed once the run is terminal'
+            - source: 'PayRun.payDate'
+              states: 'payday'
+            - source: 'PaySchedule.cutoff, PaySchedule.payDate, PaySchedule.status'
+              states: 'the open and upcoming schedules of this entity pay groups'
+            - source: 'StatutoryFiling.dueDate for filings whose entityId is this entity'
+              states: 'statutory due dates, with the filing status'
+          MUST_NOT:
+            - 'state an approval deadline'
+            - 'state a funding deadline'
+            - 'state a period close deadline'
+          reason: 'P01-GAP-002. Those three deadlines do not exist in the domain. See inherited_gaps.'
+
+        - id: 'funding_position'
+          role: 'whether payday can be met from this company own money'
+          source: 'settlements for the displayed run, and FundingAccount records whose entityId is this entity'
+
+          binding_rule: >
+            Funding MUST be compared only against accounts belonging to this legal entity. The
+            doctrine names 'imply cash is fungible across separate legal employers' as a
+            truth_before_convenience MUST_NOT, and a required amount in one currency subtracted
+            from a balance in another is a mixed-currency total besides.
+
+          no_account_state: >
+            An entity with no funding account configured is stated as such and the funding section
+            reports no position. It MUST NOT fall back to another company's account.
+
+    inspect:
+      sections:
+        - id: 'run_composition'
+          role: 'what this run contains'
+          may_show: [employees_in_run, gross_to_net_bridge, cost_by_department]
+          rule: >
+            Exact values, in the entity's currency. The gross-to-net bridge is explanation of the
+            displayed run's own totals and belongs here rather than in UNDERSTAND — it decomposes
+            the number on this page rather than comparing it with another period.
+
+          department_composition:
+            keeps: true
+            justification: >
+              Department cost is kept not as analysis but as a control: selecting a department sets
+              `?dept=` and scopes the attention list to that department's exceptions. It is the
+              page's one filter into work, which is what earns it a place in INSPECT. If it ever
+              stops driving that filter, it stops qualifying.
+
+        - id: 'run_history'
+          role: 'the period ledger for this company, and the run selector'
+          engine: 'the one governed table engine — src/components/shared/DataTable'
+          binding: >
+            This table is already on the engine with `payRunObject` and `payRunCommands`. It MUST
+            NOT be replaced with a domain-local table and its interaction model MUST NOT be
+            rebuilt. It is classified KEEP or REFINE against this contract and nothing stronger.
+          must_expose: [reference, period, status, employees, employer_cost, net_pay, calculation_version]
+          selects: 'setting ?run= to a past run, in place, without leaving the page'
+          drills_to: 'P04 for the selected run'
+
+    understand:
+      rule: >
+        A section enters this band only by passing `chart_policy.admission_test`. The band may be
+        empty, and an empty UNDERSTAND band is a better page than a padded one.
+
+      sections:
+        - id: 'period_over_period'
+          shows: 'how the displayed run differs from the run before it'
+          form: 'stated deltas beside the figures they belong to, not a separate chart band'
+          rule: >
+            A comparison against the immediately preceding run is decision-relevant: it is what
+            makes an unexplained movement visible. It is expressed as a delta on the figure it
+            describes, so the exact value and its movement are read together.
+
+  # ---------------------------------------------------------------------------
+  # PRIMARY ACTION — the decision, and the evidence for it
+  # ---------------------------------------------------------------------------
+
+  primary_action:
+    question: 'What is the most consequential legitimate next action for this legal employer?'
+
+    domain_audit:
+      method: 'Every mutating server action in src/app/server/actions.ts, classified by the scope it acts on.'
+
+      run_scoped:
+        actions:
+          [
+            recalculateRun,
+            markRunReviewed,
+            approveRun,
+            importPayrollInputs,
+            acknowledgeWarnings,
+            acknowledgeException,
+            resolveException,
+            reopenException
+          ]
+        owner: 'P04 Payroll Run Control Centre'
+
+      settlement_scoped:
+        actions: [prepareBatch, releaseBatch, acknowledgeBatch, settleBatch, reissueSettlement]
+        owner: 'P07 Payments'
+
+      filing_scoped:
+        actions: [applyFilingTransition]
+        owner: 'P08 Compliance'
+
+      entity_scoped:
+        actions: [saveLegalEntity, savePayGroup, addFundingAccount, setDefaultFundingAccount]
+        owner: 'P10 Payroll Settings'
+        classification: 'configuration, not payroll operation'
+
+      absent:
+        - capability: 'create or open a pay run for a period'
+          evidence: 'No createRun, startRun, openPeriod or equivalent action exists anywhere in the repository.'
+        - capability: 'close a payroll period at entity level'
+          evidence: 'No closePeriod or equivalent action exists. PayRun.status reaches closed; nothing transitions it from this scope.'
+
+    decision:
+      distinction:
+        rule: >
+          Two different things, never collapsed into one sentence. P02 HAS a primary next action.
+          What it does not have is a primary mutation.
+        entity_level_primary_mutation: 'NONE'
+        primary_next_action: 'navigation into legitimate payroll work'
+        MUST_NOT_be_stated_as: >
+          'P02 has no primary action.' That sentence is false and it invites the wrong repair —
+          either inventing a mutation to fill the gap, or leaving the surface with no next step at
+          all. The page carries one prominent next action; it navigates rather than mutates.
+
+      verdict: 'NO_ENTITY_LEVEL_PRIMARY_MUTATION'
+
+      statement: >
+        No create, start, review, approve, settle, file or configure mutation belongs directly to
+        P02 unless the existing domain proves otherwise. Every operation the domain supports acts
+        on a run, a settlement batch, a filing or a configuration record, and each of those has an
+        owning surface. The primary next action may navigate to the payroll run or exception
+        context where the work actually belongs.
+
+      affordance: 'navigation_into_work'
+
+      why_this_is_not_a_fake_action: >
+        It promises navigation and performs navigation. A button labelled 'Run payroll' would
+        promise a mutation that does not exist, which is the failure this decision exists to avoid.
+
+      when_a_run_is_absent: >
+        A company with no run has no next step to offer and the page says so plainly. It MUST NOT
+        offer to create one. This is the 'No payroll yet' state, and it is correct as it stands.
+
+      revisit_condition: >
+        If the domain later gains run creation or period close at entity scope, this decision is
+        reopened and a genuine primary mutation is specified. Until then, adding one is a hard
+        failure.
+
+    run_selection:
+      rule: >
+        One legal employer may have several open runs. Neither the displayed run nor the target of
+        the primary next action may be chosen by incidental array order, `.find()` on an unsorted
+        list, fixture order, or any coincidence of the current fake data.
+
+      domain_audit_of_priority:
+        question: 'Does the existing domain supply a truthful deterministic priority between two runs of one entity?'
+
+        what_exists:
+          - id: 'deterministic recency'
+            evidence: >
+              `src/utils/payroll-group.ts` provides `runsForEntity(runs, entityId)`, which filters
+              and sorts by `periodStart`, and `latestRunFor(runs)`, which sorts by `periodStart` and
+              takes the last. `previousRunOf` exists for the same reason and its own comment rejects
+              `runs[index - 1]` explicitly.
+            supplies: 'a total, stable ordering by period'
+            does_not_supply: 'a statement about which run needs attention first'
+
+          - id: 'state attention ranking'
+            evidence: >
+              `ENTITY_STATE_ORDER` ranks blocked, awaiting_data, in_progress, review, ready, paid,
+              closed. `entityStateOf(run)` derives that state from a single run.
+            supplies: 'a domain-authored ordering of how much attention a state deserves'
+            authored_for: >
+              the state column of the P01 entity matrix. It ranks entity states for sorting a
+              column, not runs of one employer against each other for choosing a destination.
+
+        what_does_not_exist:
+          - 'any record or rule ranking two runs of the same entity against each other'
+          - 'any tie-break between two runs sharing a state'
+          - 'any notion of a primary, active or current run beyond recency'
+
+        verdict: 'NO_TRUTHFUL_DETERMINISTIC_RUN_PRIORITY'
+
+      consequences:
+        displayed_run_default:
+          rule: >
+            The default displayed run is the most recent by `periodStart`, resolved through the
+            existing deterministic helpers rather than by array position. This is a recency choice
+            and is stated as one; it is not a claim about which run matters most.
+
+        primary_next_action_target:
+          when_exactly_one_run_is_open: >
+            The control may name that run and open it. Naming the only candidate is not a priority
+            decision.
+          when_more_than_one_run_is_open: >
+            A neutral navigation affordance: open this employer's active payroll work, scoped to
+            this entity, without ranking the runs. The page MUST NOT pick one and present it as
+            the one that matters.
+          MUST_NOT:
+            - 'rank runs by a composite the domain does not define'
+            - 'reuse ENTITY_STATE_ORDER as a run-priority rule without a domain record authorising it'
+            - 'present a recency default as an attention judgement'
+
+        revisit_condition: >
+          If the domain later carries a genuine run priority — an active-run marker, a per-run
+          urgency, or an ordering rule authored for runs rather than for a column — this decision is
+          reopened and the primary next action may name a specific run again.
+
+    secondary_actions:
+      rule: 'Supporting, and never more than the surface needs.'
+      permitted:
+        - id: 'select_run'
+          form: 'the run history ledger, setting ?run= in place'
+        - id: 'scope_attention_to_department'
+          form: 'selecting a department, setting ?dept= in place'
+        - id: 'return_to_group'
+          form: 'the header return control, honouring ?return='
+
+    tertiary_actions:
+      rule: 'Doctrine action_hierarchy: utility and uncommon actions live in overflow, context menu or command palette.'
+      examples: [copy_run_reference, open_audit_trail, open_properties]
+      MUST_NOT: 'appear as permanent header chrome'
+
+  # ---------------------------------------------------------------------------
+  # DRILL-DOWN AND CONTEXTUAL ACTIONS
+  # ---------------------------------------------------------------------------
+
+  drill_down:
+    rule: 'A03 drill_down_preserving_context. A new route requires a genuinely independent work context.'
+
+    in_place:
+      - 'selecting a past run — ?run='
+      - 'scoping attention to a department — ?dept='
+      - 'explaining a figure — popover or inspector, never a route'
+
+    navigates:
+      - to: 'P04 /payroll/runs/[runId]'
+        when: 'the operator acts on the run itself'
+        carries: 'a return path back to this entity view'
+      - to: 'P07 /payroll/payments'
+        when: 'funding or release work is the actual task'
+      - to: 'P08 /payroll/compliance'
+        when: 'a filing is the actual task'
+
+    forbidden:
+      - 'a new route for an employee — the employee inspector is P05, embedded in P04'
+      - 'a new route for an exception'
+      - 'a new route for a department'
+
+  contextual_actions:
+    rule: >
+      Doctrine `business_objects` and `context_menu`. Every object named on this page exposes the
+      same grammar: right-click and Shift+F10 open the same menu, in the same order, Properties
+      last, and Properties is never a synonym for Edit.
+
+    objects_present: [legal_entity, pay_run, employee, exception, statutory_filing, settlement]
+
+    existing_descriptors:
+      - 'payRunObject / payRunCommands / payRunProperties'
+      - 'employeeObject / employeeCommands / employeeProperties'
+      - 'filingObject / filingCommands'
+      - 'settlementObject / settlementCommands'
+
+    missing_descriptors:
+      - object: 'legal_entity as this page own subject'
+        note: >
+          `entityPeriodObject` and `entityPeriodCommands` exist but are shaped for the P01 matrix
+          row. P02 needs a descriptor for the entity itself. Classified ADD at step 4; it is
+          composition work, not a domain gap.
+      - object: 'exception'
+        note: >
+          No exception descriptor exists. The attention list names exceptions as objects, so one is
+          required. Classified ADD at step 4.
+
+  # ---------------------------------------------------------------------------
+  # CHART POLICY
+  # ---------------------------------------------------------------------------
+
+  chart_policy:
+    admission_test:
+      - 'Name the decision this chart changes.'
+      - 'Name the action available once it is read.'
+      - 'State whether the same fact is already available exactly, elsewhere on this page.'
+      - 'If the exact value matters and the chart hides it, the chart is the wrong form.'
+
+    binding_rules:
+      - 'A chart with no consequential explanatory or decision value is REMOVE or REPLACE.'
+      - 'No replacement chart is created to preserve visual balance.'
+      - 'A chart MUST NOT plot a threshold, target or benchmark the domain does not store.'
+      - 'Chart series colours are not status colours.'
+
+    classification:
+      rule: >
+        Every chart on the current page is classified by purpose. The verdicts below are contract
+        decisions; the file-level KEEP/REFINE/REPLACE/REMOVE classification happens at A16 step 3
+        against the rendered page.
+
+      charts:
+        - id: 'payroll-cost-trend'
+          purpose: 'trend — employer cost across runs'
+          verdict: 'REMOVE from P02'
+          reason: >
+            The run history ledger directly above it states employer cost per run exactly. Drawing
+            the same series as a line adds no decision and hides the values, which the P01
+            anti-pattern list names as `charts_that_hide_exact_values`.
+          ownership_note: >
+            REMOVE from this page is not delete. `payroll-cost-trend` has a second consumer in
+            `src/views/payroll/reports/reports-workspace.tsx`, where comparison is the stated
+            purpose. The component survives; P02 stops consuming it.
+
+        - id: 'payroll-overtime-trend'
+          purpose: 'comparison against a target'
+          verdict: 'REPLACE'
+          reason: >
+            The target it plots is `OVERTIME_TARGET_SHARE = 2`, a constant declared in the page
+            file. No overtime threshold, policy or benchmark record exists in the domain, so the
+            chart draws a line the product cannot prove and states variance against it. That is a
+            truth_before_convenience breach regardless of how the chart is drawn.
+          replaced_by: >
+            Overtime returns as an attention signal, not a chart. The domain already raises
+            `overtime_spike` as a `PayRunExceptionKind`, which is a fact with a severity and a
+            subject, and it belongs in the ATTEND band with the other exceptions.
+          gap: 'P02-GAP-002'
+          incidental_benefit: >
+            The current chart is the reason the page awaits payslips for every historical run. Its
+            removal removes the page's dominant server cost.
+
+        - id: 'payroll-by-department'
+          purpose: 'decision support — a filter into work'
+          verdict: 'KEEP, reclassified'
+          reason: >
+            It sets `?dept=` and scopes the attention list. That makes it a control, not analysis,
+            and it moves from the trends band into INSPECT. Its share-delta column is a legitimate
+            period-over-period comparison stated as an exact value.
+          condition: 'If it ever stops driving the attention filter, it stops qualifying and is re-tested.'
+
+        - id: 'payroll-gross-to-net'
+          purpose: 'explanation of the displayed run own totals'
+          verdict: 'KEEP'
+          reason: >
+            It decomposes a number on this page rather than comparing periods. It is the doctrine
+            `summary_surfaces` progression working correctly: summary, then breakdown.
+
+        - id: 'payroll-kpi-strip sparklines'
+          purpose: 'decorative — trend glyphs beside three figures'
+          verdict: 'REMOVE'
+          reason: >
+            A04 forbids decorative stat cards and KPI card grids by default. The three figures are
+            needed; the three cards and their sparklines are not. The figures survive as a dense
+            band in the OPERATE state line, and the run history ledger states the series exactly.
+
+    trends_band:
+      verdict: 'REMOVED'
+      reason: >
+        The band's own caption reads 'Nothing here needs action today'. A section that documents
+        its own irrelevance has failed the admission test in its own words. What survives the test
+        moves into the band it can serve; nothing is retained to keep the band populated.
+
+  # ---------------------------------------------------------------------------
+  # STATES
+  # ---------------------------------------------------------------------------
+
+  states:
+    empty:
+      - id: 'no_run_for_this_entity'
+        says: 'No pay run has been calculated for this company. It will appear here as soon as one is.'
+        offers: 'nothing — see primary_action.when_a_run_is_absent'
+        verdict: 'KEEP as implemented'
+
+      - id: 'open_period_awaiting_data'
+        says: >
+          The open period has no run, and the figures shown are the most recent earlier
+          calculation, named. This company is not in the group total for the open period.
+        verdict: 'KEEP as implemented'
+
+      - id: 'no_open_exceptions'
+        says: 'Nothing is blocking this run, and what was checked.'
+
+      - id: 'no_funding_account'
+        says: 'No funding account is configured for this company, so its funding position is unknown.'
+        MUST_NOT: 'substitute another company account'
+
+      - id: 'department_filter_matches_nothing'
+        says: 'That department has no open exceptions in this run, with a control to clear the filter.'
+
+    loading:
+      current: 'inherits /payroll/loading.tsx via the App Router segment above it'
+      requirement: >
+        Money slots are bars, never placeholder amounts — a figure that reads 0.00 for half a
+        second is a figure someone may act on. Whether P02 needs its own skeleton is decided at
+        step 4, after the removal of the per-run payslip fan-out changes what the wait actually is.
+
+    unknown_url_state:
+      run: 'unknown ?run= falls back to the latest run rather than 404ing'
+      dept: 'unknown ?dept= is dropped rather than filtering everything out silently'
+      return: 'only a same-origin /payroll path is followed; anything else falls back to /payroll'
+      verdict: 'KEEP all three as implemented — they are correct and were reasoned about'
+
+  # ---------------------------------------------------------------------------
+  # DOMAIN TRUTH CONSTRAINTS
+  # ---------------------------------------------------------------------------
+
+  domain_truth:
+    binding: true
+
+    MUST:
+      - 'state every figure in the entity own currency, unconverted'
+      - 'compare funding only against funding accounts belonging to this entity'
+      - 'treat paid as a settlement fact, never as a run status inference'
+      - 'suppress a countdown once the run is terminal — paid, closed, cancelled or failed'
+      - 'distinguish the open period state from the displayed run'
+      - 'name the calculation version a figure came from, and say when approval is of an older one'
+      - 'read the clock once on the server and pass it down, so server and client render the same page'
+
+    MUST_NOT:
+      - 'render a reporting currency or FX basis control'
+      - 'sum or subtract money across currencies'
+      - 'plot or state a target, threshold or benchmark the domain does not store'
+      - 'state an approval, funding or close deadline'
+      - 'infer a transfer, a compensation change magnitude, or a pay-group change from current values'
+      - 'assume one run per entity per period'
+      - 'select or rank a run by array position, unsorted find, or fixture order'
+      - 'present a recency default as a judgement about which run needs attention'
+
+    multiple_pay_groups:
+      rule: >
+        `PayGroup.entityId` permits more than one population per legal employer, and a run is
+        always exactly one pay group. Today each entity has one monthly group and therefore one
+        open run, but that is a property of the current data, not a guarantee of the model. The
+        page MUST be built so that N open runs is a legitimate answer: the OPERATE band then
+        reports the company state across its runs and the next step names which run it means.
+      current_implementation_note: >
+        The present page indexes a single `currentRun` out of the run list. That is a correct
+        rendering of today's data and an assumption the domain does not underwrite.
+
+  # ---------------------------------------------------------------------------
+  # REJECTED CONTROLS AND PATTERNS
+  # ---------------------------------------------------------------------------
+
+  rejected:
+    controls:
+      - id: 'run_payroll_button'
+        reason: 'No run-creation capability exists in the domain. See primary_action.domain_audit.absent.'
+
+      - id: 'recalculate_review_approve_buttons'
+        reason: >
+          These are real capabilities, and they belong to P04. Duplicating them here would put two
+          surfaces in front of one approval record, and approval is of a specific calculation
+          version — a second entry point is a second place for that association to drift.
+
+      - id: 'reporting_currency_and_fx_basis'
+        reason: 'One legal entity, one payroll currency. There is nothing to translate and no basis to choose.'
+
+      - id: 'entity_picker_in_the_header'
+        reason: >
+          The entity is this page identity, carried in the route. P01 matrix is the chooser, and it
+          preserves the analytical context on the way here.
+        counter_evidence_considered: >
+          P07, P08 and P09 all use `EntityPicker`. Those surfaces are entity-scoped without an
+          entity in the path, so a picker there selects a scope; here it would rewrite the page own
+          identity. Revisit only if operators are observed bouncing to P01 purely to switch company.
+
+      - id: 'quick_actions_grid'
+        reason: 'Links to Reports, Payments, Compliance and Settings are navigation. Navigation is not work.'
+
+      - id: 'full_employee_table'
+        reason: >
+          The run population belongs to P04, on the governed engine, with selective processing. A
+          second employee table here would be a second population surface for one run.
+
+      - id: 'entity_configuration_controls'
+        reason: 'saveLegalEntity, savePayGroup and the funding-account actions are P10 Settings.'
+
+    patterns:
+      challenge_or_reject:
+        - three_stat_cards_with_sparklines
+        - kpi_card_grids
+        - bento_dashboards
+        - card_inside_card
+        - a_trends_band_that_declares_itself_non_actionable
+        - charts_created_merely_to_look_analytical
+        - charts_that_hide_exact_values
+        - a_target_line_the_domain_cannot_prove
+        - mixed_currency_arithmetic
+        - decorative_colour
+        - a_second_table_engine
+        - a_second_attention_idiom_for_the_same_concept
+        - navigation_disguised_as_tasks
+
+  # ---------------------------------------------------------------------------
+  # RESPONSIVE
+  # ---------------------------------------------------------------------------
+
+  responsive:
+    rule: >
+      Compact MUST NOT simply stack every desktop block indefinitely, and MUST NOT change
+      interaction semantics.
+
+    preserved_spine:
+      - entity_identity_and_scope
+      - payroll_state_and_next_step
+      - needs_attention
+      - run_history
+
+    may_collapse: [run_composition, department_composition, period_over_period]
+
+    table_rule: 'The run history ledger scrolls horizontally within its own container. The page body never does.'
+
+    test: 'At 390px the operator still learns what this company payroll is doing and what to do next, without scrolling past a chart to reach it.'
+
+  # ---------------------------------------------------------------------------
+  # KEYBOARD
+  # ---------------------------------------------------------------------------
+
+  keyboard:
+    inherits: >
+      The governed table engine grammar, unchanged: Shift+F10 on an object identity control opens
+      the same menu as right-click, arrows navigate, Enter runs, Escape closes and returns focus to
+      the exact originating control.
+
+    requirements:
+      - 'Each attention item is one tab stop, as P01 needs_attention items are — no link nested inside a button.'
+      - 'Every object identity control on the page is reachable and carries a visible focus ring in both themes.'
+      - 'No interactive target is smaller than 24x24.'
+      - 'The department filter is operable by keyboard and its cleared state is reachable.'
+
+    ledger_rule: >
+      Any keyboard gate the browser automation cannot exercise is recorded in
+      .architecture/ux/manual-acceptance-ledger.md and stated NOT VERIFIED until a person checks it.
+      Construction evidence is never a PASS.
+
+    known_harness_limits: >
+      Base UI DropdownMenu triggers do not open from a synthetic pointer event in this harness, and
+      key delivery degrades mid-session. Neither is a reason to change working code.
+
+  # ---------------------------------------------------------------------------
+  # COMPONENT OWNERSHIP
+  # ---------------------------------------------------------------------------
+
+  component_ownership:
+    target_home: 'src/views/payroll/entity/'
+    rationale: >
+      Every other payroll surface lives under `src/views/payroll/<area>/`. P02 is the last one
+      composed from `src/views/dashboards/payroll/`, which is pre-module vocabulary.
+
+    legacy_directory:
+      path: 'src/views/dashboards/payroll/'
+      status: 'legacy composition, evaluated after this contract exists — never before'
+
+      consumer_check:
+        performed_on: '2026-09-08'
+        method: 'grep for each module path across src, excluding the module itself'
+        results:
+          - file: 'payroll-run-status.tsx'
+            consumers: ['P02 page']
+          - file: 'payroll-exception-queue.tsx'
+            consumers: ['P02 page']
+          - file: 'payroll-kpi-strip.tsx'
+            consumers: ['P02 page']
+          - file: 'payroll-gross-to-net.tsx'
+            consumers: ['P02 page']
+          - file: 'payroll-run-history.tsx'
+            consumers: ['P02 page']
+          - file: 'payroll-by-department.tsx'
+            consumers: ['P02 page']
+          - file: 'payroll-overtime-trend.tsx'
+            consumers: ['P02 page']
+          - file: 'payroll-cost-trend.tsx'
+            consumers: ['P02 page', 'src/views/payroll/reports/reports-workspace.tsx']
+            binding: 'MUST NOT be deleted. P02 stops consuming it; P09 keeps it.'
+          - file: 'payroll-stat-card.tsx'
+            consumers: ['payroll-kpi-strip.tsx']
+            note: 'Internal to the strip. Its fate follows the strip decision, and only after that decision is made.'
+
+      rules:
+        - 'No component is deleted merely because P02 stops using it.'
+        - 'A consumer check is repeated immediately before any move or removal, never inferred from this record.'
+        - 'PaymentReadiness is already src/views/payroll/payments/. It stays where it is and P02 keeps consuming it.'
+
+    engine_ownership:
+      binding: >
+        One table engine. `src/components/shared/DataTable`, its toolbar, and the object descriptors
+        in `src/views/payroll/payroll-objects.ts`. No second primitive system, theme, shell, sidebar
+        or table engine — A11 `compatibility.MUST_NOT_introduce`.
+
+  # ---------------------------------------------------------------------------
+  # INHERITED CONTRACT GAPS
+  # ---------------------------------------------------------------------------
+
+  inherited_gaps:
+    rule: >
+      Carried forward by explicit reference from P01. None of these is resolved by authoring P02.
+      Each records what P02 may truthfully expose today, what stays unsupported, and what would be
+      required to close it.
+
+    numbering_warning: >
+      The P01 and P02 gap sequences are independent and their numbers collide. `P01-GAP-003` is
+      compensation history and movement attribution; `P02-GAP-003` is the entity-scoped filing
+      accessor. They are unrelated, and a reference to 'GAP-003' without its page prefix is
+      ambiguous and MUST NOT be used. The same caution applies to GAP-001 and GAP-002.
+
+    closure_rule: >
+      An inherited gap is closed only by an explicit entry saying which domain capability arrived
+      and what evidence proves it. It is never closed by omission, by a section shipping in its
+      narrow form, or by a later contract failing to restate it.
+
+    gaps:
+      - id: 'P01-GAP-001'
+        subject: 'inter-company transfer records'
+        applies_to_p02: true
+        why_it_binds_harder_here: >
+          A transfer has two ends and both are legal employers. At group level a transfer is a
+          movement between rows; at entity level it is a person arriving in or leaving this
+          company payroll mid-period, with a currency and a statutory consequence. This is the
+          surface where the absence is most visible.
+        p02_may_expose: >
+          Joiners and leavers of this entity for the period, as counts and as named people, from
+          employment records.
+        remains_unsupported:
+          - previous_and_next_legal_employer
+          - payroll_responsibility_split
+          - split_period_treatment
+          - transfer_audit_trail
+        MUST_NOT: 'reconstruct a transfer from an entityId that changed. A07 forbids it explicitly.'
+        would_close_it: >
+          An effective-dated movement record carrying both employers, the effective date and the
+          payroll responsibility split, per A07 `inter_company_transfer_exposes`.
+
+      - id: 'P01-GAP-002'
+        subject: 'approval, funding and close deadlines'
+        applies_to_p02: true
+        p02_may_expose:
+          - 'PayRun.cutoffAt — the last moment changes are accepted'
+          - 'PayRun.payDate — payday'
+          - 'PaySchedule.cutoff, payDate and status for this entity pay groups'
+          - 'StatutoryFiling.dueDate for filings whose entityId is this entity, with status'
+        remains_unsupported: [approval_deadline, funding_deadline, period_close_deadline]
+        note: >
+          The statutory due date is a real dated obligation and narrows this gap at entity level
+          more than it narrows it at group level, because filings are entity-scoped by law and by
+          `StatutoryFiling.entityId`. It does not close it: a filing due date is not an approval
+          deadline.
+        would_close_it: >
+          Deadline fields on PaySchedule, or a schedule-obligation record carrying approval,
+          funding and close dates per pay group.
+
+      - id: 'P01-GAP-003'
+        subject: 'compensation history and movement magnitude'
+        applies_to_p02: true
+        why_it_binds_harder_here: >
+          Period-over-period movement is a question this page is expected to answer. Without prior
+          compensation values, a movement can be shown but not attributed to a salary change.
+        p02_may_expose:
+          - 'the total movement between the displayed run and the one before it, exactly'
+          - 'a compensation effective date falling inside the period'
+          - 'the calculation diff the domain does store, where present'
+        remains_unsupported: [increase_amount, increase_percentage, driver_attribution_for_a_salary_change]
+        MUST_NOT: 'present a movement as explained when only its size is known.'
+        would_close_it: 'A compensation history record carrying the prior value and its effective date.'
+
+      - id: 'P01-GAP-004'
+        subject: 'pay-group, bank-detail and unpaid-leave change history'
+        applies_to_p02: true
+        p02_may_expose: 'nothing about how these changed'
+        remains_unsupported: 'all change history for these three dimensions'
+        note: 'Recorded for completeness; it constrains the same movement questions as P01-GAP-003.'
+
+  new_gaps:
+    rule: 'FRONTEND_CONTRACT_GAP under A01. Recorded, never rendered.'
+
+    open:
+      - id: 'P02-GAP-001'
+        subject: 'entity-level payroll operation'
+        blocks: 'primary_action as a mutation'
+        evidence: >
+          No createRun, startRun, openPeriod or closePeriod action exists. Every payroll mutation is
+          run-, settlement-, filing- or configuration-scoped.
+        consequence: >
+          P02's primary next action navigates into the payroll work rather than performing it.
+          This is a deliberate decision recorded under `primary_action.decision`, not an omission,
+          and it does not mean the page has no primary action.
+
+      - id: 'P02-GAP-002'
+        subject: 'overtime threshold or policy'
+        blocks: 'any statement of overtime variance against a target'
+        evidence: >
+          `OVERTIME_TARGET_SHARE = 2` is a constant in the page file. No overtime threshold,
+          benchmark or policy record exists in the domain.
+        consequence: >
+          Overtime is exposed only where the domain raises it — the `overtime_spike` exception kind
+          — and never as variance against a line.
+
+      - id: 'P02-GAP-003'
+        subject: 'entity-scoped filing accessor'
+        blocks: 'the statutory half of dated_obligations'
+        evidence: >
+          `StatutoryFiling.entityId` exists and is populated, but `getFilings` filters by
+          `payRunId` only.
+        consequence: >
+          Filings can be reached for the displayed run today. An entity-wide filing obligation view
+          needs an entity-scoped accessor. The data exists, so this is reachable work rather than a
+          domain gap, and it is recorded here so the section is not quietly narrowed without saying
+          why.
+
+  # ---------------------------------------------------------------------------
+  # CURRENT EVIDENCE — level 2, gathered, never authority
+  # ---------------------------------------------------------------------------
+
+  current_evidence:
+    rule: >
+      A15 level 2. This section records what the current implementation does, from source. It is
+      not a target and MUST NOT be read as one. Rendered validation has not yet been performed for
+      P02 — that is A16 step 2, and it comes after this contract.
+
+    composition: >
+      Eight components from `src/views/dashboards/payroll/`, plus `PaymentReadiness` from
+      `src/views/payroll/payments/`, in a `grid grid-cols-6` with no band structure, ending in a
+      bordered Trends band of three charts.
+
+    no_next_action_control: >
+      The current page carries no primary next action control of any kind. The only header control
+      is a link back to group payroll. This is an observation about the implementation, not the
+      contract's position — the contract requires one navigating next action, and requires that it
+      never be a mutation.
+
+    run_selection_today: >
+      `getPayRunsForEntity` filters without sorting; the page then takes `runs[runs.length - 1]` as
+      the default and `runs[currentIndex - 1]` as the comparison baseline. Within one entity's
+      slice the fixtures happen to be in period order, so the result is correct today by
+      coincidence of the data. `src/utils/payroll-group.ts` already provides the deterministic
+      `runsForEntity`, `latestRunFor` and `previousRunOf` — the last written specifically to reject
+      `runs[index - 1]` — and the page uses none of them.
+
+    already_correct_and_to_be_preserved:
+      - 'the return-path guard — only a same-origin /payroll path is followed'
+      - 'the no-runs empty state'
+      - 'the awaiting-data banner separating the open period from the displayed run'
+      - 'unknown ?run= falling back to the latest, unknown ?dept= dropped'
+      - 'the clock read once on the server and passed down as a number'
+      - 'the countdown suppressed for terminal runs'
+      - 'paid derived from settlements rather than from run status'
+      - 'the run history table already on the governed engine with payRunObject and payRunCommands'
+
+    defects_established_from_source:
+      - id: 'P02-DEF-001'
+        subject: 'funding compared against another company bank account'
+        severity: 'hard failure against domain_truth'
+        evidence: >
+          The page selects `fundingAccounts.find(account => account.isDefault)` across every
+          entity's accounts. The first `isDefault: true` record in `src/fake-db/payroll/settlements.ts`
+          is `fund-sg-ops`, a Singapore DBS account in SGD. Opening a Malaysian or Vietnamese entity
+          therefore compares that entity's obligation against a Singapore balance, and
+          `fundingSummary` stamps the run currency onto the result — a mixed-currency subtraction
+          presented as headroom.
+        doctrine: >
+          truth_before_convenience names 'imply cash is fungible across separate legal employers'
+          as a MUST_NOT.
+        candidate_evidence: >
+          `src/fake-db/payroll/settlements.ts` contains `defaultAccountFor(entityId)`, which selects
+          within one entity. That is relevant evidence about what the data layer already knows. It
+          is NOT prescribed as the fix: its semantics, its exports and its consumers have not been
+          inspected, and prescribing a helper before reading it is how a defect gets moved rather
+          than repaired.
+
+        status: 'ESTABLISHED_FROM_SOURCE'
+
+        acceptance_conditions:
+          rule: >
+            The defect stays open until every condition below holds in the rendered page. These
+            constrain the outcome, not the implementation — any resolution that satisfies them is
+            acceptable.
+          conditions:
+            - 'The funding position resolves an account belonging to the current legal entity.'
+            - "The account's actual currency is preserved and stated, never replaced by the run's."
+            - "An entity's obligation is never offset against another entity's funding account."
+            - >
+              No mixed or unproven monetary calculation is ever labelled as though it were one
+              valid currency. Where a comparison cannot be made truthfully, the page says the
+              position is unknown rather than computing a number.
+            - >
+              An entity with no funding account of its own reports no funding position, and says
+              why.
+
+        render_status: >
+          Not yet confirmed in the rendered page. A capture attempt was blocked by a dev server
+          worker crash, and a blocked capture is recorded as blocked, never as a pass. Rendered
+          confirmation is A16 step 2 work.
+
+      - id: 'P02-DEF-002'
+        subject: 'a section that declares its own irrelevance'
+        evidence: >
+          The Trends band reads 'How this run compares with the six before it. Nothing here needs
+          action today.'
+        verdict: 'The band is removed. See chart_policy.trends_band.'
+
+      - id: 'P02-DEF-003'
+        subject: 'a plotted target the domain does not store'
+        evidence: '`OVERTIME_TARGET_SHARE = 2`, declared in the page file and drawn as a target line.'
+        verdict: 'See P02-GAP-002.'
+
+  # ---------------------------------------------------------------------------
+  # IMPLEMENTATION FILES IN SCOPE
+  # ---------------------------------------------------------------------------
+
+  files_in_scope:
+    rule: >
+      The exact set A16 step 3 classifies KEEP / REFINE / REPLACE / REMOVE / ADD against this
+      contract. Listing a file here is not a decision about it.
+
+    page:
+      - 'src/app/(pages)/payroll/entities/[entityId]/page.tsx'
+
+    legacy_composition:
+      - 'src/views/dashboards/payroll/payroll-run-status.tsx'
+      - 'src/views/dashboards/payroll/payroll-exception-queue.tsx'
+      - 'src/views/dashboards/payroll/payroll-kpi-strip.tsx'
+      - 'src/views/dashboards/payroll/payroll-stat-card.tsx'
+      - 'src/views/dashboards/payroll/payroll-gross-to-net.tsx'
+      - 'src/views/dashboards/payroll/payroll-run-history.tsx'
+      - 'src/views/dashboards/payroll/payroll-by-department.tsx'
+      - 'src/views/dashboards/payroll/payroll-overtime-trend.tsx'
+      - 'src/views/dashboards/payroll/payroll-cost-trend.tsx'
+
+    consumed_and_owned_elsewhere:
+      - path: 'src/views/payroll/payments/payment-readiness.tsx'
+        note: 'Consumed by P02, owned by the payments area. Read for the funding rule; not relocated.'
+      - path: 'src/views/payroll/reports/reports-workspace.tsx'
+        note: 'The second consumer of payroll-cost-trend. Touched only to confirm it is unaffected.'
+
+    shared_authorities_read_not_forked:
+      - 'src/components/shared/DataTable.tsx'
+      - 'src/components/shared/DataTableToolbar.tsx'
+      - 'src/components/shared/ObjectCommands.tsx'
+      - 'src/views/payroll/payroll-objects.ts'
+      - 'src/utils/payroll-metrics.ts'
+      - 'src/utils/payroll-payments.ts'
+      - 'src/utils/payroll-group.ts'
+      - 'src/app/server/actions.ts'
+
+    expected_new:
+      - 'src/views/payroll/entity/ — the target home, contents decided at step 4'
+      - 'an entity object descriptor and an exception object descriptor in payroll-objects.ts'
+
+  # ---------------------------------------------------------------------------
+  # VISUAL VALIDATION
+  # ---------------------------------------------------------------------------
+
+  visual_validation:
+    method: 'architecture A15 visual_validation_method, in full'
+
+    required_captures:
+      - desktop_sidebar_expanded
+      - desktop_sidebar_collapsed
+      - tablet
+      - mobile_390
+    themes: [light, dark]
+
+    must_verify:
+      - focus_order
+      - table_overflow_within_its_own_container
+      - empty_states
+      - loading_state
+      - the_page_body_never_scrolls_horizontally
+      - status_colour_contrast_at_or_above_4_5_to_1_in_both_themes
+
+    entities_to_capture:
+      rule: >
+        One entity is not a rendering. The captures MUST include at least one entity in each
+        materially different state, because the state is what the page reports.
+      minimum:
+        - 'an entity with a blocked run'
+        - 'an entity with an approved run'
+        - 'an entity whose open period is awaiting data'
+        - 'an entity in a currency other than SGD, which is what P02-DEF-001 corrupts'
+
+    rule_restated: >
+      Source and composition validation is not rendered UI validation. A15 lists spacing, dark
+      mode, focus order, keyboard, overflow and touch ergonomics as things a source audit cannot
+      validate. Final approval requires the rendered application.
+
+  # ---------------------------------------------------------------------------
+  # ACCEPTANCE AND FREEZE
+  # ---------------------------------------------------------------------------
+
+  acceptance:
+    scoring:
+      immediate_orientation: 10
+      operational_usefulness_for_one_employer: 25
+      blocker_and_action_clarity: 20
+      next_step_correctness: 10
+      drill_down_and_context_preservation: 10
+      information_hierarchy_and_density: 10
+      domain_and_financial_truth: 10
+      visual_and_responsive_quality: 5
+
+    minimum: 85
+
+    rule: 'Hard failures override the numerical score.'
+
+    hard_failures:
+      - 'a funding position compared against an account belonging to another legal entity'
+      - 'arithmetic across two currencies'
+      - 'a primary button that promises a mutation the domain cannot perform'
+      - 'a run chosen or ranked by array position, unsorted find, or fixture order'
+      - 'a target, threshold or benchmark the domain does not store'
+      - 'a section retained with a caption admitting it needs no action'
+      - 'a state the domain cannot prove'
+      - 'navigation presented as ranked work'
+      - 'a second table engine, or the run history table rebuilt as a domain-local table'
+      - 'a second attention idiom for a concept P01 already owns'
+      - 'the open period state and the displayed run conflated'
+
+    gates:
+      - 'pnpm check-types'
+      - 'pnpm lint'
+      - 'pnpm build'
+      - 'python .claude/skills/xforge-design-system/scripts/audit.py — ratchet no worse than at freeze'
+      - 'rendered validation per visual_validation above'
+      - 'ux_acceptance from the doctrine, every line'
+
+    freeze_criteria:
+      - 'every section in anatomy renders, or is recorded as a contract gap with its provable form shipped'
+      - 'every file in files_in_scope carries a step-3 classification and its outcome'
+      - 'every chart carries a chart_policy verdict and the verdict has been applied'
+      - 'P02-DEF-001 fixed and confirmed on a non-SGD entity in the rendered page'
+      - 'the consumer check re-run immediately before any component move or removal'
+      - 'inherited and new gaps restated as still open, or closed with evidence'
+      - 'keyboard gates either observed or written into the manual acceptance ledger as NOT VERIFIED'
+
+    reopening: >
+      Any change to purpose, information hierarchy, operational hierarchy, primary action decision,
+      or a rejected control requires a new entry under `divergences` stating what changed and why.
+      A contract gap closing is not a reopening — it widens a section already declared narrow.

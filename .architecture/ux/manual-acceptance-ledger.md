@@ -28,19 +28,20 @@ harness is never a reason to change working code.** See
 Check each against the object's own identity control — the run reference link, the employee name
 button, the filing name button — never against the row, which is deliberately not focusable.
 
-| #   | Surface           | Interaction                        | Expected                                                                                                     |
-| --- | ----------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| 1   | Payroll Run Queue | `Shift+F10` on a run reference     | Menu opens, arrows move through it, Enter runs the command, Escape closes and focus returns to the reference |
-| 2   | Payroll Run Queue | `⋮` by pointer and by keyboard     | Same commands as right-click, in the same order, Properties last; Escape restores focus to the button        |
-| 3   | Payroll Register  | `Shift+F10` on an employee name    | As row 1                                                                                                     |
-| 4   | Payroll Register  | `⋮` by pointer and by keyboard     | As row 2                                                                                                     |
-| 5   | Filings           | `Shift+F10` on a filing name       | As row 1. Filings renders no `⋮` — `Open filing` is the whole vocabulary, so right-click is the only menu    |
-| 6   | Payments          | `Shift+F10` on an employee name    | As row 1                                                                                                     |
-| 7   | Payments          | `⋮` by pointer and by keyboard     | As row 2, on a payment that has one. A payment with no bank reference has no `⋮` — check right-click there   |
-| 8   | Group payroll     | `Shift+F10` on a company name      | As row 1. No `⋮` — `Open company` is the whole vocabulary, so right-click is the only menu                   |
-| 9   | Group payroll     | Selection by keyboard              | Space toggles a checkbox, the engine's bar and the truth strip below the table both update                   |
-| 10  | Run history       | `⋮` by pointer and by keyboard     | As row 2. The run the page is showing has a `⋮` but no `Open run` — it is already open                       |
-| 11  | All six           | Column visibility and Export menus | Open, operate, and close by keyboard                                                                         |
+| #   | Surface           | Interaction                     | Expected                                                                                                     |
+| --- | ----------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1   | Payroll Run Queue | `Shift+F10` on a run reference  | Menu opens, arrows move through it, Enter runs the command, Escape closes and focus returns to the reference |
+| 2   | Payroll Run Queue | `⋮` by pointer and by keyboard  | Same commands as right-click, in the same order, Properties last; Escape restores focus to the button        |
+| 3   | Payroll Register  | `Shift+F10` on an employee name | As row 1                                                                                                     |
+| 4   | Payroll Register  | `⋮` by pointer and by keyboard  | As row 2                                                                                                     |
+| 5   | Filings           | `Shift+F10` on a filing name    | As row 1. Filings renders no `⋮` — `Open filing` is the whole vocabulary, so right-click is the only menu    |
+| 6   | Payments          | `Shift+F10` on an employee name | As row 1                                                                                                     |
+| 7   | Payments          | `⋮` by pointer and by keyboard  | As row 2, on a payment that has one. A payment with no bank reference has no `⋮` — check right-click there   |
+| 10  | Run history       | `⋮` by pointer and by keyboard  | As row 2. The run the page is showing has a `⋮` but no `Open run` — it is already open                       |
+| 11  | The five below    | Column visibility by keyboard   | Open, operate, and close. Run queue, Register, Filings, Payments, Run history — the group matrix is closed   |
+
+Rows 8 and 9 were closed on 2026-09-08 and are recorded below. The numbers are not reused: every
+other section of this file cites rows by number, so the sequence keeps its gaps.
 
 ### Note on row 7 — a row without a trigger
 
@@ -143,6 +144,56 @@ the engine deriving the menu from `hideable` rather than a hand-kept list.
 
 Rows 12 and 13 remain open. Key delivery was working during this pass, so they are worth closing in
 the same sitting rather than waiting for another window.
+
+## Closed 2026-09-08 — rows 8 and 9, and what remained of row 11 on P01
+
+Observed on `/payroll` in the dev worktree, light theme, with working key delivery. Every step was
+watched in the rendered page. Key delivery was proved before the gates were judged, on the same
+control the gates use: `Shift+F10` on the company name recorded two `keydown` events with
+`document.hasFocus()` true, so a null result would have meant a defect rather than a dead channel.
+
+### Row 8 — `Shift+F10` on a company name
+
+| Gate                                            | Result                                                           |
+| ----------------------------------------------- | ---------------------------------------------------------------- |
+| Menu opens on the company name                  | PASS — headed `Afenda Pte. Ltd.`, one item, `Open company`       |
+| Focus lands on the first enabled command        | PASS — `Open company` focused and highlighted on open            |
+| Arrows move through it                          | PASS with a caveat — see below                                   |
+| Enter runs the command                          | PASS — navigated to `/payroll/entities/ent-sg?return=%2Fpayroll` |
+| Escape closes                                   | PASS — the popup carries `data-closed`                           |
+| Escape returns focus to the originating control | PASS — focus back on the `Afenda Pte. Ltd.` link, ring visible   |
+
+The caveat on arrows: the company vocabulary is one command, which is what the row itself predicted
+(`Open company` is the whole vocabulary). `ArrowDown` was pressed and focus stayed on that one item
+— no wrap error, no escape from the menu — but a one-item menu cannot demonstrate movement between
+items. That gate is proved on the surfaces that have more than one command, not here.
+
+### Row 9 — selection by keyboard
+
+Reached the way a person reaches it: `Shift+Tab` from the company name landed on the row checkbox,
+labelled `Select Afenda Pte. Ltd.`.
+
+| Gate                              | Result                                                                                                     |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Checkbox is reachable by keyboard | PASS — one `Shift+Tab` back from the row's identity control                                                |
+| Space toggles it on               | PASS — `aria-checked` true, the row highlights                                                             |
+| The engine's bar updates          | PASS — `1 company selected`, `Select all 5 matching these filters`, `Explain selection`, `Clear selection` |
+| The truth strip updates           | PASS — `Employer cost S$317,796.17 · Coverage 1 of 1 included · Currency converted to SGD`                 |
+| Space toggles it off              | PASS — `aria-checked` false, bar and strip both gone, focus still on the checkbox                          |
+
+### Row 11 — the group matrix half, and a premise the row got wrong
+
+The column menu on the company matrix was closed as row 14 earlier the same day, so what was left of
+row 11 on P01 was its Export half. **There is no Export control on P01 to test.** The matrix declares
+`task: ['sort', 'select', 'bulk', 'rowCommands', 'columnVisibility']` and no `onExport`, and the
+rendered toolbar carries one popup trigger, `Show columns`. The toolbar builds itself from what the
+definition asks for — "a table with no hideable columns has no Columns menu and one with no export
+has no Export" — so the absence is the engine behaving correctly, not a missing control.
+
+Two corrections to how row 11 was written. It said **all six** tables, but the group matrix's half of
+it is now settled, so the row names the five that remain. And it said Export **menus**: export is a
+single `Button` that runs on activation, never a menu, so on the surfaces that do have one the gate
+is that it is reachable and activates — there is nothing to navigate or close.
 
 ## Before a release that claims keyboard accessibility
 

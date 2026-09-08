@@ -35,6 +35,13 @@ p01_group_payroll_control:
         manual-acceptance-ledger rows 12, 13 and 14 all closed 2026-09-08. Tab order through Needs
         attention and Next actions, Shift+Tab up the timeline rail, and the column menu's full
         open/navigate/toggle/close cycle were each observed on the rendered page.
+      keyboard_addendum: >
+        Rows 8 and 9 closed 2026-09-08, after the freeze and without changing P01. Shift+F10 on a
+        company name opens the one-command menu, Enter opens the company, Escape closes and returns
+        focus to the name; Space on a row checkbox toggles selection and both the engine's bar and
+        the selection truth strip follow it in and out. Row 11 has no Export half on this page —
+        the matrix declares no onExport, so the engine renders no Export control. The addendum
+        records evidence gathered after the freeze; it changes no decision the freeze made.
       gates: 'check-types, lint, build and audit.py all pass; audit ratchet clean at 77/77'
       render: 'desktop light and dark verified; 390px verified on the identical layout before the colour-only change'
 
