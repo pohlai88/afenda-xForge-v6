@@ -19,11 +19,13 @@ import type { PayRunQueueRow } from '@/types/payroll/run-queue-types'
 import type { PayrollRunRow } from '@/types/payroll/run-workspace-types'
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
 import type { PropertySection } from '@/components/shared/PropertiesSheet'
-import type { EntityRow } from '@/types/payroll/group-types'
+import type { EntityPayrollState, EntityRow } from '@/types/payroll/group-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 import type { SettlementRow } from '@/utils/payroll-payments'
 
 // Util Imports
 import { formatCount, formatMoney } from '@/utils/money'
+import { COUNTRY_LABELS, ENTITY_STATE_LABELS, periodLabel } from '@/utils/payroll-group'
 import { FILING_KIND_LABELS } from '@/utils/payroll-compliance'
 import { PAY_RUN_STATUS_LABELS } from '@/utils/payroll-metrics'
 import {
@@ -394,12 +396,23 @@ export const settlementCommands = (
  * is what a person calls the row, and the period is the page's, held once rather than repeated
  * down every row.
  */
-export const entityPeriodObject = (row: EntityRow): ObjectContext => ({
+export const entityPayrollObject = (entity: Pick<LegalEntity, 'id' | 'name'>, href: string): ObjectContext => ({
   type: 'entity_payroll',
-  id: row.entity.id,
-  label: row.entity.name,
-  href: row.href
+  id: entity.id,
+  label: entity.name,
+  href
 })
+
+/**
+ * The same object, described from a row of the group control matrix.
+ *
+ * Delegates rather than repeating the three fields, because doctrine `identity_rule` says a
+ * company's payroll must not become a different conceptual identity in another view — and the
+ * cheapest way to guarantee that is for one function to own what the label and the type are. The
+ * row supplies the href because the group view a reader came from is part of where Open returns
+ * them to.
+ */
+export const entityPeriodObject = (row: EntityRow): ObjectContext => entityPayrollObject(row.entity, row.href)
 
 /**
  * Opening the company is the only thing this surface does to one, so the list is one command long
@@ -419,5 +432,109 @@ export const entityPeriodCommands = (row: EntityRow, href: (entityId: string) =>
     family: 'read',
     icon: ExternalLinkIcon,
     href: href(row.entity.id)
+  }
+]
+
+/**
+ * What can be done with a company's payroll from the company's own workspace.
+ *
+ * Open is absent because this is where Open goes — the same reason `payRunCommands` drops it when
+ * `isCurrent`. Audit is absent because there is no entity-level audit trail in this domain: a
+ * command that opened nothing would be this file claiming a capability the product does not have,
+ * which doctrine `context_menu` answers by omission rather than by a disabled item.
+ *
+ * The run command names the run rather than saying "current run", because a reader who has
+ * selected an earlier period with `?run=` is looking at that one, and a menu that said "current"
+ * would be describing a different object than the page is.
+ */
+export const entityPayrollCommands = (
+  entity: Pick<LegalEntity, 'registrationNumber'>,
+  displayedRun?: Pick<PayRun, 'id' | 'reference'>
+): ObjectCommand[] => {
+  const commands: ObjectCommand[] = []
+
+  if (displayedRun) {
+    commands.push({
+      id: 'open-run',
+      label: `Open ${displayedRun.reference}`,
+      family: 'read',
+      icon: ExternalLinkIcon,
+      href: `/payroll/runs/${displayedRun.id}`
+    })
+  }
+
+  commands.push({
+    id: 'copy-registration-number',
+    label: 'Copy registration number',
+    family: 'search',
+    icon: CopyIcon,
+    onSelect: () => {
+      void copyReference(entity.registrationNumber, 'Registration number')
+    }
+  })
+
+  return commands
+}
+
+/**
+ * What a company's payroll exactly is, from what the workspace has already proved.
+ *
+ * The group standing section is deliberately asymmetric. A company whose open period has no
+ * calculation is provably outside the group total — `consolidate` excludes `awaiting_data`
+ * unconditionally. Every other state is only a *candidate* for inclusion, because consolidation
+ * also needs an FX rate to the reporting currency and this page never runs it. So the exclusion is
+ * stated and the inclusion is not: saying "Included" here would be the interface asserting a result
+ * of an aggregation it did not perform.
+ */
+export const entityPayrollProperties = (
+  entity: LegalEntity,
+  payroll: {
+    /** The run the workspace is displaying, which is not always the latest. */
+    displayedRun?: Pick<PayRun, 'reference' | 'periodStart' | 'periodEnd' | 'employeeCount'>
+    runCount: number
+
+    /** The period the group is consolidating, and this company's state within it. */
+    openPeriod: string
+    state: EntityPayrollState
+  }
+): PropertySection[] => [
+  {
+    title: 'Identity',
+    fields: [
+      { label: 'Name', value: entity.name },
+      { label: 'Code', value: entity.code },
+      { label: 'Country', value: COUNTRY_LABELS[entity.countryCode] },
+      { label: 'Currency', value: entity.currency },
+      { label: 'Registration no.', value: entity.registrationNumber },
+      { label: 'Timezone', value: entity.timezone }
+    ]
+  },
+  {
+    title: 'Payroll',
+    fields: payroll.displayedRun
+      ? [
+          { label: 'Displayed run', value: payroll.displayedRun.reference },
+          { label: 'Period', value: formatPeriod(payroll.displayedRun.periodStart, payroll.displayedRun.periodEnd) },
+          { label: 'Employees', value: formatCount(payroll.displayedRun.employeeCount) },
+          { label: 'Runs on record', value: formatCount(payroll.runCount) }
+        ]
+      : [{ label: 'Runs on record', value: 'None — payroll has not started for this company' }]
+  },
+  {
+    title: 'Group standing',
+    fields: [
+      { label: 'Open period', value: periodLabel(payroll.openPeriod) },
+      { label: 'State', value: ENTITY_STATE_LABELS[payroll.state] },
+      ...(payroll.state === 'awaiting_data'
+        ? [{ label: 'Group total', value: 'Not included — no calculation for this period' }]
+        : [])
+    ]
+  },
+  {
+    title: 'System',
+    fields: [
+      { label: 'Statutory profile', value: entity.statutoryProfileId },
+      { label: 'Id', value: entity.id }
+    ]
   }
 ]

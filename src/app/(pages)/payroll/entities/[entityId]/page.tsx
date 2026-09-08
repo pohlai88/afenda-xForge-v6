@@ -15,6 +15,7 @@ import type { DepartmentRow } from '@/views/dashboards/payroll/payroll-by-depart
 import type { ExceptionRow } from '@/views/dashboards/payroll/payroll-exception-queue'
 
 // Component Imports
+import EntityIdentity from '@/views/payroll/entity-identity'
 import WorkspaceGrid from '@/components/shared/WorkspaceGrid'
 import { CustomiseWorkspaceAction, WorkspaceCustomisation } from '@/components/shared/WorkspaceCustomisation'
 import { Button } from '@/components/ui/button'
@@ -56,6 +57,15 @@ const OVERTIME_TARGET_SHARE = 2
 const TERMINAL_STATUSES = new Set(['paid', 'closed', 'cancelled', 'failed'])
 
 /**
+ * The period the group is consolidating, which is not necessarily the period this page displays.
+ *
+ * Named because two things now read it — this company's standing in the group, and the Properties
+ * panel that reports that standing — and two copies of a period key is exactly how one of them
+ * ends up a month behind the other.
+ */
+const OPEN_PERIOD = '2026-09'
+
+/**
  * One company's payroll. `/payroll` is the group above it; `/payroll/runs/[runId]` is the
  * workspace below.
  *
@@ -94,31 +104,54 @@ const EntityPayrollPage = async ({ params, searchParams }: Props) => {
     getDepartments()
   ])
 
+  // What the group says about this company for the OPEN period, which is not necessarily the run
+  // being displayed. Read before the no-payroll branch below, because a company with no run at all
+  // still has a standing in the group — 'awaiting data' — and still deserves its identity.
+  const state = entityStateOf(runs.find(run => run.periodStart.slice(0, 7) === OPEN_PERIOD))
+
   // A return path arrives in the URL and is therefore untrusted. Only a same-origin payroll path
   // is followed; anything else — an absolute URL, a protocol-relative one — is dropped for the
   // plain group route. A navigation target taken raw from a query parameter is an open redirect.
   const backHref = returnTo && /^\/payroll(?:[/?#]|$)/.test(returnTo) ? returnTo : '/payroll'
 
-  // `action` is the page's overflow, which only exists once there is a workspace to customise.
-  const header = (action?: ReactNode) => (
-    <header className='flex items-start justify-between gap-4'>
-      <div className='flex flex-col gap-1'>
-        <Button
-          variant='link'
-          size='xs'
-          className='text-muted-foreground w-fit px-0 font-normal'
-          render={<Link href={backHref} />}
-          nativeButton={false}
-        >
-          <ChevronLeftIcon /> Group payroll
-        </Button>
-        <h1 className='text-2xl font-semibold tracking-tight'>{entity.name}</h1>
-        <p className='text-muted-foreground text-sm'>
-          {COUNTRY_LABELS[entity.countryCode]} · pays in {entity.currency} · {entity.registrationNumber}
-        </p>
-      </div>
-      {action}
-    </header>
+  /*
+   * `action` is the page's overflow, which only exists once there is a workspace to customise.
+   *
+   * `displayedRun` is narrowed to the five fields Properties and the commands render rather than
+   * passed whole: everything handed to `EntityIdentity` crosses to the client, and a `PayRun`
+   * carries its exceptions with it.
+   */
+  const header = (
+    displayedRun?: { id: string; reference: string; periodStart: string; periodEnd: string; employeeCount: number },
+    action?: ReactNode
+  ) => (
+    <EntityIdentity
+      entity={entity}
+      href={`/payroll/entities/${entity.id}`}
+      displayedRun={displayedRun}
+      runCount={runs.length}
+      openPeriod={OPEN_PERIOD}
+      state={state}
+    >
+      <header className='flex items-start justify-between gap-4'>
+        <div className='flex flex-col gap-1'>
+          <Button
+            variant='link'
+            size='xs'
+            className='text-muted-foreground w-fit px-0 font-normal'
+            render={<Link href={backHref} />}
+            nativeButton={false}
+          >
+            <ChevronLeftIcon /> Group payroll
+          </Button>
+          <h1 className='text-2xl font-semibold tracking-tight'>{entity.name}</h1>
+          <p className='text-muted-foreground text-sm'>
+            {COUNTRY_LABELS[entity.countryCode]} · pays in {entity.currency} · {entity.registrationNumber}
+          </p>
+        </div>
+        {action}
+      </header>
+    </EntityIdentity>
   )
 
   // A company with no run at all is not an error and not an empty dashboard: it is a company
@@ -194,10 +227,9 @@ const EntityPayrollPage = async ({ params, searchParams }: Props) => {
     ? null
     : daysBetween(new Date().toISOString(), currentRun.cutoffAt)
 
-  // What the group says about this company for the OPEN period, which is not necessarily the
-  // run being displayed. A company whose latest run is August has nothing for September, and the
-  // page should say so rather than let August read as current.
-  const state = entityStateOf(runs.find(run => run.periodStart.slice(0, 7) === '2026-09'))
+  // A company whose latest run is August has nothing for September, and the page should say so
+  // rather than let August read as current. `state` itself is read further up, before the branch
+  // for a company that has no payroll at all.
   const stateDetail = entityStateDetail(undefined, state)
 
   const employeeById = new Map(employees.map(e => [e.id, e]))
@@ -358,15 +390,24 @@ const EntityPayrollPage = async ({ params, searchParams }: Props) => {
   return (
     <WorkspaceCustomisation workspaceId={workspace.id} modules={workspaceModules(workspace)}>
       <div className='flex flex-col gap-6'>
-        {header(<CustomiseWorkspaceAction />)}
+        {header(
+          {
+            id: currentRun.id,
+            reference: currentRun.reference,
+            periodStart: currentRun.periodStart,
+            periodEnd: currentRun.periodEnd,
+            employeeCount: currentRun.employeeCount
+          },
+          <CustomiseWorkspaceAction />
+        )}
 
-      {state === 'awaiting_data' && (
+        {state === 'awaiting_data' && (
           <Card>
             <CardHeader>
               <CardTitle className='text-lg font-semibold'>{stateDetail}</CardTitle>
               <CardDescription>
-                The figures below are {currentRun.reference}, the most recent calculation. This company is not
-                included in the group total for the open period.
+                The figures below are {currentRun.reference}, the most recent calculation. This company is not included
+                in the group total for the open period.
               </CardDescription>
             </CardHeader>
           </Card>
