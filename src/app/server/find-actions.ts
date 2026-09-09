@@ -8,6 +8,7 @@
 import type { FindObjectHit } from '@/types/common/find-types'
 
 // Data Imports
+import { entityById } from '@/fake-db/hrm/entities'
 import { employees } from '@/fake-db/hrm/employees'
 import { filings } from '@/fake-db/payroll/filings'
 import { payRuns } from '@/fake-db/payroll/pay-runs'
@@ -16,10 +17,11 @@ import { settlements } from '@/fake-db/payroll/settlements'
 
 // Util Imports
 import { FILING_AUTHORITIES } from '@/utils/payroll-compliance'
+import { COUNTRY_LABELS } from '@/utils/payroll-group'
 import { PAY_RUN_STATUS_LABELS } from '@/utils/payroll-metrics'
 import { actorFor, can } from '@/utils/payroll-permissions'
 import { PAYMENT_STATUS_LABELS, formatPeriod } from '@/utils/payroll-workspace'
-import { employeeObject, filingObject, payRunObject } from '@/views/payroll/payroll-objects'
+import { employeeObject, entityPayrollObject, filingObject, payRunObject } from '@/views/payroll/payroll-objects'
 
 /** Matches `currentActor` in `actions.ts`; both stand in until there is a session. */
 const CURRENT_USER_ID = 'emp-020'
@@ -159,6 +161,22 @@ export const resolveObjectTargets = async (
       continue
     }
 
+    // A company is addressed by its own workspace, which is where it published itself from. The
+    // label is minted by the same builder the workspace and the group matrix use, so a recent entry
+    // and the breadcrumb that recorded it cannot disagree about what the company is called.
+    if (target.type === 'entity_payroll') {
+      const entity = entityById.get(target.id)
+
+      if (!entity) continue
+
+      hits.push({
+        object: entityPayrollObject(entity, `/payroll/entities/${entity.id}`),
+        sublabel: `${COUNTRY_LABELS[entity.countryCode]} · pays in ${entity.currency}`
+      })
+
+      continue
+    }
+
     if (target.type === 'employee') {
       const employee = employees.find(candidate => candidate.id === target.id)
 
@@ -189,7 +207,12 @@ export const resolveObjectTargets = async (
 
       hits.push({
         object: {
-          ...filingObject({ id: filing.id, kind: filing.kind, periodStart: filing.periodStart, periodEnd: filing.periodEnd }),
+          ...filingObject({
+            id: filing.id,
+            kind: filing.kind,
+            periodStart: filing.periodStart,
+            periodEnd: filing.periodEnd
+          }),
           href: `/payroll/compliance?filing=${encodeURIComponent(filing.id)}`
         },
         sublabel: FILING_AUTHORITIES[filing.kind]

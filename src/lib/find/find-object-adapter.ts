@@ -12,7 +12,7 @@
  * teaches Find how to present and reopen one.
  */
 
-import { BanknoteIcon, LandmarkIcon, UserIcon, WalletIcon, type LucideIcon } from 'lucide-react'
+import { BanknoteIcon, Building2Icon, LandmarkIcon, UserIcon, WalletIcon, type LucideIcon } from 'lucide-react'
 
 import type { FindTarget } from '@/types/common/find-types'
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
@@ -50,6 +50,18 @@ const FIND_OBJECT_TYPES: Record<string, FindObjectType> = {
     icon: BanknoteIcon,
     href: object => object.href ?? null,
     commands: object => payRunCommands({ id: object.id, reference: object.label })
+  },
+
+  // A company's payroll is read on its own workspace, which is the href its source resolved. It is
+  // listed here because an unregistered type is invisible to Find twice over — the favourite command
+  // is withheld and a recorded recent is dropped as unresolvable — so a first-class object that
+  // publishes itself must be addressable here or it never reaches the surfaces that promise it.
+  // No command list, for the same reason as an employee: `entityPayrollCommands` closes over the
+  // legal entity and the displayed run, neither of which this adapter holds.
+  entity_payroll: {
+    heading: 'Companies',
+    icon: Building2Icon,
+    href: object => object.href ?? null
   },
 
   // An employee is read on the run workspace its payroll belongs to, so the source resolves the
