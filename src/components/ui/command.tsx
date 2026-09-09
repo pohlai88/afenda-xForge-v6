@@ -37,6 +37,78 @@ function CommandDialog({
   showCloseButton?: boolean
   children: React.ReactNode
 }) {
+  const popup = React.useRef<HTMLDivElement>(null)
+  const restoreTo = React.useRef<HTMLElement | null>(null)
+
+  /*
+   * A command palette exists to be typed into, so opening one puts the caret in its filter.
+   *
+   * The input is found by its own `data-slot` rather than by a ref threaded through the caller,
+   * because `CommandInput` is rendered by whoever uses the palette and every one of them would
+   * otherwise have to remember to wire focus up.
+   */
+  const focusFilter = (node: HTMLDivElement | null) => {
+    const filter = node?.querySelector<HTMLInputElement>('[data-slot=command-input]')
+
+    if (!filter || node?.contains(document.activeElement)) return
+
+    restoreTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    filter.focus()
+  }
+
+  /*
+   * The first open, which has no other moment.
+   *
+   * `Dialog.Portal` mounts the popup a commit later than `open` becomes true, so an effect keyed on
+   * `open` finds this ref still empty the first time — measured, and the reason one mechanism was
+   * not enough here. A callback ref fires exactly when the element attaches, and by then its own
+   * children are already inside it, so the filter is there to find.
+   */
+  const attach = React.useCallback((node: HTMLDivElement | null) => {
+    popup.current = node
+    focusFilter(node)
+  }, [])
+
+  /*
+   * Every open after the first, where nothing mounts and `open` is all that changed.
+   *
+   * A closed popup lingers in the document carrying `data-closed` until its exit transition ends,
+   * so a reopen inside that window is a state change rather than a mount and the callback ref above
+   * does not fire — measured both ways, closing and reopening. Measured on its own,
+   * this covers the second and third opens and misses the first — the exact inverse of the ref, and
+   * why both are here rather than one out of habit.
+   *
+   * `initialFocus` is deliberately not declared. It was tried first, as the primitive's own API and
+   * the thing Phase 10 leaned on for Properties, and measured doing nothing at all here: Base UI
+   * resolves it before this wrapper's ref exists. A declaration that provably never fires would be
+   * decoration. No timer either: mount and `open` are the two moments, and this uses both.
+   */
+  React.useEffect(() => {
+    if (props.open) {
+      focusFilter(popup.current)
+
+      return
+    }
+
+    /*
+     * And every close, because taking focus is what made the reader lose their place.
+     *
+     * It is explicit for the same reason entry is: on a controlled dialog with no `Dialog.Trigger`,
+     * the primitive has nothing it can call the origin, and its own focus props measured inert here.
+     * Focus is only pulled back when it is still inside the palette being closed — running a command
+     * navigates, and dragging someone back from where they chose to go is worse than leaving them.
+     * By the time this runs the background is interactive again, because the wrapper below lifts
+     * `inert` in its own effect and effects run child-first.
+     */
+    const target = restoreTo.current
+
+    restoreTo.current = null
+
+    if (!target?.isConnected || !popup.current?.contains(document.activeElement)) return
+
+    target.focus({ preventScroll: true })
+  }, [props.open])
+
   return (
     <Dialog {...props}>
       <DialogHeader className='sr-only'>
@@ -44,6 +116,7 @@ function CommandDialog({
         <DialogDescription>{description}</DialogDescription>
       </DialogHeader>
       <DialogContent
+        ref={attach}
         open={props.open ?? false}
         className={cn('top-1/3 translate-y-0 overflow-hidden rounded-xl! p-0', className)}
         showCloseButton={showCloseButton}
