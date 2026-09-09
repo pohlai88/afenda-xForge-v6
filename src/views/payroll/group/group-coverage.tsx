@@ -49,7 +49,7 @@ const GroupCoverage = ({ coverage, subject = 'group total', variant = 'line', cl
       All {entities.total} entities included
     </p>
   ) : (
-    <p role='status' className={cn('text-warning flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm', className)}>
+    <p role='status' className={cn('text-warning-strong flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm', className)}>
       <TriangleAlertIcon className='size-4 shrink-0' aria-hidden='true' />
       <span>
         {entities.included} of {entities.total} entities included

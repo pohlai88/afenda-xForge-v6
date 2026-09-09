@@ -12,7 +12,8 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type SortingState
+  type SortingState,
+  type VisibilityState
 } from '@tanstack/react-table'
 import { ChevronDownIcon, ChevronRightIcon, ChevronUpIcon, MinusIcon, ScrollTextIcon } from 'lucide-react'
 
@@ -26,12 +27,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import DataTable from '@/components/shared/DataTable'
+import { ExceptionBadge } from '@/views/payroll/run/exception-badge'
 import { entityPeriodCommands, entityPeriodObject } from '@/views/payroll/payroll-objects'
 import LineageDrawer from './lineage-drawer'
 
 // Util Imports
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
+import { formatDate } from '@/utils/payroll-workspace'
+import { countExceptions } from '@/utils/payroll-metrics'
 import { ENTITY_STATE_LABELS, ENTITY_STATE_ORDER, ENTITY_STATE_STYLES, COUNTRY_LABELS } from '@/utils/payroll-group'
 
 type Props = {
@@ -69,14 +73,58 @@ const Dash = ({ label }: { label: string }) => (
  * say it when a comparison exists.
  */
 const ENTITY_COLUMNS: TableColumn[] = [
-  { id: 'entity', label: 'Company', semantic: 'identity', isAnchor: true },
-  { id: 'coverage', label: 'In the total', semantic: 'signal' },
-  { id: 'employees', label: 'Employees', semantic: 'quantity' },
-  { id: 'employerCost', label: 'Employer cost', semantic: 'money' },
-  { id: 'change', label: 'Change', semantic: 'money' },
+  { id: 'entity', label: 'Company', semantic: 'identity', isAnchor: true, pinned: true },
+  { id: 'employees', label: 'People', semantic: 'quantity' },
+  { id: 'ready', label: 'Ready', semantic: 'quantity' },
+  { id: 'issues', label: 'Issues', semantic: 'signal' },
+  { id: 'payday', label: 'Payday', semantic: 'date' },
+  { id: 'netPay', label: 'Net pay', semantic: 'money' },
   { id: 'state', label: 'State', semantic: 'signal' },
+
+  // The reconciliation three. Present, sortable and totalled exactly as before, but off by
+  // default: they answer what the group costs, which is the question the zone below this table
+  // exists for. The column menu turns them back on without leaving the page or the sort.
+  { id: 'coverage', label: 'In the total', semantic: 'signal', hideable: true },
+  { id: 'employerCost', label: 'Employer cost', semantic: 'money', hideable: true },
+  { id: 'change', label: 'Change', semantic: 'money', hideable: true },
   { id: 'open', label: 'Open', semantic: 'text', capabilities: { sortable: false, filter: 'none', searchable: false } }
 ]
+
+/** Reconciliation columns start hidden; the column menu is how they come back. */
+const OPERATIONAL_VIEW: VisibilityState = { coverage: false, employerCost: false, change: false }
+
+/** Worst first, and the same order the run queue lists them in. */
+const SEVERITIES = ['blocking', 'error', 'warning', 'info'] as const
+
+/**
+ * People this company can pay, of the people it has.
+ *
+ * Null rather than a number when the count cannot be stated, which is two cases and both matter.
+ * With no run there is no population to count. And an open blocker that names a department rather
+ * than a person affects an unknown number of people — the type allows it even though today's data
+ * has none — so subtracting only the named ones would report more people ready than the run can
+ * prove. A dash is the honest answer; an optimistic count on a payroll screen is not.
+ */
+const readyOf = (row: EntityRow): number | null => {
+  if (!row.run) return null
+
+  const stopping = row.run.exceptions.filter(
+    item => !item.resolvedAt && (item.severity === 'blocking' || item.severity === 'error')
+  )
+
+  if (stopping.some(item => !item.employeeId)) return null
+
+  return Math.max(row.employees - new Set(stopping.map(item => item.employeeId)).size, 0)
+}
+
+/** Open exceptions, worst first. A rank, not a figure — which is why the column is a `signal`. */
+const issueRank = (row: EntityRow): number => {
+  if (!row.run) return -1
+
+  const counts = countExceptions(row.run.exceptions)
+
+  return counts.blocking * 10_000 + counts.error * 100 + counts.warning
+}
 
 const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRow>[] => [
   {
@@ -84,18 +132,24 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
     header: 'Company',
     accessorFn: row => row.entity.name,
     cell: ({ row }) => (
-      <span className='flex flex-col'>
+      <span className='flex min-w-0 flex-col'>
         <Link
           href={hrefFor(row.original.entity.id)}
-          className='font-medium underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none'
+          className='truncate py-0.5 font-medium underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none'
         >
           {row.original.entity.name}
         </Link>
-        <span className='text-muted-foreground text-xs'>
+        <span className='text-muted-foreground truncate text-xs'>
           {COUNTRY_LABELS[row.original.entity.countryCode]} · {row.original.entity.currency}
         </span>
       </span>
-    )
+    ),
+
+    // A pinned column renders at exactly the width its sticky offsets were summed from, so the
+    // size has to be declared or a long name overflows into the next cell — "Afenda Manufacturing
+    // Sdn. Bhd." did. Same 260 and the same min-w-0/truncate pair the run register's pinned
+    // identity column already uses.
+    size: 260
   },
   {
     id: 'coverage',
@@ -106,7 +160,7 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
     // unreadable; a mark of a different kind is how the eye tells two facts apart.
     cell: ({ row }) => (
       <span className='flex flex-col gap-0.5 text-xs'>
-        <span className={row.original.included ? 'text-foreground' : 'text-warning'}>
+        <span className={row.original.included ? 'text-foreground' : 'text-warning-strong'}>
           {row.original.included ? 'Included' : 'Missing'}
         </span>
         {row.original.included && (
@@ -117,9 +171,74 @@ const buildColumns = (hrefFor: (entityId: string) => string): ColumnDef<EntityRo
   },
   {
     id: 'employees',
-    header: 'Employees',
+    header: 'People',
     accessorFn: row => row.employees,
     cell: ({ row }) => (row.original.included ? row.original.employees : <Dash label='No calculation' />)
+  },
+  {
+    id: 'ready',
+    header: 'Ready',
+    accessorFn: row => readyOf(row) ?? -1,
+    cell: ({ row }) => {
+      const ready = readyOf(row.original)
+
+      if (ready === null) {
+        return <Dash label={row.original.run ? 'A blocker names a department, so this cannot be counted' : 'No run'} />
+      }
+
+      const short = row.original.employees - ready
+
+      // Not coloured. `--warning` measures 2.28:1 as text on a light background, below even the
+      // 3:1 large-text floor, and the count does not need it: the sub-line names the shortfall and
+      // the Issues column beside it is already the alarm.
+      return (
+        <span className='flex flex-col items-end'>
+          <span className='font-medium'>{ready}</span>
+          {short > 0 && <span className='text-muted-foreground text-xs'>{short} blocked</span>}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'issues',
+    header: 'Issues',
+    accessorFn: issueRank,
+    cell: ({ row }) => {
+      if (!row.original.run) return <Dash label='No run' />
+
+      const counts = countExceptions(row.original.run.exceptions)
+
+      if (counts.open === 0) return <span className='text-muted-foreground text-xs'>None open</span>
+
+      return (
+        <span className='flex flex-wrap items-center gap-1'>
+          {SEVERITIES.map(
+            severity =>
+              counts[severity] > 0 && <ExceptionBadge key={severity} severity={severity} count={counts[severity]} />
+          )}
+        </span>
+      )
+    }
+  },
+  {
+    id: 'payday',
+    header: 'Payday',
+    accessorFn: row => row.run?.payDate ?? '',
+    cell: ({ row }) => (row.original.run ? formatDate(row.original.run.payDate) : <Dash label='No run, so no payday' />)
+  },
+  {
+    id: 'netPay',
+    header: 'Net pay',
+    accessorFn: row => row.reporting?.netPay.amount ?? -1,
+    cell: ({ row }) =>
+      row.original.reporting && row.original.local ? (
+        <span className='flex flex-col items-end'>
+          <span className='font-medium'>{formatMoney(row.original.reporting.netPay)}</span>
+          <span className='text-muted-foreground text-xs'>{formatMoney(row.original.local.netPay)}</span>
+        </span>
+      ) : (
+        <Dash label='No calculation' />
+      )
   },
   {
     id: 'employerCost',
@@ -202,6 +321,7 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
   const [sorting, setSorting] = useState<SortingState>([])
   const [stateFilter, setStateFilter] = useState<EntityPayrollState | 'all'>('all')
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(OPERATIONAL_VIEW)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   const reporting = consolidation.reportingCurrency
@@ -225,9 +345,10 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
   const table = useReactTable({
     data: filtered,
     columns,
-    state: { sorting, rowSelection },
+    state: { sorting, rowSelection, columnVisibility },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
     getRowId: row => row.entity.id,
     enableRowSelection: true,
     enableSortingRemoval: false,
@@ -257,13 +378,18 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
     currency: reporting
   }
 
+  const visibleNetTotal = {
+    amount: rows.reduce((sum, row) => sum + (row.original.reporting?.netPay.amount ?? 0), 0),
+    currency: reporting
+  }
+
   const visibleIncluded = rows.filter(row => row.original.included).length
 
   const footer: TableFooterRow = {
     label: (
       <span className='font-medium'>
         {visibleIncluded} of {rows.length} included
-        {visibleIncluded < rows.length && <span className='text-warning'> · incomplete</span>}
+        {visibleIncluded < rows.length && <span className='text-warning-strong'> · incomplete</span>}
       </span>
     ),
     cells: [
@@ -279,6 +405,11 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
             <Dash label='Unique headcount is only meaningful across every company' />
           )
       },
+      { columnId: 'netPay', content: <span className='font-semibold'>{formatMoney(visibleNetTotal)}</span> },
+
+      // Rendered only while the column is on. The engine builds the footer from the visible
+      // sequence, so a hidden column takes its total with it rather than leaving a stray figure
+      // under the wrong heading.
       { columnId: 'employerCost', content: <span className='font-semibold'>{formatMoney(visibleTotal)}</span> }
     ]
   }
@@ -311,7 +442,7 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
 
     // The whole group fits on one screen, so this table sorts, selects and commands and asks for
     // no paging even though the engine can page.
-    task: ['sort', 'select', 'bulk', 'rowCommands'],
+    task: ['sort', 'select', 'bulk', 'rowCommands', 'columnVisibility'],
     emptyState: {
       message:
         consolidation.entities.length === 0
@@ -326,9 +457,12 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
     <>
       <Card className={cn('gap-0 py-0', className)}>
         <CardHeader className='py-6'>
-          <CardTitle className='text-lg font-semibold'>Companies</CardTitle>
+          <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+            Companies
+          </CardTitle>
           <CardDescription>
-            Employer cost in {reporting}, with each company&apos;s own currency beneath it
+            Who needs action, and when. Net pay in {reporting}, with each company&apos;s own currency beneath it; cost
+            and coverage are in the column menu
           </CardDescription>
           <CardAction>
             <ToggleGroup
@@ -385,7 +519,7 @@ const EntityControlMatrix = ({ consolidation, returnTo, className }: Props) => {
           </span>
 
           {selectedMissing.length > 0 && (
-            <span className='text-warning text-sm'>
+            <span className='text-warning-strong text-sm'>
               {selectedMissing.map(row => row.entity.name).join(', ')} has no calculation. Selection total is
               incomplete.
             </span>

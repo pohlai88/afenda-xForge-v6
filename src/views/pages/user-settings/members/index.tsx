@@ -76,7 +76,7 @@ const Members = ({ membersData }: MembersProps) => {
             <div className='mt-4 grid grid-cols-1 gap-4'>
               <div className='w-full space-y-2'>
                 <Label htmlFor='email' className='gap-1'>
-                  Email<span className='text-destructive'>*</span>
+                  Email<span className='text-destructive-strong'>*</span>
                 </Label>
                 <InputGroup>
                   <InputGroupInput id='email' type='email' placeholder='Email address' required />
@@ -168,7 +168,7 @@ const Members = ({ membersData }: MembersProps) => {
                     <DropdownMenuGroup>
                       <DropdownMenuItem>View Details</DropdownMenuItem>
                       <DropdownMenuItem
-                        className='text-destructive hover:bg-destructive/10! hover:text-destructive! transition-colors duration-300'
+                        className='text-destructive-strong hover:bg-destructive/10! hover:text-destructive-strong! transition-colors duration-300'
                         onClick={() => removeMember(member.id)}
                       >
                         Remove
@@ -223,7 +223,7 @@ const Members = ({ membersData }: MembersProps) => {
                     <DropdownMenuContent className='w-20' align='end'>
                       <DropdownMenuGroup>
                         <DropdownMenuItem
-                          className='text-destructive hover:bg-destructive/10! hover:text-destructive! transition-colors duration-300'
+                          className='text-destructive-strong hover:bg-destructive/10! hover:text-destructive-strong! transition-colors duration-300'
                           onClick={() => revokeInvite(invite.id)}
                         >
                           Revoke

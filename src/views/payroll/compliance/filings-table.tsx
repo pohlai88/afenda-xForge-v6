@@ -103,7 +103,7 @@ const buildColumns = (onOpen: (id: string) => void): ColumnDef<FilingRow>[] => [
         <span className='flex flex-col whitespace-nowrap'>
           <span>{formatDate(row.original.dueDate)}</span>
           {days !== null && (
-            <span className={cn('text-xs', days < 0 ? 'text-destructive' : 'text-muted-foreground')}>
+            <span className={cn('text-xs', days < 0 ? 'text-destructive-strong' : 'text-muted-foreground')}>
               {days === 0
                 ? 'today'
                 : days < 0

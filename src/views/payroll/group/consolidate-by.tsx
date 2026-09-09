@@ -57,7 +57,7 @@ const ConsolidateBy = ({ consolidation, breakdown, query, defaults, className }:
     <>
       <Card className={className}>
         <CardHeader>
-          <CardTitle className='text-lg font-semibold'>
+          <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
             Employer cost by {DIMENSION_LABELS[breakdown.dimension].toLowerCase()}
           </CardTitle>
           <CardDescription>

@@ -16,6 +16,9 @@ import type {
   Payslip
 } from '@/types/payroll/pay-run-types'
 
+// Util Imports
+import { toMajorUnits } from '@/utils/money'
+
 const sum = (values: Money[], currency: Money['currency']): Money => ({
   amount: values.reduce((total, v) => total + v.amount, 0),
   currency
@@ -46,10 +49,14 @@ export type BridgeStep = {
 }
 
 export const grossToNetBridge = (run: PayRun): BridgeStep[] => {
-  const gross = run.totals.grossPay.amount / 100
-  const tax = run.totals.employeeTaxes.amount / 100
-  const deductions = run.totals.employeeDeductions.amount / 100
-  const net = run.totals.netPay.amount / 100
+  // Not `/ 100`. Minor-unit digits are a property of the currency, and the dong has none, so
+  // dividing every total by a hundred understated a Vietnamese run by two orders of magnitude
+  // while the run status card beside it stated the same figure correctly. `toMajorUnits` reads
+  // the currency off each Money, which is the fact this function was already being handed.
+  const gross = toMajorUnits(run.totals.grossPay)
+  const tax = toMajorUnits(run.totals.employeeTaxes)
+  const deductions = toMajorUnits(run.totals.employeeDeductions)
+  const net = toMajorUnits(run.totals.netPay)
 
   return [
     { label: 'Gross', value: gross, offset: 0, kind: 'total' },
@@ -198,10 +205,10 @@ export const EXCEPTION_SEVERITY_LABELS: Record<PayRunExceptionSeverity, string> 
 }
 
 export const EXCEPTION_SEVERITY_STYLES: Record<PayRunExceptionSeverity, string> = {
-  blocking: 'bg-destructive/10 text-destructive',
-  error: 'bg-destructive/10 text-destructive',
-  warning: 'bg-warning/15 text-warning',
-  info: 'bg-info/10 text-info'
+  blocking: 'bg-destructive/10 text-destructive-strong',
+  error: 'bg-destructive/10 text-destructive-strong',
+  warning: 'bg-warning/15 text-warning-strong',
+  info: 'bg-info/10 text-info-strong'
 }
 
 /** Blocking first: an exception list is a to-do, and the things that stop the run belong on top. */
@@ -220,8 +227,8 @@ export const EXCEPTION_STATUS_LABELS: Record<PayRunExceptionStatus, string> = {
 
 export const EXCEPTION_STATUS_STYLES: Record<PayRunExceptionStatus, string> = {
   open: 'bg-muted text-foreground',
-  acknowledged: 'bg-info/10 text-info',
-  resolved: 'bg-success/15 text-success'
+  acknowledged: 'bg-info/10 text-info-strong',
+  resolved: 'bg-success/15 text-success-strong'
 }
 
 /**
@@ -253,12 +260,12 @@ export const PAY_RUN_STATUS_STYLES: Record<PayRunStatus, string> = {
   draft: 'bg-muted text-muted-foreground',
   calculating: 'bg-muted text-muted-foreground',
   calculated: 'bg-primary/10 text-primary',
-  pending_approval: 'bg-warning/15 text-warning',
-  approved: 'bg-success/15 text-success',
+  pending_approval: 'bg-warning/15 text-warning-strong',
+  approved: 'bg-success/15 text-success-strong',
   paid: 'bg-primary/10 text-primary',
   closed: 'bg-muted text-muted-foreground',
-  cancelled: 'bg-destructive/10 text-destructive',
-  failed: 'bg-destructive/10 text-destructive'
+  cancelled: 'bg-destructive/10 text-destructive-strong',
+  failed: 'bg-destructive/10 text-destructive-strong'
 }
 
 /**

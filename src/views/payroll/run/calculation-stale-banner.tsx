@@ -35,7 +35,7 @@ const CalculationStaleBanner = ({ run, onRecalculate, onShowInputs, className }:
 
   return (
     <Alert className={cn('border-warning/40 bg-warning/10 text-foreground', className)} role='status'>
-      <TriangleAlertIcon className='text-warning' />
+      <TriangleAlertIcon className='text-warning-strong' />
       <AlertTitle>Calculation #{run.calculationVersion} is out of date</AlertTitle>
       <AlertDescription className='text-foreground/80'>
         {pending.count} {pending.count === 1 ? 'input' : 'inputs'} for {pending.employees}{' '}

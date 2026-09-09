@@ -64,6 +64,7 @@ const RUN_COLUMNS: TableColumn[] = [
   { id: 'gross', label: 'Gross', semantic: 'money' },
   { id: 'net', label: 'Net', semantic: 'money' },
   { id: 'employerCost', label: 'Employer cost', semantic: 'money' },
+  { id: 'calculationVersion', label: 'Calculation', semantic: 'quantity' },
   { id: 'status', label: 'Status', semantic: 'status' }
 ]
 
@@ -122,6 +123,14 @@ const buildColumns = (hrefFor: (run: PayRun) => string): ColumnDef<PayRun>[] => 
     cell: ({ row }) => <span className='font-medium'>{formatMoney(row.original.totals.employerCost)}</span>
   },
   {
+    /* The calculation a row's figures came from. Approval is of a specific version, so a ledger
+       that states cost without stating which calculation produced it cannot be reconciled. */
+    id: 'calculationVersion',
+    header: 'Calculation',
+    accessorKey: 'calculationVersion',
+    cell: ({ row }) => <span className='text-muted-foreground tabular-nums'>#{row.original.calculationVersion}</span>
+  },
+  {
     id: 'status',
     header: 'Status',
     accessorKey: 'status',
@@ -160,7 +169,7 @@ type Props = {
  * is the affordance that fits the size. Sorting, searching, paging and the commands are all the
  * engine's.
  */
-const PayrollRunHistory = ({
+const EntityRunHistory = ({
   runs,
   selectedReference,
   title = 'Run history',
@@ -232,7 +241,9 @@ const PayrollRunHistory = ({
   return (
     <Card className={cn('@container gap-0 py-0', className)}>
       <CardHeader className='py-6'>
-        <CardTitle className='text-lg font-semibold'>{title}</CardTitle>
+        <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+          {title}
+        </CardTitle>
         <CardDescription>
           {shown} of {runs.length} runs
         </CardDescription>
@@ -251,4 +262,4 @@ const PayrollRunHistory = ({
   )
 }
 
-export default PayrollRunHistory
+export default EntityRunHistory

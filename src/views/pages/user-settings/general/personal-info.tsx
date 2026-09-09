@@ -155,7 +155,7 @@ const PersonalInfo = () => {
                   <UploadCloudIcon />
                   Upload avatar
                 </Button>
-                <Button type='button' variant='ghost' onClick={remove} disabled={!file} className='text-destructive!'>
+                <Button type='button' variant='ghost' onClick={remove} disabled={!file} className='text-destructive-strong!'>
                   <Trash2Icon />
                 </Button>
               </div>

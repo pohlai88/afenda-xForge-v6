@@ -115,7 +115,7 @@ const Sessions = ({ initialSessions }: { initialSessions: Session[] }) => {
                   <TableCell className='px-4 text-right'>
                     <div className='flex items-center gap-2'>
                       <Button variant='ghost' size='icon' onClick={() => confirmDelete(rowItem)}>
-                        <LogOutIcon className='text-destructive size-4' />
+                        <LogOutIcon className='text-destructive-strong size-4' />
                       </Button>
                     </div>
                   </TableCell>

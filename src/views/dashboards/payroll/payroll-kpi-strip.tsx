@@ -100,7 +100,7 @@ const PayrollKpiStrip = ({ metrics, caption, className }: Props) => {
                 ? 'good'
                 : 'bad'
 
-          const toneClass = { good: 'text-success', bad: 'text-destructive', neutral: 'text-muted-foreground' }[tone]
+          const toneClass = { good: 'text-success-strong', bad: 'text-destructive-strong', neutral: 'text-muted-foreground' }[tone]
           const DirectionIcon = flat ? MinusIcon : rising ? ChevronUpIcon : ChevronDownIcon
 
           return (

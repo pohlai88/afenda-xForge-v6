@@ -75,7 +75,7 @@ const EmailPass = () => {
         <form className='mx-auto space-y-6'>
           <div className='w-full space-y-2'>
             <Label htmlFor='email' className='gap-1'>
-              Email<span className='text-destructive'>*</span>
+              Email<span className='text-destructive-strong'>*</span>
             </Label>
             <InputGroup>
               <InputGroupInput id='email' type='email' placeholder='Email address' required />
@@ -87,7 +87,7 @@ const EmailPass = () => {
           </div>
           <div className='w-full space-y-2'>
             <Label htmlFor='current-password' className='gap-1'>
-              Current Password<span className='text-destructive'>*</span>
+              Current Password<span className='text-destructive-strong'>*</span>
             </Label>
             <InputGroup>
               <InputGroupInput
@@ -111,7 +111,7 @@ const EmailPass = () => {
           </div>
           <div className='w-full space-y-2'>
             <Label htmlFor='new-password' className='gap-1'>
-              New Password<span className='text-destructive'>*</span>
+              New Password<span className='text-destructive-strong'>*</span>
             </Label>
             <InputGroup className='mb-3'>
               <InputGroupInput
@@ -153,11 +153,11 @@ const EmailPass = () => {
               {strength.map((req, index) => (
                 <li key={index} className='flex items-center gap-2'>
                   {req.met ? (
-                    <CheckIcon className='text-success size-4' />
+                    <CheckIcon className='text-success-strong size-4' />
                   ) : (
                     <XIcon className='text-muted-foreground size-4' />
                   )}
-                  <span className={cn('text-xs', req.met ? 'text-success' : 'text-muted-foreground')}>
+                  <span className={cn('text-xs', req.met ? 'text-success-strong' : 'text-muted-foreground')}>
                     {req.text}
                     <span className='sr-only'>{req.met ? ' - Requirement met' : ' - Requirement not met'}</span>
                   </span>

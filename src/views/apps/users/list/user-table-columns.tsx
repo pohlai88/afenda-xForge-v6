@@ -56,7 +56,7 @@ import { getInitialsFromName } from '@/configs/mailConfig'
 import { cn } from '@/lib/utils'
 
 const ROLE_ICONS: Record<UserRole, ReactNode> = {
-  Admin: <UserRoundIcon className='size-4 text-success' />,
+  Admin: <UserRoundIcon className='size-4 text-success-strong' />,
   Editor: <BrushIcon className='text-chart-2 size-4' />,
   Subscriber: <CrownIcon className='text-chart-5 size-4' />,
   Maintainer: <PencilRulerIcon className='text-chart-3 size-4' />,
@@ -65,13 +65,13 @@ const ROLE_ICONS: Record<UserRole, ReactNode> = {
 
 const STATUS_STYLES: Record<UserStatus, string> = {
   Active:
-    'bg-success/10 text-success focus-visible:ring-success/20 [a&]:hover:bg-success/5 dark:[a&]:hover:bg-success/5',
+    'bg-success/10 text-success-strong focus-visible:ring-success/20 [a&]:hover:bg-success/5 dark:[a&]:hover:bg-success/5',
   Pending:
-    'bg-warning/10 text-warning focus-visible:ring-warning/20 [a&]:hover:bg-warning/5 dark:[a&]:hover:bg-warning/5',
+    'bg-warning/10 text-warning-strong focus-visible:ring-warning/20 [a&]:hover:bg-warning/5 dark:[a&]:hover:bg-warning/5',
   Suspended:
-    'bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 text-destructive',
+    'bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 text-destructive-strong',
   Inactive:
-    'bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 text-destructive'
+    'bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 text-destructive-strong'
 }
 
 const formatBilling = (billing: UserBilling): string => {

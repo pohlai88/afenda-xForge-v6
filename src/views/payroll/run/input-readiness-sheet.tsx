@@ -23,9 +23,9 @@ const STATUS_LABELS: Record<InputFeedStatus, string> = {
 }
 
 const STATUS_ICON_STYLES: Record<InputFeedStatus, string> = {
-  ready: 'bg-success/15 border-success/40 text-success',
-  pending: 'bg-warning/15 border-warning/40 text-warning',
-  missing: 'bg-destructive/10 border-destructive/40 text-destructive'
+  ready: 'bg-success/15 border-success/40 text-success-strong',
+  pending: 'bg-warning/15 border-warning/40 text-warning-strong',
+  missing: 'bg-destructive/10 border-destructive/40 text-destructive-strong'
 }
 
 const STATUS_ICONS: Record<InputFeedStatus, typeof CheckIcon> = {
@@ -99,8 +99,8 @@ const InputReadinessSheet = ({ open, onOpenChange, run, feeds, onImport, onRecal
                         feed.status === 'ready'
                           ? 'text-muted-foreground'
                           : feed.status === 'pending'
-                            ? 'text-warning'
-                            : 'text-destructive'
+                            ? 'text-warning-strong'
+                            : 'text-destructive-strong'
                       )}
                       aria-hidden='true'
                     >

@@ -239,9 +239,9 @@ const EditContactForm = ({ contact }: EditContactFormProps) => {
       <ScrollArea className='min-h-0 flex-1'>
         <div className='flex h-full flex-col justify-between gap-4 px-4'>
           <div className='flex flex-col gap-4'>
-            {error && <p className='text-destructive text-sm'>{error}</p>}
+            {error && <p className='text-destructive-strong text-sm'>{error}</p>}
             {uploadErrors.map(uploadError => (
-              <p key={uploadError} className='text-destructive text-sm'>
+              <p key={uploadError} className='text-destructive-strong text-sm'>
                 {uploadError}
               </p>
             ))}
@@ -266,7 +266,7 @@ const EditContactForm = ({ contact }: EditContactFormProps) => {
                       aria-invalid={!!phoneError}
                     />
                   </div>
-                  {phoneError && <p className='text-destructive text-xs'>{phoneError}</p>}
+                  {phoneError && <p className='text-destructive-strong text-xs'>{phoneError}</p>}
                 </div>
                 <div className='flex flex-col gap-1.5'>
                   <Label htmlFor='edit-contact-email' className='text-muted-foreground text-xs'>
@@ -284,7 +284,7 @@ const EditContactForm = ({ contact }: EditContactFormProps) => {
                       aria-invalid={!!emailError}
                     />
                   </div>
-                  {emailError && <p className='text-destructive text-xs'>{emailError}</p>}
+                  {emailError && <p className='text-destructive-strong text-xs'>{emailError}</p>}
                 </div>
                 <div className='flex flex-col gap-1.5'>
                   <Label htmlFor='edit-contact-city' className='text-muted-foreground text-xs'>

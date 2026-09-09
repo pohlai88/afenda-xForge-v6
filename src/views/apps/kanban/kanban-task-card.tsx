@@ -94,10 +94,10 @@ export function TaskCard({ task, isOverlay, onEdit, onDelete, className, ...prop
                 className={cn(
                   'capitalize',
                   task.priority === 'high'
-                    ? 'bg-destructive/10 text-destructive'
+                    ? 'bg-destructive/10 text-destructive-strong'
                     : task.priority === 'medium'
-                      ? 'bg-warning/10 text-warning'
-                      : 'bg-info/10 text-info'
+                      ? 'bg-warning/10 text-warning-strong'
+                      : 'bg-info/10 text-info-strong'
                 )}
               >
                 {task.priority}

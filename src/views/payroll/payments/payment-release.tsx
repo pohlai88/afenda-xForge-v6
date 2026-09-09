@@ -192,7 +192,7 @@ const PaymentRelease = ({
         )}
 
         {evaluation.notes.length > 0 && (
-          <ul className='text-warning list-disc pl-4 text-xs'>
+          <ul className='text-warning-strong list-disc pl-4 text-xs'>
             {evaluation.notes.map(note => (
               <li key={note}>{note}</li>
             ))}

@@ -60,7 +60,9 @@ const GroupHero = ({ consolidation, comparisonLabel, className }: Props) => {
     <>
       <Card className={className}>
         <CardHeader>
-          <CardTitle className='text-lg font-semibold'>Group employer cost</CardTitle>
+          <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+            Group employer cost
+          </CardTitle>
           <CardDescription>
             {periodLabel(consolidation.period)} · reported in {consolidation.reportingCurrency} ·{' '}
             {FX_BASIS_LABELS[consolidation.fxBasis]}
@@ -138,9 +140,7 @@ const GroupHero = ({ consolidation, comparisonLabel, className }: Props) => {
             </div>
             <div className='bg-muted/50 flex flex-col gap-1 rounded-lg px-4 py-3'>
               <dt className='text-muted-foreground text-sm'>Employees</dt>
-              <dd className='text-xl font-semibold tabular-nums'>
-                {formatCount(consolidation.headcount.unique)}
-              </dd>
+              <dd className='text-xl font-semibold tabular-nums'>{formatCount(consolidation.headcount.unique)}</dd>
               <dd className='text-muted-foreground text-xs'>counted once each</dd>
             </div>
           </dl>

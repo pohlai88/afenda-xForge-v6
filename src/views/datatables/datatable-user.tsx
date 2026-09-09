@@ -115,7 +115,7 @@ const columns: ColumnDef<Item>[] = [
       const role = row.getValue('role') as string
 
       const roles = {
-        admin: <UserRoundIcon className='size-4 text-success' />,
+        admin: <UserRoundIcon className='size-4 text-success-strong' />,
         author: <PencilLineIcon className='text-chart-1 size-4' />,
         editor: <BrushIcon className='text-chart-2 size-4' />,
         maintainer: <PencilRulerIcon className='text-chart-3 size-4' />,
@@ -157,11 +157,11 @@ const columns: ColumnDef<Item>[] = [
 
       const styles = {
         active:
-          'bg-success/10 text-success focus-visible:ring-success/20 [a&]:hover:bg-success/5 dark:[a&]:hover:bg-success/5',
+          'bg-success/10 text-success-strong focus-visible:ring-success/20 [a&]:hover:bg-success/5 dark:[a&]:hover:bg-success/5',
         inactive:
-          'bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 text-destructive',
+          'bg-destructive/10 [a&]:hover:bg-destructive/5 focus-visible:ring-destructive/20 text-destructive-strong',
         pending:
-          'bg-warning/10 text-warning focus-visible:ring-warning/20 [a&]:hover:bg-warning/5 dark:[a&]:hover:bg-warning/5'
+          'bg-warning/10 text-warning-strong focus-visible:ring-warning/20 [a&]:hover:bg-warning/5 dark:[a&]:hover:bg-warning/5'
       }[status]
 
       return (

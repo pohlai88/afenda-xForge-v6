@@ -86,10 +86,10 @@ const PayrollRunHeader = ({ run, entity, daysToPayday, actions, className }: Pro
       <dl className='text-muted-foreground flex flex-wrap gap-x-5 gap-y-1 text-sm'>
         <div className='flex gap-1.5'>
           <dt>Payday</dt>
-          <dd className={cn('text-foreground font-medium tabular-nums', overdue && 'text-destructive')}>
+          <dd className={cn('text-foreground font-medium tabular-nums', overdue && 'text-destructive-strong')}>
             {formatDate(run.payDate)}
             {daysToPayday !== null && (
-              <span className={cn('font-normal', overdue ? 'text-destructive' : 'text-muted-foreground')}>
+              <span className={cn('font-normal', overdue ? 'text-destructive-strong' : 'text-muted-foreground')}>
                 {' · '}
                 {overdue
                   ? `${Math.abs(daysToPayday)} days overdue`

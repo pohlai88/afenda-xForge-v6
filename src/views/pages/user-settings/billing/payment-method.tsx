@@ -40,7 +40,7 @@ const PaymentMethod = () => {
                 <DropdownMenuContent className='w-20' align='end'>
                   <DropdownMenuGroup>
                     <DropdownMenuItem>Make Default</DropdownMenuItem>
-                    <DropdownMenuItem className='text-destructive!'>Remove</DropdownMenuItem>
+                    <DropdownMenuItem className='text-destructive-strong!'>Remove</DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -62,7 +62,7 @@ const PaymentMethod = () => {
                 <DropdownMenuContent className='w-20' align='end'>
                   <DropdownMenuGroup>
                     <DropdownMenuItem>Make Default</DropdownMenuItem>
-                    <DropdownMenuItem className='text-destructive'>Remove</DropdownMenuItem>
+                    <DropdownMenuItem className='text-destructive-strong'>Remove</DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>

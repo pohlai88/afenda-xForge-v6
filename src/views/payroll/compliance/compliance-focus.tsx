@@ -54,14 +54,14 @@ const Countdown = ({ row }: { row: FilingRow }) => {
   }
 
   const overdue = days < 0
-  const tone = overdue ? 'text-destructive' : days <= DUE_SOON_DAYS ? 'text-warning' : 'text-foreground'
+  const tone = overdue ? 'text-destructive-strong' : days <= DUE_SOON_DAYS ? 'text-warning-strong' : 'text-foreground'
 
   return (
     <>
       <span className={cn('text-5xl leading-none font-semibold tracking-tight tabular-nums sm:text-6xl', tone)}>
         {days === 0 ? 'Today' : Math.abs(days)}
       </span>
-      <span className={cn('text-sm', overdue ? 'text-destructive' : 'text-muted-foreground')}>
+      <span className={cn('text-sm', overdue ? 'text-destructive-strong' : 'text-muted-foreground')}>
         {days === 0
           ? `Due · ${formatDate(row.dueDate)}`
           : overdue
@@ -86,22 +86,22 @@ const ComplianceFocus = ({ row, onOpen, onPrepare, onDownload, className }: Prop
       text: `Not prepared yet. Prepare it from ${row.runReference ?? `${row.periodStart.slice(0, 4)}'s`} payslips.`
     },
     prepared: {
-      tone: 'text-info',
+      tone: 'text-info-strong',
       Icon: FileCheckIcon,
       text: `Prepared${row.calculationVersion ? ` from calculation #${row.calculationVersion}` : ''}. Submit to ${authority} by ${formatDate(row.dueDate)}.`
     },
     submitted: {
-      tone: 'text-warning',
+      tone: 'text-warning-strong',
       Icon: ClockIcon,
       text: `Submitted ${formatDate(row.submittedAt?.slice(0, 10) ?? row.dueDate)}${row.reference ? ` · ${row.reference}` : ''}. Awaiting ${authority}'s response.`
     },
     rejected: {
-      tone: 'text-destructive',
+      tone: 'text-destructive-strong',
       Icon: AlertOctagonIcon,
       text: `Rejected by ${authority}: ${row.rejectionReason ?? 'no reason given.'} Fix the records and prepare it again.`
     },
     accepted: {
-      tone: 'text-success',
+      tone: 'text-success-strong',
       Icon: CheckCircle2Icon,
       text: `Accepted by ${authority}${row.respondedAt ? ` on ${formatDate(row.respondedAt.slice(0, 10))}` : ''}.`
     }

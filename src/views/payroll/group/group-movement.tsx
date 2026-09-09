@@ -52,17 +52,14 @@ const GroupMovement = ({ consolidation, className }: Props) => {
     <>
       <Card className={className}>
         <CardHeader>
-          <CardTitle className='text-lg font-semibold'>Where the change came from</CardTitle>
+          <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+            Where the change came from
+          </CardTitle>
           <CardDescription>
             Employer cost against {periodLabel(previous.period)}, in {consolidation.reportingCurrency}
           </CardDescription>
           <CardAction className='flex flex-col items-end gap-0.5'>
-            <span
-              className={cn(
-                'flex items-center gap-1 text-2xl font-semibold tabular-nums',
-                'text-foreground'
-              )}
-            >
+            <span className={cn('flex items-center gap-1 text-2xl font-semibold tabular-nums', 'text-foreground')}>
               <TotalIcon className='size-5' aria-hidden='true' />
               {formatMoney(total)}
             </span>
@@ -72,7 +69,7 @@ const GroupMovement = ({ consolidation, className }: Props) => {
 
         <CardContent className='flex flex-col gap-3'>
           {!previous.comparable && (
-            <p className='text-warning text-sm'>
+            <p className='text-warning-strong text-sm'>
               The two periods do not cover the same companies, so this is not a like-for-like movement. The companies
               present in both are listed below alongside the one that is not.
             </p>
@@ -90,7 +87,7 @@ const GroupMovement = ({ consolidation, className }: Props) => {
               // improvement, whichever way the arithmetic went.
               // An absent company keeps its warning: that is a hole in the number, a genuine state.
               // Everything else is direction only, carried by the chevron and the sign.
-              const tone = line.kind === 'absence' ? 'text-warning' : 'text-muted-foreground'
+              const tone = line.kind === 'absence' ? 'text-warning-strong' : 'text-muted-foreground'
 
               const fill = line.kind === 'absence' ? 'bg-warning/15' : 'bg-muted-foreground/20'
 

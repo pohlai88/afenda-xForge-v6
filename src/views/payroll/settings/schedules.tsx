@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<PaySchedule['status'], string> = {
 
 const STATUS_STYLES: Record<PaySchedule['status'], string> = {
   closed: 'bg-muted text-muted-foreground',
-  open: 'bg-info/10 text-info',
+  open: 'bg-info/10 text-info-strong',
   upcoming: 'bg-muted text-foreground'
 }
 

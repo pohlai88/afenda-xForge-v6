@@ -122,7 +122,7 @@ const ExceptionInspector = ({
             {exception.severity === 'blocking' && status !== 'resolved' && (
               <>
                 <Separator />
-                <p className='text-destructive text-sm'>
+                <p className='text-destructive-strong text-sm'>
                   Payroll cannot be approved while this is open. Blockers must be resolved, not acknowledged.
                 </p>
               </>

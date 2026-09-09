@@ -48,7 +48,7 @@ const FilingStageRail = ({ status, className }: Props) => {
                 'flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium whitespace-nowrap',
                 isDone && 'text-muted-foreground',
                 isActive && 'bg-primary text-primary-foreground',
-                isError && 'bg-destructive/10 text-destructive',
+                isError && 'bg-destructive/10 text-destructive-strong',
                 !isDone && !isActive && !isError && 'text-muted-foreground/60'
               )}
               aria-current={isActive ? 'step' : undefined}
@@ -56,7 +56,7 @@ const FilingStageRail = ({ status, className }: Props) => {
               <span
                 className={cn(
                   'flex size-4 shrink-0 items-center justify-center rounded-full border text-[10px] tabular-nums',
-                  isDone && 'bg-success/15 border-success/40 text-success',
+                  isDone && 'bg-success/15 border-success/40 text-success-strong',
                   isActive && 'border-primary-foreground/40',
                   isError && 'border-destructive/40',
                   !isDone && !isActive && !isError && 'border-current'

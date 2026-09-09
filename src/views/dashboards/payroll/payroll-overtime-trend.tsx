@@ -54,7 +54,7 @@ const PayrollOvertimeTrend = ({ points, target, currentHours, currentCost, class
         <CardTitle className='text-lg font-semibold'>Overtime vs target</CardTitle>
         <CardDescription>Share of gross, target {target.toFixed(1)}%</CardDescription>
         <CardAction>
-          <Badge className={cn(over ? 'bg-warning/15 text-warning' : 'bg-success/15 text-success')}>
+          <Badge className={cn(over ? 'bg-warning/15 text-warning-strong' : 'bg-success/15 text-success-strong')}>
             {over ? 'Above target' : 'Within target'}
           </Badge>
         </CardAction>

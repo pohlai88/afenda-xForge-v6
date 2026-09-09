@@ -21,7 +21,13 @@ import { COUNTRY_LABELS } from '@/utils/payroll-group'
 import { PAY_RUN_STATUS_LABELS } from '@/utils/payroll-metrics'
 import { actorFor, can } from '@/utils/payroll-permissions'
 import { PAYMENT_STATUS_LABELS, formatPeriod } from '@/utils/payroll-workspace'
-import { employeeObject, entityPayrollObject, filingObject, payRunObject } from '@/views/payroll/payroll-objects'
+import {
+  employeeObject,
+  entityPayrollObject,
+  filingObject,
+  legalEntityObject,
+  payRunObject
+} from '@/views/payroll/payroll-objects'
 
 /** Matches `currentActor` in `actions.ts`; both stand in until there is a session. */
 const CURRENT_USER_ID = 'emp-020'
@@ -171,6 +177,27 @@ export const resolveObjectTargets = async (
 
       hits.push({
         object: entityPayrollObject(entity, `/payroll/entities/${entity.id}`),
+        sublabel: `${COUNTRY_LABELS[entity.countryCode]} · pays in ${entity.currency}`
+      })
+
+      continue
+    }
+
+    // The company itself, which the entity workspace publishes as its own subject. Resolved beside
+    // `entity_payroll` above rather than folded into it: that one is an employer on one period, and
+    // collapsing the two here would make a recorded recent come back named as the other object.
+    //
+    // Without this branch the type is recorded and then forgotten — resolution comes back empty,
+    // which `forgetUnresolvedRecent` cannot tell from a company the reader may no longer see, so the
+    // entry is dropped. Registering the type in the Find adapter is necessary and not sufficient;
+    // this is the half that answers with the company.
+    if (target.type === 'legal_entity') {
+      const entity = entityById.get(target.id)
+
+      if (!entity) continue
+
+      hits.push({
+        object: legalEntityObject(entity),
         sublabel: `${COUNTRY_LABELS[entity.countryCode]} · pays in ${entity.currency}`
       })
 

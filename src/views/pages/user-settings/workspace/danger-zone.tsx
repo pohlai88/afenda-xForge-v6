@@ -40,7 +40,7 @@ const DangerZone = () => {
                   render={
                     <Button
                       variant='outline'
-                      className='border-destructive! text-destructive! hover:bg-destructive/10! focus-visible:ring-destructive/20 max-lg:w-full'
+                      className='border-destructive! text-destructive-strong! hover:bg-destructive/10! focus-visible:ring-destructive/20 max-lg:w-full'
                     />
                   }
                 >
@@ -74,7 +74,7 @@ const DangerZone = () => {
               </div>
               <Button
                 variant='outline'
-                className='hover:bg-destructive/10! text-destructive! border-destructive! focus-visible:ring-destructive/20 max-lg:w-full'
+                className='hover:bg-destructive/10! text-destructive-strong! border-destructive! focus-visible:ring-destructive/20 max-lg:w-full'
                 disabled
               >
                 <Trash2Icon />

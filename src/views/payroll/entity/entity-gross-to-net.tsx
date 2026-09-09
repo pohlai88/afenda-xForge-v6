@@ -10,7 +10,7 @@ import type { BridgeStep } from '@/utils/payroll-metrics'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 // Util Imports
-import { formatMajorUnits } from '@/utils/money'
+import { formatMajorUnits, formatMajorUnitsCompact } from '@/utils/money'
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 
 const chartConfig = {
@@ -20,6 +20,13 @@ const chartConfig = {
 type Props = {
   steps: BridgeStep[]
   currencySymbol: string
+
+  /**
+   * Minor-unit digits for this run's currency, from `currencyDigits`. Passed rather than
+   * defaulted: the formatter's own default of two grew decimals on a dong figure that has none,
+   * so the summary read to the cent in a currency with no cents.
+   */
+  currencyDigits: number
   className?: string
 }
 
@@ -31,11 +38,13 @@ type Props = {
  * The terminal columns (gross, net) sit on the floor with a zero offset; the deductions float
  * between them, which is what makes the drop legible.
  */
-const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
+const EntityGrossToNet = ({ steps, currencySymbol, currencyDigits, className }: Props) => {
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className='text-lg font-semibold'>Gross to net</CardTitle>
+        <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+          Gross to net
+        </CardTitle>
         <CardDescription>Where this run&apos;s pay goes</CardDescription>
       </CardHeader>
       <CardContent>
@@ -45,7 +54,7 @@ const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
             sr-only summary below is the accessible version. */}
         <p className='sr-only'>
           How gross pay reduces to net for this run.{' '}
-          {steps.map(step => `${step.label}: ${formatMajorUnits(step.value, currencySymbol)}.`).join(' ')}
+          {steps.map(step => `${step.label}: ${formatMajorUnits(step.value, currencySymbol, currencyDigits)}.`).join(' ')}
         </p>
         <ChartContainer config={chartConfig} className='max-h-85 min-h-60 w-full' aria-hidden='true'>
           <BarChart data={steps} margin={{ top: 20, right: 8, left: 0 }}>
@@ -58,14 +67,14 @@ const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={value => `${currencySymbol}${Math.round(Number(value) / 1000)}K`}
+              tickFormatter={value => formatMajorUnitsCompact(Number(value), currencySymbol)}
             />
             <ChartTooltip
               cursor={false}
               content={
                 <ChartTooltipContent
                   hideLabel={false}
-                  formatter={value => `${currencySymbol}${Number(value).toLocaleString('en-US')}`}
+                  formatter={value => formatMajorUnits(Number(value), currencySymbol, currencyDigits)}
                 />
               }
             />
@@ -83,4 +92,4 @@ const PayrollGrossToNet = ({ steps, currencySymbol, className }: Props) => {
   )
 }
 
-export default PayrollGrossToNet
+export default EntityGrossToNet

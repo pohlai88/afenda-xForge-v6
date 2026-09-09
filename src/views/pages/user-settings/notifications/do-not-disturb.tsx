@@ -40,7 +40,7 @@ const DoNotDisturb = () => {
                 aria-label='Toggle dark mode'
                 className={cn(
                   isDark
-                    ? 'border-info text-info! hover:bg-info/10 focus-visible:border-info focus-visible:ring-info/20!'
+                    ? 'border-info text-info-strong! hover:bg-info/10 focus-visible:border-info focus-visible:ring-info/20!'
                     : ''
                 )}
               >

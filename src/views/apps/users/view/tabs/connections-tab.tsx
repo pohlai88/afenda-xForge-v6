@@ -187,7 +187,7 @@ export function ConnectionsTab({ user }: ConnectionsTabProps) {
                     className={cn(
                       'size-9 shrink-0 rounded-lg',
                       isConnected
-                        ? 'bg-destructive/10 text-destructive hover:bg-destructive/15 hover:text-destructive'
+                        ? 'bg-destructive/10 text-destructive-strong hover:bg-destructive/15 hover:text-destructive-strong'
                         : 'bg-muted text-muted-foreground hover:bg-muted/80'
                     )}
                     aria-label={isConnected ? `Disconnect ${account.label}` : `Connect ${account.label}`}

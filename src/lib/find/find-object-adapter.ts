@@ -56,9 +56,25 @@ const FIND_OBJECT_TYPES: Record<string, FindObjectType> = {
   // listed here because an unregistered type is invisible to Find twice over — the favourite command
   // is withheld and a recorded recent is dropped as unresolvable — so a first-class object that
   // publishes itself must be addressable here or it never reaches the surfaces that promise it.
-  // No command list, for the same reason as an employee: `entityPayrollCommands` closes over the
-  // legal entity and the displayed run, neither of which this adapter holds.
+  // No command list, for the same reason as an employee: `entityPeriodCommands` closes over the
+  // matrix row and its href builder, neither of which this adapter holds.
   entity_payroll: {
+    heading: 'Companies',
+    icon: Building2Icon,
+    href: object => object.href ?? null
+  },
+
+  // The company itself, which P02 made this workspace's own subject: `entity_payroll` above is one
+  // employer *on one period*, the row the group matrix lists, and this is the employer that outlives
+  // any period. Two entries because they are two objects, not one object spelled twice.
+  //
+  // Registered for the reason stated above: the entity workspace publishes this type, so without an
+  // entry here its recorded recent is dropped as unresolvable and its favourite command is withheld
+  // — the page would name itself correctly and still be unreachable through Find.
+  //
+  // No command list. `legalEntityCommands` needs the registration number to offer Copy, and this
+  // adapter holds an `ObjectContext`, which carries identity and no domain fields.
+  legal_entity: {
     heading: 'Companies',
     icon: Building2Icon,
     href: object => object.href ?? null

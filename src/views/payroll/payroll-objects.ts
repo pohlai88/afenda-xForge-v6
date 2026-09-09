@@ -13,19 +13,19 @@ import { CopyIcon, ExternalLinkIcon, HistoryIcon, TriangleAlertIcon } from 'luci
 import { toast } from 'sonner'
 
 // Type Imports
-import type { PayRun } from '@/types/payroll/pay-run-types'
+import type { PayRun, PayRunException } from '@/types/payroll/pay-run-types'
+import type { LegalEntity } from '@/types/hrm/entity-types'
 import type { FilingRow } from '@/types/payroll/compliance-types'
 import type { PayRunQueueRow } from '@/types/payroll/run-queue-types'
 import type { PayrollRunRow } from '@/types/payroll/run-workspace-types'
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
 import type { PropertySection } from '@/components/shared/PropertiesSheet'
-import type { EntityPayrollState, EntityRow } from '@/types/payroll/group-types'
-import type { LegalEntity } from '@/types/hrm/entity-types'
+import type { EntityRow } from '@/types/payroll/group-types'
 import type { SettlementRow } from '@/utils/payroll-payments'
 
 // Util Imports
 import { formatCount, formatMoney } from '@/utils/money'
-import { COUNTRY_LABELS, ENTITY_STATE_LABELS, periodLabel } from '@/utils/payroll-group'
+import { COUNTRY_LABELS } from '@/utils/payroll-group'
 import { FILING_KIND_LABELS } from '@/utils/payroll-compliance'
 import { PAY_RUN_STATUS_LABELS } from '@/utils/payroll-metrics'
 import {
@@ -435,106 +435,151 @@ export const entityPeriodCommands = (row: EntityRow, href: (entityId: string) =>
   }
 ]
 
+/* -------------------------------------------------------------------------------------------- */
+/* Legal entity — P02's own subject                                                             */
+/* -------------------------------------------------------------------------------------------- */
+
 /**
- * What can be done with a company's payroll from the company's own workspace.
+ * The company itself, not its period row.
  *
- * Open is absent because this is where Open goes — the same reason `payRunCommands` drops it when
- * `isCurrent`. Audit is absent because there is no entity-level audit trail in this domain: a
- * command that opened nothing would be this file claiming a capability the product does not have,
- * which doctrine `context_menu` answers by omission rather than by a disabled item.
- *
- * The run command names the run rather than saying "current run", because a reader who has
- * selected an earlier period with `?run=` is looking at that one, and a menu that said "current"
- * would be describing a different object than the page is.
+ * `entityPeriodObject` above is a different object: it is one employer *on one period*, which is
+ * what the group matrix lists. This is the employer, whose identity has to stay the same wherever
+ * it is named, so it carries its own doctrine type rather than borrowing that one.
  */
-export const entityPayrollCommands = (
-  entity: Pick<LegalEntity, 'registrationNumber'>,
-  displayedRun?: Pick<PayRun, 'id' | 'reference'>
+export const legalEntityObject = (entity: Pick<LegalEntity, 'id' | 'name'>): ObjectContext => ({
+  type: 'legal_entity',
+  id: entity.id,
+  label: entity.name,
+  href: `/payroll/entities/${entity.id}`
+})
+
+/**
+ * What can be done with a company from a payroll surface.
+ *
+ * Deliberately short. Configuration is P10's, payments are P07's, and filings are P08's — this
+ * offers the two things that are about the company itself plus the routes into those surfaces,
+ * scoped to it. `isCurrent` drops Open on the page that already is the company.
+ */
+export const legalEntityCommands = (
+  entity: Pick<LegalEntity, 'id' | 'name' | 'registrationNumber'>,
+  { isCurrent = false }: { isCurrent?: boolean } = {}
 ): ObjectCommand[] => {
   const commands: ObjectCommand[] = []
 
-  if (displayedRun) {
+  if (!isCurrent) {
     commands.push({
-      id: 'open-run',
-      label: `Open ${displayedRun.reference}`,
+      id: 'open',
+      label: 'Open company',
       family: 'read',
       icon: ExternalLinkIcon,
-      href: `/payroll/runs/${displayedRun.id}`
+      href: `/payroll/entities/${entity.id}`
     })
   }
 
-  commands.push({
-    id: 'copy-registration-number',
-    label: 'Copy registration number',
-    family: 'search',
-    icon: CopyIcon,
-    onSelect: () => {
-      void copyReference(entity.registrationNumber, 'Registration number')
+  commands.push(
+    {
+      id: 'copy-registration',
+      label: 'Copy registration number',
+      family: 'search',
+      icon: CopyIcon,
+      onSelect: () => {
+        void copyReference(entity.registrationNumber, 'Registration number')
+      }
+    },
+    {
+      id: 'payments',
+      label: 'Open payments',
+      family: 'read',
+      icon: ExternalLinkIcon,
+      href: `/payroll/payments?entity=${encodeURIComponent(entity.id)}`
+    },
+    {
+      id: 'compliance',
+      label: 'Open compliance',
+      family: 'read',
+      icon: ExternalLinkIcon,
+      href: `/payroll/compliance?entity=${encodeURIComponent(entity.id)}`
     }
-  })
+  )
 
   return commands
 }
 
-/**
- * What a company's payroll exactly is, from what the workspace has already proved.
- *
- * The group standing section is deliberately asymmetric. A company whose open period has no
- * calculation is provably outside the group total — `consolidate` excludes `awaiting_data`
- * unconditionally. Every other state is only a *candidate* for inclusion, because consolidation
- * also needs an FX rate to the reporting currency and this page never runs it. So the exclusion is
- * stated and the inclusion is not: saying "Included" here would be the interface asserting a result
- * of an aggregation it did not perform.
- */
-export const entityPayrollProperties = (
-  entity: LegalEntity,
-  payroll: {
-    /** The run the workspace is displaying, which is not always the latest. */
-    displayedRun?: Pick<PayRun, 'reference' | 'periodStart' | 'periodEnd' | 'employeeCount'>
-    runCount: number
-
-    /** The period the group is consolidating, and this company's state within it. */
-    openPeriod: string
-    state: EntityPayrollState
-  }
-): PropertySection[] => [
+/** What a company exactly is. Only fields the entity record itself fixes. */
+export const legalEntityProperties = (entity: LegalEntity, openPeriodLabel?: string): PropertySection[] => [
   {
     title: 'Identity',
     fields: [
       { label: 'Name', value: entity.name },
       { label: 'Code', value: entity.code },
-      { label: 'Country', value: COUNTRY_LABELS[entity.countryCode] },
-      { label: 'Currency', value: entity.currency },
-      { label: 'Registration no.', value: entity.registrationNumber },
-      { label: 'Timezone', value: entity.timezone }
+      { label: 'Registration', value: entity.registrationNumber },
+      { label: 'Country', value: COUNTRY_LABELS[entity.countryCode] }
     ]
   },
   {
     title: 'Payroll',
-    fields: payroll.displayedRun
-      ? [
-          { label: 'Displayed run', value: payroll.displayedRun.reference },
-          { label: 'Period', value: formatPeriod(payroll.displayedRun.periodStart, payroll.displayedRun.periodEnd) },
-          { label: 'Employees', value: formatCount(payroll.displayedRun.employeeCount) },
-          { label: 'Runs on record', value: formatCount(payroll.runCount) }
-        ]
-      : [{ label: 'Runs on record', value: 'None — payroll has not started for this company' }]
-  },
-  {
-    title: 'Group standing',
     fields: [
-      { label: 'Open period', value: periodLabel(payroll.openPeriod) },
-      { label: 'State', value: ENTITY_STATE_LABELS[payroll.state] },
-      ...(payroll.state === 'awaiting_data'
-        ? [{ label: 'Group total', value: 'Not included — no calculation for this period' }]
-        : [])
-    ]
-  },
-  {
-    title: 'System',
-    fields: [
+      { label: 'Currency', value: entity.currency },
+      { label: 'Timezone', value: entity.timezone },
       { label: 'Statutory profile', value: entity.statutoryProfileId },
-      { label: 'Id', value: entity.id }
+      ...(openPeriodLabel ? [{ label: 'Open period', value: openPeriodLabel }] : [])
     ]
   }
 ]
+
+/* -------------------------------------------------------------------------------------------- */
+/* Payroll exception                                                                            */
+/* -------------------------------------------------------------------------------------------- */
+
+/**
+ * One exception on a run.
+ *
+ * No `href`. `ObjectContext.href` is optional precisely for objects that have no canonical route,
+ * and an exception is one: it is reached through the run workspace's exception view, never through
+ * a route of its own. The attention list supplies the destination separately.
+ */
+export const payrollExceptionObject = (
+  exception: Pick<PayRunException, 'id' | 'title'>,
+  subject?: string
+): ObjectContext => ({
+  type: 'payroll_exception',
+  id: exception.id,
+  label: subject ? `${exception.title} · ${subject}` : exception.title,
+  href: undefined
+})
+
+/**
+ * What can be done with an exception from a surface that only reports it.
+ *
+ * Acknowledging and resolving belong to the run workspace, which owns the mutation and the
+ * calculation version it is recorded against. This offers the way there and the rule that raised
+ * it, so someone can read what was checked without leaving.
+ */
+export const payrollExceptionCommands = (
+  exception: Pick<PayRunException, 'id' | 'rule'>,
+  { href }: { href: string }
+): ObjectCommand[] => {
+  const commands: ObjectCommand[] = [
+    {
+      id: 'open',
+      label: 'Work this exception',
+      family: 'read',
+      icon: ExternalLinkIcon,
+      href
+    }
+  ]
+
+  if (exception.rule) {
+    commands.push({
+      id: 'copy-rule',
+      label: 'Copy the rule that raised it',
+      family: 'search',
+      icon: CopyIcon,
+      onSelect: () => {
+        void copyReference(exception.rule!, 'Rule')
+      }
+    })
+  }
+
+  return commands
+}

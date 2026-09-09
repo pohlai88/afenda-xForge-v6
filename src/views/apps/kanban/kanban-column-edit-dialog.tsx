@@ -74,7 +74,7 @@ function ColumnEditDialogContent({
             if (e.key === 'Enter') handleSave()
           }}
         />
-        {isDuplicate && <p className='text-destructive text-xs'>A column with this name already exists.</p>}
+        {isDuplicate && <p className='text-destructive-strong text-xs'>A column with this name already exists.</p>}
       </div>
 
       <DialogFooter>

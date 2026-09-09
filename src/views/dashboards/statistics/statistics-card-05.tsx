@@ -48,8 +48,8 @@ const StatisticsCard = ({
         </p>
         <Badge
           className={cn('rounded-sm', {
-            'bg-success/10 text-success': changePercentage > 0,
-            'bg-destructive/10 text-destructive': changePercentage < 0
+            'bg-success/10 text-success-strong': changePercentage > 0,
+            'bg-destructive/10 text-destructive-strong': changePercentage < 0
           })}
         >
           {changePercentage > 0 ? '+' : ''}

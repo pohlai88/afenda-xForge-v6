@@ -61,7 +61,7 @@ export function UserStatsCards({ stats }: UserStatsCardsProps) {
       change: STAT_CHANGE_BADGES.paidUsers,
       subtitle: 'Last week analytics',
       icon: <UserPlusIcon className='size-4' />,
-      iconClassName: 'bg-destructive/10 text-destructive'
+      iconClassName: 'bg-destructive/10 text-destructive-strong'
     },
     {
       title: 'Active Users',
@@ -69,7 +69,7 @@ export function UserStatsCards({ stats }: UserStatsCardsProps) {
       change: STAT_CHANGE_BADGES.activeUsers,
       subtitle: 'Last week analytics',
       icon: <UserCheckIcon className='size-4' />,
-      iconClassName: 'bg-success/10 text-success'
+      iconClassName: 'bg-success/10 text-success-strong'
     },
     {
       title: 'Pending Users',
@@ -77,7 +77,7 @@ export function UserStatsCards({ stats }: UserStatsCardsProps) {
       change: STAT_CHANGE_BADGES.pendingUsers,
       subtitle: 'Last week analytics',
       icon: <UserCogIcon className='size-4' />,
-      iconClassName: 'bg-warning/10 text-warning'
+      iconClassName: 'bg-warning/10 text-warning-strong'
     }
   ]
 
@@ -93,7 +93,7 @@ export function UserStatsCards({ stats }: UserStatsCardsProps) {
                 <p
                   className={cn(
                     'text-sm font-medium',
-                    card.change >= 0 ? 'text-success' : 'text-destructive'
+                    card.change >= 0 ? 'text-success-strong' : 'text-destructive-strong'
                   )}
                 >
                   ({formatChange(card.change)})

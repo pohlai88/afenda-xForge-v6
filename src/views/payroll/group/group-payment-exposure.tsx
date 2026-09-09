@@ -68,7 +68,9 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className='text-lg font-semibold'>Can the group pay?</CardTitle>
+        <CardTitle role='heading' aria-level={2} className='text-lg font-semibold'>
+          Can the group pay?
+        </CardTitle>
         <CardDescription>
           Net pay still to leave each company&apos;s account, in that company&apos;s own currency
         </CardDescription>
@@ -76,7 +78,7 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
           <span
             className={cn(
               'flex items-center gap-1.5 text-2xl font-semibold tabular-nums',
-              short.length > 0 ? 'text-destructive' : 'text-success'
+              short.length > 0 ? 'text-destructive-strong' : 'text-success-strong'
             )}
           >
             {short.length > 0 ? (
@@ -94,7 +96,7 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
         <p className='text-muted-foreground text-sm'>
           {releasable.length} of {exposures.length} can release today
           {short.length > 0 && (
-            <span className='text-destructive'>
+            <span className='text-destructive-strong'>
               {' · '}
               {short.map(item => item.entity.name).join(', ')} {short.length === 1 ? 'is' : 'are'} short of funds
             </span>
@@ -104,10 +106,10 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
         {/* A company with no calculation has no obligation to fund yet, which is not the same as
             being funded. Counting it in either column would be a claim the domain cannot make. */}
         {withoutRun.length > 0 && (
-          <p className='text-warning text-sm'>
+          <p className='text-warning-strong text-sm'>
             {withoutRun.map(row => row.entity.name).join(', ')} {withoutRun.length === 1 ? 'has' : 'have'} no
-            calculation for this period, so {withoutRun.length === 1 ? 'its' : 'their'} funding requirement is not
-            yet known. This card covers {exposures.length} of {consolidation.entityCount} companies.
+            calculation for this period, so {withoutRun.length === 1 ? 'its' : 'their'} funding requirement is not yet
+            known. This card covers {exposures.length} of {consolidation.entityCount} companies.
           </p>
         )}
 
@@ -146,7 +148,7 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
                   <TableCell
                     className={cn(
                       'py-2 pr-4 text-right font-medium tabular-nums',
-                      item.headroom.amount < 0 ? 'text-destructive' : 'text-muted-foreground'
+                      item.headroom.amount < 0 ? 'text-destructive-strong' : 'text-muted-foreground'
                     )}
                   >
                     {formatMoney(item.headroom)}
@@ -176,4 +178,3 @@ const GroupPaymentExposure = ({ consolidation, exposures, className }: Props) =>
 }
 
 export default GroupPaymentExposure
-
