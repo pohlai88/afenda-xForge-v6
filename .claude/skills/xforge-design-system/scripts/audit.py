@@ -245,7 +245,7 @@ CHECKS = (
     ("Intl / toLocaleString in a server component", intl_in_server_component, 1),
     ("clock read in a server view component", clock_in_server_view, 0),
     ("raw <button>/<input> (inherited, AdminCN template views)", raw_elements, 25),
-    ("card titles not in the document outline (inherited)", card_titles_not_headings, 77),
+    ("card titles not in the document outline (inherited)", card_titles_not_headings, 70),
 )
 
 # --- self test ----------------------------------------------------------------------------------

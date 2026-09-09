@@ -17,6 +17,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { cn } from '@/lib/utils'
 import { formatMoney } from '@/utils/money'
 import { PAY_RUN_STATUS_LABELS, PAY_RUN_STATUS_STYLES } from '@/utils/payroll-metrics'
+import { formatDate, formatPeriod } from '@/utils/payroll-workspace'
 import { PAYROLL_STAGE_LABELS, stageIndexForStatus } from '@/utils/payroll-workspace'
 
 type Props = {
@@ -27,11 +28,35 @@ type Props = {
    * Null for a finished run, where a countdown to a long-past cut-off says nothing.
    */
   daysToCutoff: number | null
+
+  /**
+   * Blocking exceptions in the *same* set the attention surface is showing. When a department
+   * filter is on, both narrow together — a company-wide count beside a filtered list is two
+   * different answers to one question.
+   */
   blockingCount: number
+
+  /** What that count covers, when it is not the whole run. Names the department in force. */
+  blockingScope?: string
+
+  /** Supporting navigation into the displayed run. Lower emphasis than the primary next action. */
+  runHref: string
   className?: string
 }
 
-const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props) => {
+/**
+ * What this company's payroll is doing for the run on screen.
+ *
+ * The leading figure of the page, and deliberately not a card grid: one dominant number, the
+ * lifecycle position underneath it, and the three facts that qualify it. Exact gross-to-net
+ * figures are not here — they decompose the run rather than state its condition, so they sit in
+ * INSPECT where the reader is reconciling rather than operating.
+ *
+ * The figure wraps rather than sharing a header row with the reference. At 390px a header grid
+ * gave the amount 205px and it clipped mid-digit, which on a payroll product reads as a broken
+ * number rather than a broken layout.
+ */
+const EntityPayrollState = ({ run, daysToCutoff, blockingCount, blockingScope, runHref, className }: Props) => {
   // The same six stages the run workspace draws, so the two never disagree on where a run is.
   const currentStage = stageIndexForStatus(run.status)
   const overdue = daysToCutoff !== null && daysToCutoff < 0
@@ -39,22 +64,32 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className='flex items-center gap-2 text-lg font-semibold'>
-          {run.reference}
+        <CardTitle role='heading' aria-level={2} className='flex flex-wrap items-center gap-2 text-lg font-semibold'>
+          {/* The badge may wrap to its own line; the reference may not break inside itself. A
+              run identifier split across two lines is one nobody can match against a bank file. */}
+          <span className='whitespace-nowrap'>{run.reference}</span>
           <Badge className={PAY_RUN_STATUS_STYLES[run.status]}>{PAY_RUN_STATUS_LABELS[run.status]}</Badge>
         </CardTitle>
         <CardDescription>
-          {run.periodStart} – {run.periodEnd} · pays {run.payDate}
+          {formatPeriod(run.periodStart, run.periodEnd)} · pays {formatDate(run.payDate)}
         </CardDescription>
-        <CardAction className='flex flex-col items-end gap-0.5'>
-          <span className='text-3xl leading-none font-semibold tracking-tight sm:text-4xl'>
-            {formatMoney(run.totals.employerCost)}
-          </span>
-          <span className='text-muted-foreground text-sm'>Total employer cost</span>
+        <CardAction>
+          <Button variant='ghost' size='sm' render={<Link href={runHref} />} nativeButton={false}>
+            View run details
+            <ArrowRightIcon />
+          </Button>
         </CardAction>
       </CardHeader>
 
       <CardContent className='flex flex-1 flex-col gap-5'>
+        {/* Wraps as siblings. The amount never competes with the reference for a single line. */}
+        <div className='flex flex-wrap items-baseline gap-x-3 gap-y-1'>
+          <span className='text-4xl leading-none font-semibold tracking-tight tabular-nums sm:text-5xl'>
+            {formatMoney(run.totals.employerCost)}
+          </span>
+          <span className='text-muted-foreground text-sm'>total employer cost</span>
+        </div>
+
         {/* Stage track. A run that was cancelled or failed is not partway along this path, so
             it is rendered as a plain status above rather than a position on the track. */}
         <div className='flex items-center'>
@@ -96,7 +131,7 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
               <UsersIcon className='size-4.5' />
             </span>
             <span className='flex flex-col'>
-              <span className='font-semibold'>{run.employeeCount}</span>
+              <span className='font-semibold tabular-nums'>{run.employeeCount}</span>
               <span className='text-muted-foreground text-sm'>Employees in run</span>
             </span>
           </div>
@@ -111,9 +146,9 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
               <CalendarClockIcon className='size-4.5' />
             </span>
             <span className='flex flex-col'>
-              <span className='font-semibold'>
+              <span className='font-semibold tabular-nums'>
                 {daysToCutoff === null
-                  ? run.payDate
+                  ? formatDate(run.payDate)
                   : overdue
                     ? `${Math.abs(daysToCutoff)} days overdue`
                     : `${daysToCutoff} days left`}
@@ -133,38 +168,18 @@ const PayrollRunStatus = ({ run, daysToCutoff, blockingCount, className }: Props
             >
               <AlertTriangleIcon className='size-4.5' />
             </span>
-            <span className='flex flex-col'>
-              <span className='font-semibold'>{blockingCount}</span>
+            <span className='flex min-w-0 flex-col'>
+              <span className='font-semibold tabular-nums'>{blockingCount}</span>
               <span className='text-muted-foreground text-sm'>
                 {blockingCount === 1 ? 'Blocking issue' : 'Blocking issues'}
+                {blockingScope && <span className='block truncate text-xs'>in {blockingScope}</span>}
               </span>
             </span>
           </div>
         </div>
-
-        {/* The same figures the bridge chart draws, as exact amounts. The chart shows the shape
-            of the run; someone signing it off needs the numbers to the cent. */}
-        <div className='bg-muted/40 mt-auto grid grid-cols-2 gap-4 rounded-md p-4 sm:grid-cols-4'>
-          {[
-            { label: 'Gross', value: run.totals.grossPay },
-            { label: 'Tax', value: run.totals.employeeTaxes },
-            { label: 'Deductions', value: run.totals.employeeDeductions },
-            { label: 'Net pay', value: run.totals.netPay }
-          ].map(item => (
-            <div key={item.label} className='flex flex-col gap-1'>
-              <span className='text-muted-foreground text-xs tracking-wide uppercase'>{item.label}</span>
-              <span className='text-base font-semibold'>{formatMoney(item.value)}</span>
-            </div>
-          ))}
-        </div>
-
-        <Button variant='outline' className='w-fit' render={<Link href={`/payroll/runs/${run.id}`} />} nativeButton={false}>
-          Open run workspace
-          <ArrowRightIcon />
-        </Button>
       </CardContent>
     </Card>
   )
 }
 
-export default PayrollRunStatus
+export default EntityPayrollState

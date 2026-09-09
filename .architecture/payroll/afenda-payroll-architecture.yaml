@@ -725,3 +725,51 @@ afenda_payroll_architecture:
       the system, the operator immediately understands what matters, exceptions
       become actionable work, and every number or state on the screen can be
       explained and trusted.
+
+  # ---------------------------------------------------------------------------
+  # PROGRAMME STATE — A10 progression
+  # ---------------------------------------------------------------------------
+
+  programme_state:
+    updated_on: '2026-09-10'
+    authority: >
+      The pointer for the A10 route programme. A page's own contract records how that page was
+      accepted; this records only which surface the programme is on, so the answer does not have to
+      be reassembled from several frozen files.
+
+    surfaces:
+      P01:
+        route: '/payroll'
+        status: 'FROZEN_V1'
+        frozen_on: '2026-09-08'
+        contract: '.architecture/payroll/P01-group-payroll-control.yaml'
+
+      P02:
+        route: '/payroll/entities/[entityId]'
+        status: 'FROZEN_V1'
+        frozen_on: '2026-09-10'
+        contract: '.architecture/payroll/P02-entity-payroll-workspace.yaml'
+        accepted_under: >
+          The P02 acceptance policy: browser-level automated keyboard verification in place of a
+          physical human pass, frozen with two declared shared debts that P02 does not own.
+
+      P03:
+        status: 'NEXT_ARCHITECTURE_TARGET'
+        contract: 'not yet authored'
+
+    next_programme_action: >
+      Architecture-first for P03. No P03 implementation has begun, and no P03 frontend has been
+      inspected or modified — the pointer advancing is not a licence to touch the code beneath it.
+      The first P03 action is to establish its contract, exactly as P01 and P02 were.
+
+    carried_across_the_programme:
+      rule: >
+        Open at the P02 freeze and not closed by it. Listed here so the debt survives the closing of
+        the page that recorded it.
+      shared_debt_register: '.architecture/shared-debt-register.md'
+      items:
+        - 'SD-001 — Properties / sheet focus restoration, OPEN_SHARED_DEBT, SHARED_PRIMITIVE'
+        - 'SD-002 — global footer dead href="#" controls, OPEN_SHARED_DEBT, GLOBAL_SHELL'
+        - 'P02-DEF-001B — shared funding authority debt; payroll-payments.ts stays BLOCKED FOR MODIFICATION'
+        - 'P01-GAP-001, P01-GAP-002, P01-GAP-003, P01-GAP-004 — open'
+        - 'P02-GAP-001, P02-GAP-002, P02-GAP-003, P02-GAP-004 — open'
