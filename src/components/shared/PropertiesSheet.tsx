@@ -1,6 +1,7 @@
 'use client'
 
 // React Imports
+import { useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 
 // Type Imports
@@ -11,6 +12,9 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+
+// Store Imports
+import { registerPropertiesInspector } from '@/lib/properties-store'
 
 export type PropertyField = {
   label: string
@@ -49,8 +53,35 @@ const Field = ({ label, value }: PropertyField) => (
  * This owns presentation only: the header, the object's identity, section layout, scrolling,
  * close and focus behaviour. Every field comes from the domain, because the shared layer has
  * no business knowing what a payslip or a legal entity is made of.
+ *
+ * It also says, while it is mounted, that this object can be inspected — which is what lets the
+ * shell's Alt+Enter reach the inspector a surface already built without that surface being told a
+ * shortcut exists. The opener is the sheet's own `onOpenChange`, so the keyboard and the context
+ * menu end at the same component instance and cannot show different fields.
  */
 const PropertiesSheet = ({ object, typeLabel, sections, open, onOpenChange }: Props) => {
+  /*
+   * Held in a ref so registration depends on which object this is, not on how the caller happened
+   * to write its handler. Several call sites pass an inline arrow, which is a new function every
+   * render; keying the effect on it would re-register on every render for no change at all.
+   */
+  const openChange = useRef(onOpenChange)
+
+  // Written after the commit, never during render: a ref mutated while rendering is the shape React
+  // 19 cannot reason about, and `react-hooks/refs` says so. The initial value is already correct.
+  useEffect(() => {
+    openChange.current = onOpenChange
+  })
+
+  const type = object?.type
+  const id = object?.id
+
+  useEffect(() => {
+    if (!type || !id) return
+
+    return registerPropertiesInspector({ type, id, open: () => openChange.current(true) })
+  }, [type, id])
+
   if (!object) return null
 
   const populated = sections.filter(section => section.fields.length > 0)

@@ -22,6 +22,7 @@ import {
   ContextMenuGroup,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuShortcut,
   ContextMenuTrigger
 } from '@/components/ui/context-menu'
 import {
@@ -30,6 +31,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 
@@ -41,6 +43,14 @@ import { favouriteStore } from '@/lib/find/recent-and-favourites'
 import { queryProviderFor } from '@/lib/query/query-providers'
 import { openQuery } from '@/lib/query/query-store'
 
+// Store Imports
+import {
+  getObjectContextServerSnapshot,
+  getObjectContextSnapshot,
+  subscribeObjectContext
+} from '@/lib/object-context-store'
+import { PROPERTIES_SHORTCUT } from '@/lib/properties-store'
+
 // Util Imports
 import { sameTarget } from '@/types/common/find-types'
 import { groupCommands } from '@/types/common/object-context-types'
@@ -49,18 +59,21 @@ type MenuParts = {
   Group: typeof ContextMenuGroup | typeof DropdownMenuGroup
   Item: typeof ContextMenuItem | typeof DropdownMenuItem
   Separator: typeof ContextMenuSeparator | typeof DropdownMenuSeparator
+  Shortcut: typeof ContextMenuShortcut | typeof DropdownMenuShortcut
 }
 
 const CONTEXT_PARTS: MenuParts = {
   Group: ContextMenuGroup,
   Item: ContextMenuItem,
-  Separator: ContextMenuSeparator
+  Separator: ContextMenuSeparator,
+  Shortcut: ContextMenuShortcut
 }
 
 const DROPDOWN_PARTS: MenuParts = {
   Group: DropdownMenuGroup,
   Item: DropdownMenuItem,
-  Separator: DropdownMenuSeparator
+  Separator: DropdownMenuSeparator,
+  Shortcut: DropdownMenuShortcut
 }
 
 type ObjectCommandsProps = {
@@ -90,8 +103,20 @@ const ObjectCommandItems = ({
   /** The control this menu was summoned from, so 360 Query can hand focus back to exactly it. */
   returnFocus?: () => HTMLElement | null
 }) => {
-  const { Group, Item, Separator } = parts
+  const { Group, Item, Separator, Shortcut } = parts
   const groups = groupCommands(commands)
+
+  /*
+   * Whether Alt+Enter would reach *this* object's Properties.
+   *
+   * The shortcut acts on what the page is about, so it is labelled only where it works. An employee
+   * row inside a run workspace has an inspector of its own that the keyboard does not reach, and
+   * printing the binding beside it would be the menu claiming a capability that does not apply
+   * there — the same rule that keeps "Ask about this" off objects with no provider.
+   */
+  const subject = useSyncExternalStore(subscribeObjectContext, getObjectContextSnapshot, getObjectContextServerSnapshot)
+
+  const shortcutApplies = subject?.type === object.type && subject.id === object.id
 
   /*
    * Pinning an object is a navigation capability, not a business one.
@@ -188,6 +213,7 @@ const ObjectCommandItems = ({
           <Item onClick={() => onOpenProperties(object)}>
             <InfoIcon />
             Properties
+            {shortcutApplies ? <Shortcut>{PROPERTIES_SHORTCUT}</Shortcut> : null}
           </Item>
         </Group>
       ) : null}
