@@ -1,0 +1,919 @@
+Continue Afenda frontend development with **Phase 10 only: PropertiesSheet first-open focus lifecycle**.
+
+# Authoritative starting state
+
+```text
+Phase 09 browser closure:
+ead5011
+
+expected branch:
+payroll/phase10-properties-focus
+```
+
+Phase 09 is frozen.
+
+Do NOT amend, squash, rewrite, or reopen Phase 09.
+
+The repository may contain unrelated untracked `.HITL/step*.txt` files.
+
+They are not part of this phase.
+
+Do not:
+
+```text
+edit
+delete
+rename
+stage
+interpret
+```
+
+them.
+
+If other unexpected tracked changes exist, stop and report the contradiction.
+
+---
+
+# Phase 10 problem
+
+Phase 09 proved that all Properties invocation paths now converge on the same shared `PropertiesSheet`.
+
+It also exposed the next shared defect:
+
+```text
+PropertiesSheet does not establish the intended focus correctly
+on the first open within a page lifecycle.
+```
+
+The problem affects the shared Properties primitive itself rather than:
+
+```text
+Alt+Enter
+right-click
+Shift+F10
+entity_payroll
+payroll_run
+```
+
+specifically.
+
+Phase 10 must determine the exact first-open failure through browser evidence and correct it once in the shared Properties lifecycle.
+
+Do not assume the exact mechanism before reproduction.
+
+---
+
+# 1. Validate baseline
+
+Before editing establish:
+
+```text
+HEAD == ead5011
+branch == payroll/phase10-properties-focus
+tracked working tree == clean
+```
+
+Record any permitted unrelated untracked `.HITL/step*.txt` files and leave them untouched.
+
+---
+
+# 2. Read authority
+
+Read:
+
+```text
+.architecture/ux/afenda-ui-ux-doctrine.yaml
+.HITL/phase09-properties-shortcut.md
+Phase 09 browser-closure record
+```
+
+Also inspect the relevant Phase 08 focus record because it established the evidence rule:
+
+```text
+actual DOM focus state wins over visual inference
+```
+
+Then inspect:
+
+```text
+src/components/shared/PropertiesSheet.tsx
+src/lib/properties-store.ts
+src/components/layout/PropertiesShortcut.tsx
+src/components/shared/ObjectCommands.tsx
+the Base UI Dialog/Sheet primitive actually used
+```
+
+Search for:
+
+```text
+initialFocus
+finalFocus
+autoFocus
+focus
+focusin
+focusout
+Dialog.Popup
+Dialog.Backdrop
+Dialog.Portal
+onOpenChange
+open
+ref
+```
+
+Do not assume Radix APIs.
+
+This application uses Base UI.
+
+---
+
+# 3. Reproduce before editing
+
+Instrument actual focus behaviour with browser-observable evidence.
+
+Use a capturing listener or equivalent measurement for:
+
+```text
+focusin
+focusout
+document.activeElement
+```
+
+Reproduce on at least:
+
+```text
+entity_payroll
+payroll_run
+```
+
+And through at least:
+
+```text
+Alt+Enter
+right-click → Properties
+```
+
+Also test Shift+F10 → Properties where practical.
+
+For every invocation record:
+
+```text
+summoning element
+active element immediately before open
+first focus event after open
+active element once Properties is visibly open
+whether target is inside or behind the Properties surface
+```
+
+Most importantly distinguish:
+
+```text
+first open after page load
+second open
+subsequent open
+```
+
+Do not assume they behave the same.
+
+---
+
+# 4. Define the exact defect from evidence
+
+Before implementation answer:
+
+```text
+A. What receives focus on first open?
+B. What receives focus on second open?
+C. Is there a difference?
+D. Does invocation method change the result?
+E. Does the Properties DOM exist before opening or mount on demand?
+F. Does Base UI attempt initial focus?
+G. Is an intended target actually declared?
+H. Is the problem mount timing, registration timing, ref timing,
+   primitive behaviour, or something else?
+```
+
+Do not turn a guess into the contract.
+
+The Phase 10 contract must describe the measured defect.
+
+---
+
+# 5. Write the Phase 10 contract
+
+Create:
+
+```text
+.HITL/phase10-properties-sheet-focus.md
+```
+
+The contract must include:
+
+```text
+problem
+measured baseline
+shared ownership
+Base UI primitive behaviour
+first-open lifecycle
+subsequent-open lifecycle
+intended focus target
+focus entry law
+focus restoration law
+invocation parity
+accessibility requirement
+responsive contract
+acceptance probes
+explicit exclusions
+expected files
+frozen systems
+stop condition
+```
+
+State explicitly:
+
+```text
+Phase 10 repairs the shared PropertiesSheet lifecycle.
+
+It is not an Alt+Enter feature.
+It is not a Payroll feature.
+```
+
+---
+
+# 6. Shared ownership
+
+The fix must live in the lowest shared layer that knows:
+
+```text
+Properties became open
+the Properties content exists
+the intended first interactive target exists
+```
+
+Likely ownership is:
+
+```text
+PropertiesSheet
+```
+
+but prove this from the actual implementation.
+
+Do not place focus corrections in:
+
+```text
+PropertiesShortcut
+ObjectCommands
+entity page
+pay-run page
+entity_payroll
+payroll_run
+```
+
+unless repository evidence proves the shared primitive cannot own it.
+
+---
+
+# 7. Preserve Phase 09 architecture
+
+Do not redesign:
+
+```text
+properties-store.ts
+global Alt+Enter eligibility law
+editable-target guard
+object capability detection
+ObjectContext
+Properties registration
+```
+
+unless a directly measured Phase 10 blocker requires the smallest mechanical adjustment.
+
+Phase 09's law remains:
+
+```text
+published object
++
+registered inspector
+=
+Properties capability
+```
+
+Phase 10 changes focus lifecycle only.
+
+---
+
+# 8. Intended focus target
+
+Determine the correct first target from the actual PropertiesSheet content.
+
+The target must be:
+
+```text
+inside Properties
+visible
+enabled
+keyboard-appropriate
+stable across business-object types
+```
+
+Do not focus a decorative heading merely to satisfy a technical check.
+
+If Properties is primarily read-oriented and no interactive field exists, determine whether the canonical target should instead be:
+
+```text
+close control
+sheet container with appropriate tabindex
+first meaningful control
+```
+
+based on the existing component semantics.
+
+Do not invent edit behaviour.
+
+Properties remains read-oriented.
+
+---
+
+# 9. First-open law
+
+After Phase 10:
+
+```text
+first open after page load
+```
+
+must behave the same as:
+
+```text
+second open
+third open
+later open
+```
+
+with respect to meaningful focus entry.
+
+There must not be a "warm-up" open where focus stays behind the sheet.
+
+---
+
+# 10. Invocation parity
+
+The focus result must be equivalent for:
+
+```text
+Alt+Enter
+right-click → Properties
+Shift+F10 → Properties
+```
+
+The summoning mechanism may differ.
+
+The opened Properties lifecycle must not.
+
+Do not add invocation-specific focusing.
+
+---
+
+# 11. No arbitrary timers
+
+Do not solve the issue using:
+
+```text
+setTimeout(..., 50)
+setTimeout(..., 100)
+sleep
+polling
+```
+
+unless inspection proves the underlying primitive explicitly requires scheduling and no deterministic lifecycle is available.
+
+Prefer:
+
+```text
+mount lifecycle
+Base UI focus API
+ref lifecycle
+open lifecycle
+```
+
+that directly corresponds to the point when the target exists.
+
+---
+
+# 12. Base UI first
+
+Inspect the exact installed Base UI version/API.
+
+If the primitive already supports:
+
+```text
+initialFocus
+finalFocus
+focus management lifecycle
+```
+
+understand why current behaviour is insufficient before adding imperative logic.
+
+Do not:
+
+```text
+replace Base UI
+introduce Radix
+create a second dialog/sheet primitive
+```
+
+Phase 10 should strengthen the shared composition, not replace it.
+
+---
+
+# 13. Focus restoration
+
+Entry focus and restoration are separate contracts.
+
+When Properties closes through:
+
+```text
+Escape
+close button
+normal dismissal
+```
+
+focus should return meaningfully according to existing behaviour.
+
+Phase 09 measured restoration working.
+
+Do not regress it.
+
+Explicitly verify:
+
+```text
+Alt+Enter summon → close → original focused context
+right-click summon → close → meaningful original context
+Shift+F10 summon → close → meaningful original context
+```
+
+If Base UI already handles restoration correctly, preserve it.
+
+---
+
+# 14. Escape truth
+
+Do not determine whether Properties is open merely by counting:
+
+```text
+[role=dialog]
+```
+
+Phase 09 discovered that a closed popup may keep its role and height temporarily during exit transition.
+
+Acceptance must use actual state such as:
+
+```text
+data-open/data-closed
+visibility/interactivity
+focus ownership
+component state
+```
+
+as appropriate.
+
+Do not report a false defect from transition residue.
+
+---
+
+# 15. Focus trap
+
+Verify that once Properties is open:
+
+```text
+Tab
+Shift+Tab
+```
+
+behave according to the existing Base UI modal/sheet contract.
+
+A keyboard user must not accidentally tab into inert page content behind an active Properties surface if the primitive is meant to be modal.
+
+Do not write your own focus trap if Base UI already owns it.
+
+---
+
+# 16. Editable contents
+
+Properties is read-oriented.
+
+Phase 10 must not transform it into an editing surface.
+
+If some Properties variants contain interactive controls, ensure the chosen initial-focus law remains valid without object-type branching.
+
+No:
+
+```text
+if entity_payroll
+if payroll_run
+if employee
+```
+
+focus logic.
+
+---
+
+# 17. Properties command grammar stays frozen
+
+Do not change:
+
+```text
+Properties last
+right-click ordering
+Shift+F10 behaviour
+Alt+Enter shortcut
+Ask about this availability
+Audit availability
+```
+
+Phase 10 is not command redesign.
+
+---
+
+# 18. Query system frozen
+
+Do not modify:
+
+```text
+QueryPanel
+QueryProvider
+queryProviderFor
+query store
+query actions
+entity_payroll query provider
+```
+
+Phase 08 query focus is frozen and must remain green.
+
+Run one regression probe only.
+
+---
+
+# 19. Payroll domain frozen
+
+Do not modify:
+
+```text
+src/views/payroll/**
+src/app/server/**
+payroll object identities
+payroll domain state
+payroll query providers
+```
+
+unless a compile-only mechanical consequence is unavoidable.
+
+A shared Properties focus fix should require zero Payroll domain changes.
+
+---
+
+# 20. Workspace customization frozen
+
+Do not modify Phase 05:
+
+```text
+WorkspaceCustomisation
+WorkspaceLayoutPersistence
+segmentsOf
+sizes
+order
+hide/restore
+Reset
+```
+
+---
+
+# 21. Expected diff
+
+The runtime diff should be extremely narrow.
+
+Expected center:
+
+```text
+src/components/shared/PropertiesSheet.tsx
+```
+
+Possibly a tiny shared helper if repository convention proves it is justified.
+
+Then:
+
+```text
+Phase 10 contract
+browser closure record
+```
+
+A broad diff is evidence the ownership decision is wrong.
+
+---
+
+# 22. Acceptance probes
+
+At minimum prove:
+
+## P1 — baseline first-open failure
+
+Before editing, directly reproduce the first-open focus defect.
+
+## P2 — entity first open / Alt+Enter
+
+Fresh page load.
+
+On `entity_payroll`:
+
+```text
+Alt+Enter
+```
+
+Properties opens and meaningful focus is inside the sheet on the first open.
+
+## P3 — entity second open
+
+Close.
+
+Open again.
+
+Focus behaviour matches P2.
+
+## P4 — pay-run first open
+
+Fresh pay-run page.
+
+Alt+Enter.
+
+Same focus contract.
+
+## P5 — right-click first open
+
+Fresh page.
+
+Right-click → Properties.
+
+Focus enters correctly.
+
+## P6 — Shift+F10 first open
+
+Fresh page.
+
+Shift+F10 → Properties.
+
+Focus enters correctly.
+
+## P7 — immediate keyboard operation
+
+Without clicking after Properties opens, the next keyboard action operates within Properties rather than behind it.
+
+## P8 — Tab
+
+Tab proceeds through Properties appropriately.
+
+## P9 — Shift+Tab
+
+Reverse traversal remains correct.
+
+## P10 — Escape
+
+Escape closes Properties.
+
+Use actual open/closed state, not lingering dialog-role existence.
+
+## P11 — restoration Alt+Enter
+
+Focus returns meaningfully after close.
+
+## P12 — restoration pointer
+
+Same for pointer invocation.
+
+## P13 — invocation parity
+
+All three invocation methods converge on one focus lifecycle.
+
+## P14 — entity identity unaffected
+
+`ent-sg` Properties still shows the same entity.
+
+## P15 — awaiting-data truth unaffected
+
+`ent-feed` Properties remains truthful.
+
+## P16 — payroll-run identity unaffected
+
+Run Properties still inspects the run.
+
+## P17 — QueryPanel regression
+
+```text
+Shift+F10
+→ Ask about this
+```
+
+still receives QueryPanel focus correctly.
+
+## P18 — no-capability object
+
+An object without Properties capability remains unaffected.
+
+## P19 — first-open across navigation
+
+Navigate to another Properties-capable workspace without a full browser restart where practical.
+
+Its first open must also work.
+
+## P20 — 1440
+
+No layout regression.
+
+## P21 — 1024
+
+No layout regression.
+
+## P22 — 390 compact layout
+
+Properties remains usable and focus stays within the surface.
+
+Label this accurately as compact desktop/browser layout if tested through iframe.
+
+---
+
+# 23. Evidence law
+
+For browser probes use only:
+
+```text
+PASS
+FAIL
+NOT VERIFIED
+```
+
+PASS requires direct observation.
+
+For focus specifically, use:
+
+```text
+document.activeElement
+focusin/focusout
+open state
+DOM containment
+```
+
+Visual screenshots alone do not establish focus.
+
+---
+
+# 24. Development server
+
+Do not use unrelated existing servers.
+
+In particular, do not assume any old server is valid evidence.
+
+For QA:
+
+```text
+start current branch on a known separate port
+confirm it serves current HEAD
+perform probes
+stop it immediately
+```
+
+If `.next` is stale and produces routing/build artifacts, regenerate it as environment/build cleanup.
+
+Do not classify stale `.next` behaviour as a product bug without proof.
+
+---
+
+# 25. Validation gates
+
+After implementation run:
+
+```bash
+pnpm check-types
+pnpm lint
+pnpm build
+```
+
+Also run:
+
+```text
+design-system audit
+```
+
+if the same existing audit remains available.
+
+Do not claim an architecture-audit script unless one actually exists.
+
+---
+
+# 26. Defect handling
+
+If Phase 10 testing uncovers a different defect:
+
+Report first:
+
+```text
+probe
+observed
+expected
+owning layer
+whether Phase 10 caused it
+smallest justified correction
+```
+
+Only fix it if it blocks this phase's focus contract.
+
+Otherwise record it as a future unresolved capability.
+
+No opportunistic cleanup.
+
+---
+
+# 27. Commit structure
+
+Prefer:
+
+```text
+docs(ux): define phase 10 properties focus lifecycle
+fix(ux): correct PropertiesSheet first-open focus
+docs(ux): close phase 10 browser acceptance
+```
+
+If no runtime fix is ultimately necessary because the defect is elsewhere, use the actual proven ownership in the commit name.
+
+Do not amend frozen history.
+
+---
+
+# 28. Final report
+
+Report:
+
+```text
+1. starting commit
+2. branch
+3. exact baseline first-open defect
+4. first vs subsequent-open comparison
+5. Base UI primitive/API discovered
+6. actual owning layer
+7. Phase 10 brief path
+8. runtime files changed
+9. focus mechanism before
+10. focus mechanism after
+11. why no arbitrary timing is used
+12. Alt+Enter result
+13. right-click result
+14. Shift+F10 result
+15. focus restoration
+16. focus-trap behaviour
+17. QueryPanel regression result
+18. payroll/domain files confirmed untouched
+19. probe-by-probe PASS / FAIL / NOT VERIFIED
+20. actual viewports
+21. check-types
+22. lint
+23. build
+24. design audit
+25. contract commit
+26. implementation commit
+27. correction commit if any
+28. browser closure commit
+29. working-tree state including unrelated .HITL/step*.txt
+```
+
+Also identify the next unresolved capability.
+
+Do not implement it.
+
+---
+
+# 29. Stop condition
+
+Phase 10 may freeze when:
+
+```text
+first-open defect directly reproduced
+contract committed
+shared focus lifecycle fixed
+first and subsequent opens behave consistently
+Alt+Enter passes
+right-click passes
+Shift+F10 passes
+focus trap passes
+Escape passes
+focus restoration passes
+QueryPanel regression passes
+domain truth unchanged
+gates green
+browser evidence recorded honestly
+tracked working tree clean
+```
+
+Unrelated `.HITL/step*.txt` files may remain untouched.
+
+Then STOP.
+
+Do not begin Phase 11.
+
+Begin now by validating `ead5011`, inspecting the exact Base UI PropertiesSheet composition, and measuring first-open versus second-open focus before editing.
