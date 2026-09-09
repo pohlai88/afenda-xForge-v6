@@ -74,18 +74,6 @@ const PropertiesSheet = ({ object, typeLabel, sections, open, onOpenChange }: Pr
   const popup = useRef<HTMLDivElement | null>(null)
 
   /*
-   * The moment the popup exists, which is the only moment the first open has.
-   *
-   * A callback ref rather than an effect, because on the first open there is no commit at which the
-   * element is both mounted and reachable from an effect that runs early enough — measured, an
-   * effect keyed on `open` finds the ref still empty the first time and lands on nothing. React
-   * calls this with the node as it attaches, so there is nothing to poll for and no frame to chase.
-   *
-   * It does not fire again. After the first close the popup stays in the document carrying
-   * `data-closed`, so reopening is a state change and not a mount — which is what the effect below
-   * is for.
-   */
-  /*
    * Where focus goes back to, captured at the instant before it is taken away.
    *
    * Entry and restoration are one lifecycle here and this is why: nothing else knows what the reader
@@ -103,6 +91,18 @@ const PropertiesSheet = ({ object, typeLabel, sections, open, onOpenChange }: Pr
     node.focus({ preventScroll: true })
   }, [])
 
+  /*
+   * The moment the popup exists, which is the only moment the first open has.
+   *
+   * A callback ref rather than an effect, because on the first open there is no commit at which the
+   * element is both mounted and reachable from an effect that runs early enough — measured, an
+   * effect keyed on `open` finds the ref still empty the first time and lands on nothing. React
+   * calls this with the node as it attaches, so there is nothing to poll for and no frame to chase.
+   *
+   * It does not fire again. After the first close the popup stays in the document carrying
+   * `data-closed`, so reopening is a state change and not a mount — which is what the effect below
+   * is for.
+   */
   const attachPopup = useCallback(
     (node: HTMLDivElement | null) => {
       popup.current = node
@@ -184,7 +184,13 @@ const PropertiesSheet = ({ object, typeLabel, sections, open, onOpenChange }: Pr
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent ref={attachPopup} initialFocus={popup} finalFocus={finalFocus} className='gap-0 sm:max-w-md'>
+      <SheetContent
+        ref={attachPopup}
+        open={open}
+        initialFocus={popup}
+        finalFocus={finalFocus}
+        className='gap-0 sm:max-w-md'
+      >
         <SheetHeader className='pr-12'>
           <Badge variant='secondary' className='w-fit'>
             {typeLabel}

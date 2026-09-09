@@ -8,6 +8,7 @@ import { XIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { useModalBackgroundInert } from '@/hooks/use-modal-background-inert'
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot='sheet' {...props} />
@@ -43,15 +44,37 @@ function SheetContent({
   children,
   side = 'right',
   showCloseButton = true,
+  open = true,
+  ref,
   ...props
 }: SheetPrimitive.Popup.Props & {
   side?: 'top' | 'right' | 'bottom' | 'left'
   showCloseButton?: boolean
+
+  /** Whether the sheet is open, so the page behind it can leave the tab order while it is. */
+  open?: boolean
+  ref?: React.Ref<HTMLDivElement>
 }) {
+  // The element is held in state rather than a ref because the hook has to re-run when it arrives.
+  const [popup, setPopup] = React.useState<HTMLDivElement | null>(null)
+
+  useModalBackgroundInert(popup, open)
+
+  const attach = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      setPopup(node)
+
+      if (typeof ref === 'function') ref(node)
+      else if (ref) ref.current = node
+    },
+    [ref]
+  )
+
   return (
     <SheetPortal>
       <SheetOverlay />
       <SheetPrimitive.Popup
+        ref={attach}
         data-slot='sheet-content'
         data-side={side}
         className={cn(

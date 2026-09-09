@@ -8,6 +8,7 @@ import { XIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { useModalBackgroundInert } from '@/hooks/use-modal-background-inert'
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot='dialog' {...props} />
@@ -42,14 +43,36 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  open = true,
+  ref,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+
+  /** Whether the dialog is open, so the page behind it can leave the tab order while it is. */
+  open?: boolean
+  ref?: React.Ref<HTMLDivElement>
 }) {
+  // The element is held in state rather than a ref because the hook has to re-run when it arrives.
+  const [popup, setPopup] = React.useState<HTMLDivElement | null>(null)
+
+  useModalBackgroundInert(popup, open)
+
+  const attach = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      setPopup(node)
+
+      if (typeof ref === 'function') ref(node)
+      else if (ref) ref.current = node
+    },
+    [ref]
+  )
+
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Popup
+        ref={attach}
         data-slot='dialog-content'
         className={cn(
           'bg-popover text-popover-foreground ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-6 rounded-xl p-6 text-sm ring-1 duration-100 outline-none sm:max-w-md',
