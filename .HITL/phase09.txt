@@ -1,0 +1,979 @@
+Continue Afenda frontend development with **Phase 09 only: shared Alt+Enter Properties shortcut**.
+
+# Starting authority
+
+The current branch must contain the completed and frozen Phase 08 sequence:
+
+```text
+Phase 08 contract
+→ Phase 08 shared QueryPanel focus implementation
+→ Phase 08 browser closure
+```
+
+Expected new branch:
+
+```text
+payroll/phase09-properties-shortcut
+```
+
+Do not assume a numeric commit hash from conversation.
+
+Determine the actual Phase 08 closure commit from `git log`.
+
+The working tree may contain exactly this unrelated untracked file:
+
+```text
+.HITL/step0
+```
+
+It is NOT part of Phase 09.
+
+Do not modify it.
+Do not delete it.
+Do not stage it.
+Do not move it.
+Do not infer its purpose.
+
+Any other unexpected tracked or untracked change is a precondition failure and must be reported before editing.
+
+---
+
+# Phase 09 objective
+
+Implement the shared Afenda keyboard convention:
+
+```text
+Alt+Enter → Properties
+```
+
+for first-class business objects that already expose Properties.
+
+This requirement already exists in the Afenda UX doctrine.
+
+Current known state:
+
+```text
+right-click → Properties       implemented
+Shift+F10 → context menu       implemented
+Alt+Enter → Properties         not implemented app-wide
+```
+
+Phase 09 closes that interaction-parity gap.
+
+This is NOT a Payroll-specific feature.
+
+---
+
+# 1. Validate before editing
+
+Establish:
+
+```text
+current HEAD
+current branch
+Phase 08 closure commit
+tracked tree clean
+only permitted unrelated untracked file = .HITL/step0
+```
+
+Then inspect the current architecture before deciding where the shortcut belongs.
+
+Do not implement from this prompt alone.
+
+---
+
+# 2. Read authority
+
+Read:
+
+```text
+.architecture/ux/afenda-ui-ux-doctrine.yaml
+.HITL/phase06-entity-workspace-object-identity.md
+.HITL/phase06-entity-workspace-object-identity-browser-closure.md
+.HITL/phase08-query-panel-focus-handoff.md
+Phase 08 browser closure record
+```
+
+The relevant doctrine is conceptually:
+
+```text
+Properties
+canonical question:
+"What exactly is this object?"
+
+default shortcut:
+Alt+Enter
+```
+
+Also preserve:
+
+```text
+right-click = contextual commands
+Shift+F10 = contextual commands
+Properties = last contextual command
+```
+
+---
+
+# 3. Discover the actual Properties architecture
+
+Locate and inspect:
+
+```text
+ObjectContext
+ObjectCommands
+ObjectContextMenu
+PropertiesSheet
+Properties trigger/open state
+PublishObjectContext
+global keyboard handling
+existing shortcut infrastructure
+command palette
+shell-level key listeners
+Base UI keyboard behaviour
+```
+
+Search specifically for:
+
+```text
+Alt+Enter
+altKey
+Enter
+keydown
+KeyboardEvent
+Properties
+openProperties
+PropertiesSheet
+```
+
+Before coding, report:
+
+```text
+A. who owns the current selected/published object
+B. who decides whether Properties exists
+C. who opens Properties
+D. where the Properties sheet is mounted
+E. whether a global shortcut mechanism already exists
+F. whether keyboard events are currently centralized or scattered
+G. what conditions make an object Properties-capable
+```
+
+Do not create a second keyboard subsystem if one already exists.
+
+---
+
+# 4. Reproduce baseline first
+
+Before changing code, directly verify the current behaviour on at least:
+
+```text
+entity_payroll
+payroll_run
+```
+
+Focus the object/workspace according to the existing interaction model.
+
+Press:
+
+```text
+Alt+Enter
+```
+
+Expected baseline:
+
+```text
+Properties does not open
+```
+
+Record:
+
+```text
+focused element before keypress
+event target
+whether event reached application code
+whether browser/OS intercepted it
+whether Properties changed state
+```
+
+Also confirm the existing pointer route still works:
+
+```text
+right-click
+→ Properties
+```
+
+This establishes the actual defect rather than assuming the doctrine gap.
+
+---
+
+# 5. Write the Phase 09 contract first
+
+Create:
+
+```text
+.HITL/phase09-properties-shortcut.md
+```
+
+The durable contract must define:
+
+```text
+problem
+browser evidence
+doctrine requirement
+shared ownership
+shortcut scope
+eligibility law
+keyboard-event law
+focus law
+Properties-opening law
+interaction precedence
+accessibility
+responsive behaviour
+acceptance probes
+explicit exclusions
+expected files
+frozen systems
+stop condition
+```
+
+State explicitly:
+
+```text
+Phase 09 is a shared object-interaction correction.
+It is not a Payroll-domain feature.
+```
+
+---
+
+# 6. Core behaviour
+
+For the currently active/focused first-class business object:
+
+```text
+Alt+Enter
+```
+
+should open the same Properties experience available through:
+
+```text
+right-click
+→ Properties
+```
+
+There must be one Properties capability.
+
+Do not create:
+
+```text
+KeyboardProperties
+ShortcutPropertiesSheet
+PayrollPropertiesShortcut
+```
+
+or equivalent parallel implementations.
+
+The keyboard path must invoke the same underlying shared command/state transition as the pointer path wherever the current architecture permits.
+
+---
+
+# 7. Eligibility law
+
+Alt+Enter must operate only when there is a meaningful current business object whose existing command model supports Properties.
+
+Conceptually:
+
+```text
+current object exists
+AND
+Properties is valid for that object
+→ Alt+Enter opens Properties
+```
+
+Otherwise:
+
+```text
+no-op
+```
+
+Do not fabricate Properties for objects that do not expose it.
+
+Do not make Alt+Enter itself a new source of capability truth.
+
+The same capability authority used by existing contextual commands should decide.
+
+---
+
+# 8. No object-type branching
+
+Do NOT implement:
+
+```text
+if entity_payroll → ...
+if payroll_run → ...
+if settlement → ...
+```
+
+The solution must be object-type agnostic.
+
+Adding a new first-class object later should inherit Alt+Enter automatically when it participates in the existing Properties architecture.
+
+---
+
+# 9. Shortcut ownership
+
+Find the lowest correct shared layer that knows:
+
+```text
+the current object
+whether Properties applies
+how to open Properties
+```
+
+Do not attach independent `keydown` listeners to every page or every business object.
+
+Prefer an existing shell/object interaction boundary.
+
+One shared listener/command mechanism is preferable to page-level listeners.
+
+However:
+
+Do not centralize unrelated keyboard behaviour merely because Phase 09 touches one shortcut.
+
+Keep the phase narrow.
+
+---
+
+# 10. Keyboard event law
+
+The implementation must correctly distinguish:
+
+```text
+Alt+Enter
+```
+
+from:
+
+```text
+Enter
+Shift+Enter
+Ctrl+Enter
+Meta+Enter
+Alt+other key
+```
+
+Do not accidentally fire Properties for another combination.
+
+Use the actual browser event model in this repository.
+
+Do not infer shortcut identity from printable character output.
+
+---
+
+# 11. Editing/input safety
+
+Alt+Enter must not unexpectedly hijack an interaction where the user is actively editing text or operating a control with an established Alt+Enter meaning.
+
+Inspect existing application conventions.
+
+At minimum evaluate event targets such as:
+
+```text
+input
+textarea
+contenteditable
+select
+combobox
+query filter
+dialog fields
+```
+
+Do not blindly suppress every Alt+Enter globally.
+
+Define and document the correct boundary.
+
+If the application's existing shortcut infrastructure already has an editable-target guard, reuse it.
+
+---
+
+# 12. Browser/default behaviour
+
+Use `preventDefault()` only when Afenda actually consumes the shortcut.
+
+Do not suppress Alt+Enter globally when:
+
+```text
+there is no active object
+Properties is unavailable
+the event is intentionally excluded
+```
+
+Avoid unnecessary propagation interference.
+
+If an existing keyboard dispatcher defines propagation law, follow it.
+
+---
+
+# 13. Properties identity
+
+Opening Properties from Alt+Enter must inspect exactly the same object identity as the existing contextual menu.
+
+Examples:
+
+```text
+entity_payroll → same entity_payroll object
+payroll_run    → same payroll_run object
+```
+
+Do not substitute:
+
+```text
+route params
+selected table row from stale state
+generic company identity
+parent workspace identity
+```
+
+unless that is already the canonical published object.
+
+---
+
+# 14. Focus on open
+
+When Properties opens through Alt+Enter:
+
+* focus must enter the Properties surface according to its existing primitive/lifecycle;
+* keyboard focus must not remain behind a newly opened modal/inspector if that contradicts the current primitive;
+* do not implement a second focus solution if Properties already manages initial focus correctly.
+
+First measure current pointer Properties focus behaviour.
+
+Reuse the existing behaviour.
+
+Phase 08's QueryPanel focus correction must not be copied blindly into Properties.
+
+---
+
+# 15. Focus restoration
+
+When Properties closes:
+
+```text
+Escape
+close control
+normal dismissal
+```
+
+focus should return according to the existing Properties/Base UI contract.
+
+For Alt+Enter invocation, meaningful restoration should normally lead back to the summoning/focused object context.
+
+Do not force focus to arbitrary page elements.
+
+Measure rather than assume.
+
+---
+
+# 16. Context-menu parity
+
+After Phase 09:
+
+```text
+right-click → Properties
+Shift+F10 → Properties
+Alt+Enter → Properties
+```
+
+must reach the same conceptual inspector.
+
+Do not alter:
+
+```text
+Properties position = last
+context-menu order
+Audit availability
+Ask about this availability
+FIND capability
+Query providers
+```
+
+Phase 09 adds a direct shortcut; it does not redesign ObjectCommands.
+
+---
+
+# 17. 360 Query remains frozen
+
+Phase 08 and Phase 07 are frozen.
+
+Do not modify:
+
+```text
+QueryPanel
+query store
+QueryProvider
+queryProviderFor
+query actions
+entity_payroll query provider
+```
+
+unless browser evidence proves Phase 09 cannot function without a tiny shared integration change.
+
+A Properties shortcut should normally require none of these.
+
+---
+
+# 18. Phase 05 workspace system remains frozen
+
+Do not modify:
+
+```text
+WorkspaceCustomisation
+WorkspaceLayoutPersistence
+segmentsOf
+workspace sizes
+workspace ordering
+hide/restore
+Reset
+```
+
+Phase 09 is unrelated.
+
+---
+
+# 19. No new permanent chrome
+
+Do not add:
+
+```text
+Properties button to every page
+keyboard-help banner
+shortcut badge everywhere
+new toolbar
+new header action
+```
+
+merely to expose Alt+Enter.
+
+This phase is about keyboard parity, not additional chrome.
+
+If an existing menu already renders shortcut hints using the shared command definition, determine whether showing `Alt+Enter` there is appropriate under the current architecture.
+
+Do not duplicate shortcut text manually across surfaces.
+
+---
+
+# 20. Shortcut discoverability
+
+Inspect whether the existing context-menu/command components support shortcut labels.
+
+If they already do, and Properties is the correct shared command owner, the context menu MAY display:
+
+```text
+Alt+Enter
+```
+
+next to Properties.
+
+But only if:
+
+```text
+existing project pattern supports it
+shared command definition can own it
+no duplicated hard-coded shortcut string is needed
+```
+
+This is secondary to functional parity.
+
+Do not broaden Phase 09 into a shortcut-documentation system.
+
+---
+
+# 21. Accessibility
+
+The shortcut must complement—not replace—pointer and menu access.
+
+Maintain:
+
+```text
+pointer equivalent exists
+Shift+F10 equivalent exists
+Properties remains discoverable
+keyboard focus remains visible
+screen-reader semantics unchanged
+Escape/close remains operable
+```
+
+Do not create keyboard-only functionality.
+
+---
+
+# 22. Responsive semantics
+
+Alt+Enter is primarily desktop-keyboard behaviour, but the implementation must not make layout responsive behaviour regress.
+
+Validate at:
+
+```text
+1440
+1024
+390
+```
+
+where meaningful.
+
+At `390`, do not claim Alt+Enter as a mobile requirement if the actual device/input mode lacks that keyboard combination.
+
+What must remain true is:
+
+```text
+Properties remains accessible through the existing compact/pointer UI
+no layout regression
+no orientation regression
+```
+
+If testing 390 through desktop iframe, label it accurately as compact layout testing, not physical-phone Alt+Enter testing.
+
+---
+
+# 23. Known unrelated issues
+
+Do not fix:
+
+```text
+/payroll 390px legacy card clipping
+unrelated stale .next artifacts
+unrelated :3007 server
+.HITL/step0
+```
+
+unless one directly prevents Phase 09 validation.
+
+If `.next` is stale and produces false routing/build behaviour, it may be safely regenerated as build artefact handling, but do not treat that as a product change.
+
+---
+
+# 24. Dev-server evidence
+
+Do not use an existing server unless you have proved it belongs to:
+
+```text
+this repository
+this branch
+this HEAD
+```
+
+The previously observed `:3007` server belongs to another working tree/commit.
+
+Do not stop or modify it.
+
+When browser QA is needed:
+
+```text
+start this branch on a separate known port
+verify branch/served behaviour
+run probes
+stop it immediately
+```
+
+---
+
+# 25. Expected diff
+
+Expected runtime change should be small and shared.
+
+Likely area:
+
+```text
+shared object command / object-context keyboard layer
+possibly shared Properties trigger/state
+Phase 09 HITL documentation
+browser closure record
+```
+
+A diff touching multiple Payroll domain pages is evidence of the wrong ownership decision.
+
+---
+
+# 26. Acceptance probes
+
+Prove at minimum:
+
+## P1 — baseline
+
+Before fix:
+
+```text
+Alt+Enter
+```
+
+does not open Properties on a Properties-capable object.
+
+Directly observe.
+
+## P2 — entity_payroll
+
+On:
+
+```text
+/payroll/entities/ent-sg
+```
+
+Alt+Enter opens Properties for the current `entity_payroll`.
+
+## P3 — payroll_run
+
+On a normal payroll-run workspace:
+
+Alt+Enter opens Properties for the current `payroll_run`.
+
+This proves shared behaviour.
+
+## P4 — object identity
+
+Fields shown through Alt+Enter match the same object shown through right-click → Properties.
+
+## P5 — Shift+F10 unaffected
+
+```text
+Shift+F10
+→ Properties
+```
+
+still works.
+
+## P6 — right-click unaffected
+
+```text
+right-click
+→ Properties
+```
+
+still works.
+
+## P7 — no Properties capability
+
+On an object/surface that does not support Properties:
+
+```text
+Alt+Enter
+```
+
+does nothing.
+
+No fake inspector opens.
+
+## P8 — editable target
+
+When focus is inside a relevant editable control, verify the documented shortcut-interception law.
+
+No accidental destructive hijack.
+
+## P9 — exact modifier
+
+Verify these do NOT trigger Properties:
+
+```text
+Enter
+Shift+Enter
+Ctrl+Enter
+Meta+Enter
+```
+
+## P10 — focus entry
+
+After Alt+Enter opens Properties, focus behaves according to the existing Properties contract.
+
+## P11 — Escape
+
+Escape closes Properties.
+
+## P12 — focus restoration
+
+Focus returns meaningfully after close.
+
+## P13 — QueryPanel unaffected
+
+Existing:
+
+```text
+Shift+F10
+→ Ask about this
+```
+
+still opens QueryPanel and Phase 08 focus handoff remains correct.
+
+## P14 — entity awaiting data
+
+On `ent-feed`, Alt+Enter opens truthful Properties without inventing a current September run/group inclusion.
+
+## P15 — 1440
+
+No layout/interaction regression.
+
+## P16 — 1024
+
+No layout/interaction regression.
+
+## P17 — 390 compact layout
+
+Properties remains accessible and layout remains usable.
+
+Do not pretend this proves a physical mobile keyboard shortcut.
+
+---
+
+# 27. Browser evidence law
+
+Classify every browser probe only as:
+
+```text
+PASS
+FAIL
+NOT VERIFIED
+```
+
+PASS means directly observed.
+
+FAIL means directly observed contradiction.
+
+NOT VERIFIED means the harness could not prove it.
+
+Do not replace browser evidence with:
+
+```text
+source inspection
+component declarations
+screenshots without DOM confirmation
+expected Base UI behaviour
+```
+
+when the probe concerns actual focus/input behaviour.
+
+Phase 08 demonstrated why measured DOM state wins over visual inference.
+
+---
+
+# 28. Validation gates
+
+After implementation run:
+
+```bash
+pnpm check-types
+pnpm lint
+pnpm build
+```
+
+Also run the existing design-system audit.
+
+Run an architecture audit only if such a script actually exists.
+
+Do not claim a nonexistent architecture audit.
+
+---
+
+# 29. Defect discipline
+
+If browser testing discovers another shared interaction defect:
+
+First report:
+
+```text
+probe
+observed behaviour
+expected behaviour
+owning layer
+whether Phase 09 caused it
+smallest justified correction
+```
+
+Only fix it if it blocks the Phase 09 contract.
+
+Otherwise record it as the next unresolved capability.
+
+No opportunistic cleanup.
+
+---
+
+# 30. Commit structure
+
+Prefer:
+
+```text
+docs(ux): define phase 09 properties shortcut
+feat(ux): add shared Alt+Enter properties shortcut
+docs(ux): close phase 09 browser acceptance
+```
+
+If the implementation is correctly classified as a bug fix rather than feature under repository convention:
+
+```text
+fix(ux): add shared Alt+Enter properties shortcut
+```
+
+is acceptable.
+
+Do not amend frozen Phase 08 commits.
+
+---
+
+# 31. Final report
+
+Report:
+
+```text
+1. starting commit
+2. branch
+3. baseline reproduction
+4. shortcut architecture discovered
+5. shared owning layer
+6. Phase 09 brief path
+7. runtime files changed
+8. exact eligibility law
+9. editable-target/interception law
+10. Properties opening mechanism
+11. focus entry behaviour
+12. focus restoration behaviour
+13. provider/domain files confirmed untouched
+14. probe-by-probe PASS / FAIL / NOT VERIFIED
+15. actual viewports observed
+16. check-types
+17. lint
+18. build
+19. design audit
+20. contract commit
+21. implementation commit
+22. correction commit if any
+23. browser closure commit
+24. working-tree status including .HITL/step0
+```
+
+Identify the next unresolved capability, but do not implement it.
+
+---
+
+# 32. Stop condition
+
+Phase 09 may freeze only when:
+
+```text
+baseline gap directly reproduced
+contract committed
+one shared Alt+Enter implementation exists
+entity_payroll passes
+payroll_run passes
+pointer and Shift+F10 paths remain intact
+non-capable objects remain no-op
+editable-target law is proven
+focus entry/restoration is proven
+QueryPanel regression probe passes
+gates green
+browser evidence recorded honestly
+tracked working tree clean
+```
+
+The unrelated `.HITL/step0` may remain untracked and untouched.
+
+Then STOP.
+
+Do not begin Phase 10.
+
+Begin now by validating the current Phase 08 closure HEAD, locating the shared Properties ownership path, and reproducing Alt+Enter before editing.
