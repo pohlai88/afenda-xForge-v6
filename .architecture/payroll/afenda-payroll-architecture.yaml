@@ -762,6 +762,51 @@ afenda_payroll_architecture:
       inspected or modified — the pointer advancing is not a licence to touch the code beneath it.
       The first P03 action is to establish its contract, exactly as P01 and P02 were.
 
+    branch_reconciliation:
+      merged_on: '2026-09-10'
+      subject: 'origin/main merged into dev after the P02 freeze'
+      why: >
+        The two branches forked at 8bc6e37 on 2026-09-08 and ran in parallel: `dev` carried the
+        payroll architecture programme through the P01 and P02 freezes, `main` carried the workspace
+        persistence and 360 Query work. Neither contained the other.
+
+      adopted_from_main:
+        - 'src/components/shared/WorkspaceCustomisation.tsx and WorkspaceGrid.tsx — the workspace persistence system'
+        - 'src/types/common/workspace-types.ts'
+        - 'QueryPanel, query-actions and payroll-query — the 360 Query refusal work'
+        - 'the UX doctrine update and audit-permission-review'
+        - 'manual acceptance ledger row 12 and its note on where focus can and cannot return'
+
+      deferred_adoption:
+        file: 'src/views/payroll/entity-workspace.tsx'
+        removed_in_the_merge: true
+        recoverable_at: '23411996d6e119febb86bae6dc3a7c98684bc018:src/views/payroll/entity-workspace.tsx'
+        why: >
+          It is the binding between the workspace customisation system and the P02 page as that page
+          stood BEFORE the step 6 recomposition. It declares modules for the KPI strip and the
+          overtime trend — two surfaces the P02 contract REMOVED by decision — and imports five
+          components that the freeze renamed or retired. It merged without textual conflict and then
+          failed `tsc` on exactly those five imports, which is the whole reason it is named here
+          rather than quietly carried.
+        what_was_NOT_done: >
+          Its imports were not repointed at the new entity-* components. Doing that would re-bind a
+          customisation system to a FROZEN page composition and decide, inside a merge, which P02
+          modules a reader may move or put down. That is a P02 contract change and belongs in a
+          `divergences` entry, not in conflict resolution.
+        status: 'OPEN — workspace customisation is not adopted by P02, and P02 does not claim it'
+        to_adopt_later: >
+          Author a P02 divergence stating which modules are customisable and what a reader is
+          permitted to put down, then re-bind. The capability survives in the merge; only its P02
+          binding was dropped.
+
+      p02_page_conflict:
+        file: 'src/app/(pages)/payroll/entities/[entityId]/page.tsx'
+        resolved_to: 'dev — the frozen P02 implementation'
+        why: >
+          `main` rebuilt this page around WorkspaceGrid over the pre-freeze composition. Taking it
+          would have reinstated the KPI strip and the overtime chart that P02 removed by decision,
+          and un-frozen P02 through a merge. The freeze holds: P02 renders exactly what it froze.
+
     carried_across_the_programme:
       rule: >
         Open at the P02 freeze and not closed by it. Listed here so the debt survives the closing of

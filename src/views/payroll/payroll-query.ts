@@ -22,6 +22,7 @@ import type { QueryAnswer, QueryProvider, QuerySuggestion } from '@/types/common
 import {
   payRunCalculationChanges,
   payRunEmployeesWithOpenExceptions,
+  payRunQueryCapabilities,
   settlementHistory,
   settlementQueryCapabilities,
   settlementSameReasonFailures
@@ -33,34 +34,54 @@ import { resultsFromHits } from '@/lib/find/find-sources'
 const OPEN_EXCEPTIONS = 'open-exceptions'
 const CALCULATION_CHANGES = 'calculation-changes'
 
-const payRunSuggestions = async (): Promise<QuerySuggestion[]> => [
-  {
-    id: OPEN_EXCEPTIONS,
-    mode: 'search',
+/**
+ * A pay run's questions, and which of them this reader may be offered.
+ *
+ * Search is unconditional. Audit is not: a reader without audit rights gets nothing from the audit
+ * question, and advertising a question whose only possible answer is a refusal is the interface
+ * claiming a capability the reader does not have. Hiding it is not the authorization — the action
+ * behind it refuses on its own — it is only the difference between offering something and offering
+ * something that cannot work.
+ */
+const payRunSuggestions = async (): Promise<QuerySuggestion[]> => {
+  const capabilities = await payRunQueryCapabilities()
 
-    // "Affected by", not "with". An exception can name a department rather than a person, and then
-    // it is attributed to everyone in it — so the answer legitimately contains people who do not
-    // own the exception. A label saying "employees with" would describe a narrower question than
-    // the one the domain actually answers.
-    label: 'Who is affected by open exceptions?',
-    keywords: ['exception', 'blocker', 'blocking', 'outstanding', 'people', 'who', 'affected']
-  },
-  {
-    id: CALCULATION_CHANGES,
-    mode: 'audit',
-    label: 'What changed since the last calculation?',
-    keywords: ['calculation', 'recalculated', 'diff', 'delta', 'version', 'changed', 'net']
+  const questions: QuerySuggestion[] = [
+    {
+      id: OPEN_EXCEPTIONS,
+      mode: 'search',
+
+      // "Affected by", not "with". An exception can name a department rather than a person, and
+      // then it is attributed to everyone in it — so the answer legitimately contains people who do
+      // not own the exception. A label saying "employees with" would describe a narrower question
+      // than the one the domain actually answers.
+      label: 'Who is affected by open exceptions?',
+      keywords: ['exception', 'blocker', 'blocking', 'outstanding', 'people', 'who', 'affected']
+    }
+  ]
+
+  if (capabilities.calculationChanges) {
+    questions.push({
+      id: CALCULATION_CHANGES,
+      mode: 'audit',
+      label: 'What changed since the last calculation?',
+      keywords: ['calculation', 'recalculated', 'diff', 'delta', 'version', 'changed', 'net']
+    })
   }
-]
+
+  return questions
+}
 
 /**
  * A pay run's questions.
  *
- * `modes` says what the provider can actually answer, which is now search and audit. Predict is
- * still absent, and absent is the honest state: this domain stores no forecast, only lifecycle
- * facts, and dressing a due-date countdown as a prediction would complete the acronym by lying.
- * Declaring a mode the provider cannot answer would put a control in the panel that never has
- * anything behind it.
+ * `modes` declares what this provider is capable of answering — search and audit. What a given
+ * reader is *offered* comes from the questions actually published above, so a reader without audit
+ * rights sees no audit control at all. Support is not show.
+ *
+ * Predict is absent from both, and absent is the honest state: this domain stores no forecast, only
+ * lifecycle facts, and dressing a due-date countdown as a prediction would complete the acronym by
+ * lying.
  */
 export const payRunQueryProvider: QueryProvider = {
   type: 'payroll_run',

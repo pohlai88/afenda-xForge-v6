@@ -34,6 +34,23 @@ import { closeQuery, getQuerySnapshot, subscribeQuery, type QueryInvocation } fr
 type AnswerStatus = 'idle' | 'loading' | 'done' | 'error'
 
 /**
+ * How the question list is doing.
+ *
+ * Four states because there are four things that can be true, and two of them used to be told to
+ * the reader as one. A provider that could not be reached and a provider that has nothing to offer
+ * are not the same answer: the first means the panel does not know, the second means it does.
+ * Collapsing them said "nothing can be asked about this" on the strength of a dropped request.
+ *
+ * Local to the panel on purpose. `QueryProvider` still returns a promise of questions, which is the
+ * whole contract — wrapping the result to carry a failure would push this component's lifecycle
+ * into every domain that implements one.
+ */
+type SuggestionState =
+  | { status: 'loading' }
+  | { status: 'ready'; questions: QuerySuggestion[] }
+  | { status: 'error' }
+
+/**
  * The doctrine's own words for the three kinds of question, and the only place they are named.
  *
  * All three are listed because the vocabulary is fixed; only the modes a provider advertises are
@@ -122,8 +139,8 @@ const QueryPanel = () => {
 
   const [mode, setMode] = useState<QueryMode>('search')
 
-  /** What this subject can be asked. `null` until the provider has said. */
-  const [suggestions, setSuggestions] = useState<QuerySuggestion[] | null>(null)
+  /** What this subject can be asked, and whether the panel has managed to find out. */
+  const [suggestions, setSuggestions] = useState<SuggestionState>({ status: 'loading' })
   const [question, setQuestion] = useState<QuerySuggestion | null>(null)
   const [answer, setAnswer] = useState<QueryAnswer | null>(null)
   const [status, setStatus] = useState<AnswerStatus>('idle')
@@ -159,7 +176,7 @@ const QueryPanel = () => {
         asked.current += 1
         setShown(next)
         returnFocus.current = next.returnFocus
-        setSuggestions(null)
+        setSuggestions({ status: 'loading' })
         setQuestion(null)
         setAnswer(null)
         setStatus('idle')
@@ -174,8 +191,9 @@ const QueryPanel = () => {
          * provider actually published a question in, not the first it declares support for, so a
          * reader never lands on a mode with nothing behind it.
          *
-         * A provider that throws leaves the panel saying there is nothing to ask, which is the same
-         * thing a reader is told when there genuinely is not. Why it failed is the server's business.
+         * A provider that cannot answer is a failure, not an empty list. Nothing about why is shown
+         * or kept: the reason is the server's business, and it may be the shape of a permission.
+         * Recovery is closing and asking again, which runs this from the top.
          */
         const token = asked.current
 
@@ -184,13 +202,13 @@ const QueryPanel = () => {
           .then(published => {
             if (asked.current !== token) return
 
-            setSuggestions(published)
+            setSuggestions({ status: 'ready', questions: published })
             setMode(target.modes.find(candidate => published.some(one => one.mode === candidate)) ?? target.modes[0])
           })
           .catch(() => {
             if (asked.current !== token) return
 
-            setSuggestions([])
+            setSuggestions({ status: 'error' })
           })
       }),
     []
@@ -321,8 +339,9 @@ const QueryPanel = () => {
    * support for it. Support is not show, and a switch with nothing behind one of its options is a
    * control that misstates what the object can be asked.
    */
-  const modes = (shownProvider?.modes ?? []).filter(candidate => suggestions?.some(one => one.mode === candidate))
-  const asking = suggestions?.filter(suggestion => suggestion.mode === mode) ?? []
+  const published = suggestions.status === 'ready' ? suggestions.questions : []
+  const modes = (shownProvider?.modes ?? []).filter(candidate => published.some(one => one.mode === candidate))
+  const asking = published.filter(suggestion => suggestion.mode === mode)
 
   return (
     <Dialog.Root
@@ -409,7 +428,7 @@ const QueryPanel = () => {
           >
             <CommandInput ref={inputRef} placeholder='Filter questions...' value={filter} onValueChange={setFilter} />
             <CommandList className='max-h-48'>
-              {suggestions === null ? (
+              {suggestions.status === 'loading' ? (
                 <div className='flex flex-col gap-2 p-2' aria-busy='true'>
                   <Skeleton className='h-5 w-3/4' />
                   <Skeleton className='h-5 w-1/2' />
@@ -417,12 +436,19 @@ const QueryPanel = () => {
               ) : null}
 
               {/*
-                Nothing to ask is a real state, not a failure. A provider exists for this type, so
-                the command was offered — but this particular record has no question it can answer,
-                and saying so is better than listing one that could only reply "not applicable".
+                Two sentences that must never be swapped. Nothing to ask is knowledge: a provider
+                exists for this type so the command was offered, and this particular record has no
+                question it can answer — which is also what a reader with no audit rights is told,
+                because a permission is not something to announce. Not being able to find out is the
+                opposite, and says so without saying why: the reason may itself be the shape of a
+                permission, and a reader who could not load a list has no use for it either way.
               */}
-              {suggestions?.length === 0 ? (
+              {suggestions.status === 'ready' && published.length === 0 ? (
                 <p className='text-muted-foreground px-2 py-3 text-sm'>Nothing can be asked about this yet.</p>
+              ) : null}
+
+              {suggestions.status === 'error' ? (
+                <p className='text-muted-foreground px-2 py-3 text-sm'>Questions couldn&rsquo;t be loaded.</p>
               ) : null}
 
               {asking.length > 0 ? <CommandEmpty>No matching question.</CommandEmpty> : null}
