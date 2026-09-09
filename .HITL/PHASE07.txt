@@ -1,0 +1,810 @@
+Continue Afenda Payroll frontend development with **Phase 07 only**.
+
+# Authoritative starting state
+
+```text
+Phase 05E governance      48ce950
+Phase 06 brief            fb4de00
+Phase 06 implementation   805bac2
+Phase 06 correction       02cfc76
+Phase 06 browser closure  93769ea
+
+branch base:
+93769ea
+
+expected branch:
+payroll/phase07-entity-360-query
+
+working tree:
+clean
+```
+
+Phase 06 is frozen.
+
+Do NOT amend, squash, rewrite, or reopen any Phase 06 commit.
+
+---
+
+# Phase 07 candidate
+
+The unresolved capability deliberately left by Phase 06 is:
+
+```text
+entity_payroll 360 Query provider
+```
+
+Current known behaviour:
+
+```text
+entity_payroll is now a first-class business object
+ObjectContext is published
+Properties works
+Recents works
+context menu works
+queryProviderFor('entity_payroll') is absent
+therefore "Ask about this" is correctly absent
+```
+
+Phase 07 exists to close that missing **EXPLORE** capability.
+
+But do not blindly implement from this summary.
+
+First verify the actual query architecture and provider contracts in the repository.
+
+---
+
+# 1. Validate starting state
+
+Before editing:
+
+```text
+HEAD == 93769ea
+branch == payroll/phase07-entity-360-query
+working tree == clean
+```
+
+If not, stop and report the contradiction.
+
+Do not recreate Phase 06 discovery.
+
+---
+
+# 2. Read authority
+
+Read:
+
+```text
+.HITL/phase06-entity-workspace-object-identity.md
+.HITL/phase06-entity-workspace-object-identity-browser-closure.md
+.architecture/ux/afenda-ui-ux-doctrine.yaml
+```
+
+Then locate and inspect the actual 360 Query architecture.
+
+Search for:
+
+```text
+queryProviderFor
+query provider registry
+360 Query
+Ask about this
+ObjectCommands
+ObjectContext
+existing provider implementations
+provider registration
+query drawer / panel
+query suggestions
+current-object query context
+```
+
+Also inspect:
+
+```text
+src/views/payroll/payroll-objects.ts
+src/views/payroll/entity-identity.tsx
+/payroll/entities/[entityId]
+```
+
+Use existing providers as the implementation authority.
+
+Do not invent a second query system.
+
+---
+
+# 3. Prove the Phase 07 gap
+
+Before implementation, report:
+
+```text
+A. where query providers are registered
+B. provider interface / type
+C. at least two existing provider examples
+D. how ObjectCommands determines whether "Ask about this" renders
+E. how the 360 Query surface receives current object/context
+F. what entity_payroll domain facts are actually available
+G. what facts are NOT available
+```
+
+Then determine whether `entity_payroll` can be supported by extending the existing provider model without changing the global query architecture.
+
+Expected answer should be yes.
+
+If it is not, report the architectural contradiction before coding.
+
+---
+
+# 4. Write the Phase 07 contract first
+
+Create:
+
+```text
+.HITL/phase07-entity-payroll-360-query.md
+```
+
+The contract must define:
+
+```text
+problem
+evidence
+operator consequence
+existing query architecture
+provider ownership
+entity_payroll query context
+supported query intents
+unsupported query intents
+domain-truth boundaries
+interaction behaviour
+accessibility / keyboard behaviour
+responsive behaviour
+acceptance probes
+explicit exclusions
+expected files
+frozen systems
+stop condition
+```
+
+Do not treat the exclusions as future permissions.
+
+---
+
+# 5. Architectural objective
+
+The intended architecture is conceptually:
+
+```text
+entityPayrollObject
+        ↓
+PublishObjectContext
+        ↓
+ObjectCommands
+        ↓
+queryProviderFor("entity_payroll")
+        ↓
+existing Afenda 360 Query surface
+```
+
+The important rule is:
+
+**Register the capability once at the provider/registry layer.**
+
+Do NOT special-case the context menu merely to make "Ask about this" appear.
+
+If the global command grammar already asks:
+
+```text
+does this object type have a provider?
+```
+
+then Phase 07 should make that answer true.
+
+The menu should gain the command naturally.
+
+---
+
+# 6. Provider ownership
+
+There must be one provider for:
+
+```text
+entity_payroll
+```
+
+Do not create:
+
+```text
+entityPayrollQueryProviderForMenu
+entityPayrollQueryProviderForPage
+entityPayrollQueryProviderForProperties
+```
+
+or equivalent duplication.
+
+The provider must operate on the same stable object identity introduced by Phase 06.
+
+The provider must not mint a second conceptual entity identity.
+
+---
+
+# 7. Domain truth
+
+This phase is constrained by what the entity workspace can actually prove.
+
+Use only data available from the current Payroll frontend/domain sources.
+
+Do not invent:
+
+```text
+AI-generated payroll conclusions
+compliance conclusions
+risk scores
+forecast results
+employee-level explanations not loaded
+entity-level audit history that does not exist
+group-total inclusion when FX/consolidation truth is unavailable
+future payroll state
+missing-run reasons unless explicitly represented
+```
+
+If the company is `awaiting_data`, the provider may expose that state when provable.
+
+If the company is excluded from the current group total and the domain proves exclusion, that may be stated.
+
+Do not infer inclusion merely because the company has a payroll run.
+
+Domain truth remains binding.
+
+---
+
+# 8. Query intent design
+
+Derive supported intents from existing provider conventions.
+
+Do not invent a new conversational architecture.
+
+At minimum evaluate whether the existing provider model can meaningfully support entity-level intents equivalent to:
+
+```text
+Break this down
+What changed?
+Show related payroll runs
+Explain current state
+Show source
+What affects this?
+What happens next?
+```
+
+These are candidate semantic intents, NOT mandatory labels.
+
+Only expose an intent if the current frontend/domain can actually answer it.
+
+If an existing global intent is meaningless for `entity_payroll`, omit it.
+
+Afenda's rule remains:
+
+```text
+meaningless controls MUST NOT render
+```
+
+---
+
+# 9. No fake AI
+
+Phase 07 is NOT permission to introduce:
+
+```text
+LLM calls
+OpenAI API
+generic chatbot
+prompt engineering framework
+server agent
+RAG
+vector database
+new AI backend
+free-text hallucinated answers
+```
+
+The existing 360 Query architecture is the authority.
+
+If it is deterministic/provider-driven today, keep it deterministic/provider-driven.
+
+This phase connects a new business object type to the existing system.
+
+It does not redesign the system.
+
+---
+
+# 10. Preserve context
+
+"Ask about this" must obey the Afenda doctrine:
+
+```text
+current entity workspace remains the parent context
+query opens in the existing drawer/panel/query surface
+no route jump merely to ask about the object
+selection/object identity stays intact
+closing the query returns naturally to the workspace
+```
+
+Do not create:
+
+```text
+/payroll/entities/[entityId]/query
+```
+
+unless the existing architecture already requires that route, which must be proven before use.
+
+---
+
+# 11. Existing global grammar wins
+
+Do not modify `ObjectCommands` specifically for `entity_payroll` unless a genuine global defect is discovered.
+
+Expected behaviour is:
+
+```text
+provider absent
+→ Ask about this absent
+
+provider registered
+→ Ask about this available
+```
+
+That invariant is desirable.
+
+Do not replace it with:
+
+```text
+if object.type === 'entity_payroll'
+```
+
+inside command rendering.
+
+---
+
+# 12. FIND registration remains frozen
+
+Phase 06 corrected `entity_payroll` registration in FIND.
+
+Do not reopen or duplicate that correction.
+
+Do not create another registry for queryability if the existing query registry already serves that purpose.
+
+Separate registries are acceptable only where the architecture already intentionally distinguishes:
+
+```text
+findable object type
+queryable object type
+```
+
+Follow the existing design.
+
+Do not merge them opportunistically either.
+
+---
+
+# 13. Properties remains Properties
+
+360 Query must not absorb or replace the Phase 06 Properties inspector.
+
+Maintain the distinction:
+
+```text
+Properties
+= What exactly is this object?
+
+360 Query
+= Explain / explore / relate / understand this object
+```
+
+Do not duplicate the entire Properties field set inside query results merely because it is available.
+
+---
+
+# 14. No new permanent chrome
+
+The presence of the provider should not add a permanent page button unless the existing global query architecture requires one.
+
+Preferred exposure remains through established Afenda surfaces:
+
+```text
+context menu
+360 Query trigger
+command/query infrastructure
+```
+
+High capability, low permanent chrome.
+
+---
+
+# 15. Table law
+
+If a query result exposes runs or related records in tabular form:
+
+Use the existing table engine.
+
+Do NOT create another table.
+
+Do not invent columns simply to fill space.
+
+Respect domain schemas, permissions, and valid aggregations.
+
+---
+
+# 16. Accessibility and keyboard
+
+Preserve the interaction contract already proven in Phase 06:
+
+```text
+right-click contextual commands
+Shift+F10 contextual commands
+Properties last
+```
+
+After provider registration, both invocation paths should expose equivalent query capability.
+
+The 360 Query surface must preserve:
+
+```text
+focus entry
+focus restoration
+Escape/close behaviour
+keyboard operability
+accessible command naming
+```
+
+Reuse existing query behaviour rather than adding Payroll-specific keyboard handling.
+
+---
+
+# 17. Responsive semantics
+
+Validate the entity workspace/query interaction at:
+
+```text
+1440
+1024
+390
+```
+
+Use actual widths that the harness genuinely achieves.
+
+Do not report a width merely because a resize command returned success.
+
+For iframe-based testing, record the iframe viewport dimensions used.
+
+At compact width:
+
+```text
+query remains usable
+entity identity remains understandable
+no page-level destructive horizontal overflow
+query does not replace orientation semantics
+```
+
+Do not solve unrelated legacy card clipping discovered on `/payroll`.
+
+That is outside Phase 07.
+
+Record it only if necessary.
+
+---
+
+# 18. Do not use the wrong dev server
+
+A server on:
+
+```text
+:3007
+```
+
+was previously found to belong to another working tree/commit.
+
+It is NOT valid evidence for this branch.
+
+For any browser QA:
+
+1. start a server from this exact repository/branch;
+2. use a distinct known port;
+3. confirm the rendered source belongs to the current tree;
+4. stop it immediately after QA.
+
+Do not interact with or terminate the existing unrelated `:3007` server.
+
+Prefer no dev server until browser QA is necessary.
+
+---
+
+# 19. Expected implementation shape
+
+Do not assume exact filenames before inspection.
+
+The likely narrow diff should involve:
+
+```text
+existing query provider/registry
+entity_payroll provider
+possibly payroll object/query descriptor configuration
+Phase 07 HITL contract
+focused architecture evidence if repository convention requires it
+```
+
+A broad diff across Payroll is a warning sign.
+
+Phase 07 should not require redesigning:
+
+```text
+entity page
+entity identity
+workspace customization
+workspace persistence
+table engine
+ObjectContext
+Properties
+FIND architecture
+```
+
+except for tiny mechanical integration proven necessary.
+
+---
+
+# 20. Acceptance probes
+
+At minimum prove:
+
+### P1 — provider registration
+
+```text
+queryProviderFor("entity_payroll")
+```
+
+returns the intended provider.
+
+No page-local special case.
+
+### P2 — context menu
+
+Right-click the `entity_payroll` object.
+
+"Ask about this" is now present.
+
+Properties remains last according to the existing command grammar.
+
+No invented Audit command appears.
+
+### P3 — keyboard parity
+
+Shift+F10 exposes the same query capability.
+
+### P4 — query opens in context
+
+Invoke "Ask about this".
+
+Existing 360 Query UI opens without abandoning the entity workspace.
+
+### P5 — correct object identity
+
+The query surface receives the current entity payroll object, not:
+
+```text
+raw route id
+payroll_run identity
+generic company surrogate
+```
+
+Verify with at least:
+
+```text
+ent-sg
+ent-feed
+```
+
+### P6 — normal entity
+
+For `ent-sg`, supported entity-level query capabilities render and operate using provable data.
+
+### P7 — awaiting-data entity
+
+For `ent-feed`:
+
+```text
+query remains available
+awaiting_data may be stated when provable
+no fabricated current run appears
+no fabricated group inclusion appears
+```
+
+### P8 — no-current-run behaviour
+
+An entity without a current-period run remains queryable as an `entity_payroll` object.
+
+The provider must not require a PayRun merely to exist.
+
+### P9 — unsupported intent omission
+
+An intent the domain cannot answer must be absent or explicitly unavailable according to the existing query architecture.
+
+It must not produce fabricated output.
+
+### P10 — responsive 1440
+
+Query + workspace remain usable.
+
+### P11 — responsive 1024
+
+Same semantics.
+
+### P12 — responsive 390
+
+Same semantics with compact presentation.
+
+### P13 — close/focus restoration
+
+Close the query surface.
+
+Focus returns according to the existing query interaction contract.
+
+### P14 — existing providers unaffected
+
+At least one existing non-`entity_payroll` query provider continues to work.
+
+Phase 07 must not regress the global registry.
+
+---
+
+# 21. Tests
+
+Use existing repository validation.
+
+Run focused static/provider checks where possible.
+
+Before completion:
+
+```bash
+pnpm check-types
+pnpm lint
+pnpm build
+```
+
+Also run:
+
+```text
+design-system audit
+architecture audit
+other existing de facto validation
+```
+
+if present.
+
+There is no need to invent a test framework for this phase.
+
+Do not claim nonexistent automated tests.
+
+---
+
+# 22. Browser evidence law
+
+Classify probes only as:
+
+```text
+PASS
+FAIL
+NOT VERIFIED
+```
+
+PASS = directly observed.
+
+FAIL = observed contradiction.
+
+NOT VERIFIED = harness cannot prove it.
+
+Do not use construction evidence as browser PASS.
+
+The previous session demonstrated that trusted right-click and Shift+F10 events CAN work when the screenshot/automation interaction is handled correctly, so do not automatically mark them untestable based on older assumptions.
+
+---
+
+# 23. Defect handling
+
+If QA finds a genuine Phase 07 defect:
+
+Report first:
+
+```text
+probe
+observed
+expected
+owning layer
+smallest fix
+```
+
+Then apply only the narrow correction.
+
+Do not opportunistically fix unrelated Payroll defects.
+
+Do not fix the known `/payroll` 390px legacy card clipping unless Phase 07 directly caused it.
+
+---
+
+# 24. Commit structure
+
+Prefer:
+
+```text
+1. docs(payroll): define phase 07 entity payroll 360 query
+2. feat(payroll): add entity payroll 360 query provider
+```
+
+If browser QA reveals a defect:
+
+```text
+3. fix(payroll): <specific phase 07 correction>
+```
+
+Then create a durable browser closure record if that is now the established Phase 06 convention:
+
+```text
+.HITL/phase07-entity-payroll-360-query-browser-closure.md
+```
+
+Commit closure separately:
+
+```text
+docs(payroll): close phase 07 browser acceptance
+```
+
+Do not amend earlier commits.
+
+---
+
+# 25. Final report
+
+Report:
+
+```text
+1. starting commit
+2. branch
+3. provider architecture discovered
+4. provider examples reviewed
+5. Phase 07 brief path
+6. supported entity_payroll query intents
+7. intentionally unsupported intents
+8. files changed
+9. domain-truth safeguards
+10. context-menu integration mechanism
+11. acceptance probes
+12. check-types
+13. lint
+14. build
+15. design/architecture audit
+16. browser widths actually observed
+17. browser PASS / FAIL / NOT VERIFIED matrix
+18. contract commit
+19. implementation commit
+20. correction commit if any
+21. browser closure commit
+22. working-tree state
+```
+
+Also identify the next unresolved capability, but do not implement it.
+
+---
+
+# 26. Stop condition
+
+Phase 07 may freeze only when:
+
+```text
+contract written
+provider implemented through existing architecture
+domain truth preserved
+all non-browser gates green
+available browser probes completed honestly
+commits complete
+working tree clean
+```
+
+Then STOP.
+
+Do not begin Phase 08.
+
+Begin now with repository inspection of the existing 360 Query provider architecture.
