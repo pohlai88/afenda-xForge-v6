@@ -31,7 +31,7 @@ repairs it.
 
 |                    |                                                                                                 |
 | ------------------ | ----------------------------------------------------------------------------------------------- |
-| **Status**         | `OPEN_SHARED_DEBT`                                                                              |
+| **Status**         | `OPEN_SHARED_DEBT` — fix authored on an unmerged branch, see *Fix in flight*                     |
 | **Owner boundary** | `SHARED_PRIMITIVE` — `src/components/shared/PropertiesSheet.tsx`, `src/components/ui/sheet.tsx` |
 | **Discovered by**  | P02 Entity Payroll Workspace, automated browser keyboard acceptance, 2026-09-10                 |
 | **Affects**        | every consumer of `PropertiesSheet`                                                             |
@@ -67,6 +67,46 @@ the sheet a way to record and restore the element it was summoned from, the way
 `ObjectContextMenu` already does with `finalFocus` and the way `QueryPanel` does with its
 `returnFocus` ref. Doing it per consumer would put the same logic in four places and leave the fifth
 without it.
+
+### Fix in flight — authored outside the frozen line, 2026-09-10
+
+`e682393` *"fix(ux): Properties takes the focus it opens with"* on
+`payroll/phase10-properties-focus` rewrites `PropertiesSheet.tsx` from 89 lines to 216 and makes
+entry and restoration one lifecycle: focus is captured into a `restoreTo` ref at the instant it is
+taken, a callback ref covers the first open, and an effect covers reopens and every close. It
+carries a 289-line browser closure record, `.HITL/phase10-properties-sheet-focus-browser-closure.md`
+(`79a6771`) — 22 probes, all PASS, at 1440, 1024 and 390, measured with capturing
+`focusin`/`focusout` against `document.activeElement`.
+
+**This does not close SD-001 yet**, and the entry stays `OPEN_SHARED_DEBT`. Verified against this
+line of code: `e682393` is NOT an ancestor of `main` or `dev`. `PropertiesSheet.tsx` at `5f1370b` is
+still the 89-line version with zero occurrences of `restoreTo` or `takeFocus`, so the defect is live
+in the frozen line exactly as recorded. A debt cannot be closed in a tree against a commit that tree
+does not contain — the same rule the acceptance policy applies to everything else here.
+
+**Closes when** `payroll/phase12-command-palette-focus` (which contains `e682393`) merges to `main`,
+and the reproduction above is re-run against the merged tree and fails to reproduce. Then, and only
+then, this entry closes citing `e682393`.
+
+### Correction to the diagnosis above, from the author of the fix
+
+The original repair note suggested giving the sheet a way to record and restore its summoning
+element. That is what `e682393` does, so the direction was right. But one implication needs
+correcting, because it would mislead the next reader:
+
+**Declaring `finalFocus` on the sheet would not have fixed this.** Base UI restores focus on
+*unmount*, and this popup does not unmount — it stays in the document carrying `data-closed`. So a
+declared `finalFocus` has no moment to run. Corroborated independently in this tree, in code that
+predates the fix: `ObjectCommands.tsx:309` already records *"the popup does not unmount on close — it
+stays in the document carrying `data-closed` — so there is no unmount to hook either"*, and
+`QueryPanel.tsx:244` keeps its own `finalFocus` while noting it *"is Base UI's to run"* and adding an
+explicit restoration beside it rather than relying on it. Three surfaces have now reached the same
+conclusion separately.
+
+The absence of `finalFocus` on `SheetContent` was reported accurately — it is genuinely not there at
+`5f1370b` — but it was the wrong thing to point at. Restoration had to become an explicit effect
+keyed on `open`. That is the durable lesson, and it is why this correction is recorded rather than
+quietly edited away.
 
 ---
 

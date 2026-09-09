@@ -799,6 +799,18 @@ afenda_payroll_architecture:
           permitted to put down, then re-bind. The capability survives in the merge; only its P02
           binding was dropped.
 
+      recoverability_correction:
+        recorded_on: '2026-09-10'
+        claim_corrected: >
+          The deleted branch tips were reported as "recoverable", which overstated the safety. Both
+          worktrees — C:/JackProject/afenda-xForge-v6 and C:/JackProject/afenda-xForge-v6-dev —
+          resolve against ONE `.git` object store. The tips 5b889f1, b6d6146 and 0050bc4 do resolve
+          locally, and `entity-workspace.tsx` does recover from 2341199, but that is a single disk,
+          not redundancy. On GitHub those objects are now unreferenced and subject to collection.
+        consequence: >
+          Anything named here as "recoverable at <sha>" is recoverable only while this machine's
+          object store survives. Treat it as a pointer, never as a backup.
+
       p02_page_conflict:
         file: 'src/app/(pages)/payroll/entities/[entityId]/page.tsx'
         resolved_to: 'dev — the frozen P02 implementation'
