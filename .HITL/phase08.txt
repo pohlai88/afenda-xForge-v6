@@ -1,0 +1,636 @@
+Continue Afenda frontend development with **Phase 08 only: 360 Query focus handoff**.
+
+## Starting authority
+
+```text
+Phase 07 browser closure:
+8995222
+
+expected branch:
+payroll/phase08-query-focus
+
+working tree:
+clean
+```
+
+Phase 07 is frozen.
+
+Do not amend or reopen Phase 07.
+
+The defect discovered during Phase 07 browser QA is:
+
+```text
+When "Ask about this" is invoked through keyboard contextual commands,
+the 360 Query panel opens but keyboard focus remains behind the panel
+instead of entering the query panel's filter/input control.
+```
+
+This was reproduced on:
+
+```text
+entity_payroll provider
+existing payroll_run provider
+```
+
+Therefore this is a **shared ObjectCommands / QueryPanel interaction defect**, not an `entity_payroll` defect.
+
+---
+
+# Mission
+
+Repair the shared focus handoff contract for 360 Query.
+
+The intended lifecycle is:
+
+```text
+invoke Ask about this
+        ↓
+open existing QueryPanel
+        ↓
+panel becomes visibly available
+        ↓
+focus enters the panel's intended first interactive control
+        ↓
+user operates query entirely by keyboard
+        ↓
+close / Escape
+        ↓
+focus returns to the element that invoked Ask about this
+```
+
+Do not change query semantics.
+
+Do not change providers.
+
+Do not add Payroll-specific focus code.
+
+---
+
+# 1. Validate baseline
+
+First prove:
+
+```text
+HEAD == 8995222
+branch == payroll/phase08-query-focus
+working tree == clean
+```
+
+If not, stop and report the contradiction.
+
+---
+
+# 2. Read existing authority
+
+Read:
+
+```text
+.HITL/phase07-entity-payroll-360-query.md
+.HITL/phase07-entity-payroll-360-query-browser-closure.md
+.architecture/ux/afenda-ui-ux-doctrine.yaml
+```
+
+Then inspect the actual shared implementation around:
+
+```text
+ObjectCommands
+openQuery
+query store
+QueryPanel
+panel input/filter
+context-menu invocation
+Shift+F10 invocation
+panel open/close lifecycle
+existing focus-management primitives
+```
+
+Also inspect the underlying Base UI/shadcn primitives before adding custom focus machinery.
+
+---
+
+# 3. Reproduce before editing
+
+Reproduce the defect on at least:
+
+```text
+one entity_payroll object
+one pre-existing payroll_run object
+```
+
+Use keyboard invocation:
+
+```text
+Shift+F10
+→ Ask about this
+```
+
+Record:
+
+```text
+focused element before invocation
+focused element after menu opens
+focused element after QueryPanel opens
+```
+
+Also test pointer/right-click invocation so we do not accidentally fix keyboard while breaking pointer behaviour.
+
+Do not rely on source inspection alone.
+
+---
+
+# 4. Write Phase 08 contract before implementation
+
+Create:
+
+```text
+.HITL/phase08-query-panel-focus-handoff.md
+```
+
+Define:
+
+```text
+problem
+evidence
+shared ownership
+existing focus behaviour
+desired focus lifecycle
+invocation paths
+focus restoration law
+accessibility requirement
+implementation boundary
+acceptance probes
+explicit exclusions
+expected files
+frozen systems
+stop condition
+```
+
+The contract must state explicitly:
+
+```text
+This is a shared 360 Query interaction correction.
+It is not a Payroll-specific feature.
+```
+
+---
+
+# 5. Ownership decision
+
+Find the lowest correct shared layer that knows both:
+
+```text
+the query panel has opened
+and
+which element should receive initial focus
+```
+
+Prefer existing primitive capabilities before writing imperative DOM focus code.
+
+Investigate whether the current panel/dialog/sheet primitive already supports:
+
+```text
+initial focus
+auto focus
+onOpenAutoFocus
+focus trap
+focus restoration
+```
+
+using the actual Base UI primitive/API in this repository.
+
+Do not assume Radix APIs exist.
+
+Do not introduce Radix.
+
+---
+
+# 6. Critical architecture rule
+
+Do NOT fix this inside:
+
+```text
+entity_payroll provider
+payRunQueryProvider
+settlementQueryProvider
+payroll entity page
+payroll run page
+ObjectCommands branch for a specific object type
+```
+
+Provider code should remain unaware of focus.
+
+The bug must be solved once for all providers.
+
+---
+
+# 7. Preserve the query architecture
+
+Do not redesign:
+
+```text
+QueryProvider
+queryProviderFor()
+query store payload
+server query actions
+query modes
+FindResult
+AuditEvent
+```
+
+unless a tiny shared focus-related extension is genuinely necessary and proven by inspection.
+
+Do not add:
+
+```text
+new query mode
+new provider interface fields
+Payroll-specific callbacks
+provider-specific focus selectors
+```
+
+merely to move focus.
+
+---
+
+# 8. Desired initial focus
+
+Determine the QueryPanel's canonical first working control from the rendered/shared implementation.
+
+Likely this is the query filter/search/input, but **verify it**.
+
+The target must be:
+
+```text
+visible
+enabled
+keyboard-operable
+appropriate as the first action
+stable across query providers
+```
+
+Do not focus a decorative heading or panel container merely to satisfy a focus check.
+
+---
+
+# 9. Focus timing
+
+The fix must account for the fact that:
+
+```text
+openQuery()
+```
+
+updates state before the panel/input may exist in the DOM.
+
+Do not rely on brittle arbitrary timing such as:
+
+```text
+setTimeout(..., 100)
+```
+
+unless the repository's existing primitive explicitly requires such scheduling and no deterministic lifecycle exists.
+
+Prefer the component/open lifecycle that knows when the target is mounted.
+
+---
+
+# 10. Focus restoration
+
+When the QueryPanel closes:
+
+```text
+Escape
+close control
+other normal close mechanism
+```
+
+focus should return to the originating control/object context when the existing interaction architecture can identify it.
+
+Do not force focus to:
+
+```text
+document.body
+page root
+arbitrary first button
+```
+
+If the existing Base UI primitive already restores focus correctly, preserve it.
+
+Do not replace working restoration merely to fix entry focus.
+
+---
+
+# 11. Invocation parity
+
+Prove equivalent behaviour for:
+
+```text
+right-click → Ask about this
+Shift+F10 → Ask about this
+```
+
+If another existing global invocation path opens the same QueryPanel, verify it is not regressed.
+
+The focus contract belongs to the opened QueryPanel, not to one input modality.
+
+---
+
+# 12. Properties and contextual command grammar stay frozen
+
+Do not alter:
+
+```text
+Properties last
+Audit availability
+Ask about this visibility
+provider lookup logic
+context menu ordering
+FIND registration
+```
+
+Phase 08 changes focus behaviour only.
+
+---
+
+# 13. Accessibility requirements
+
+The corrected interaction must satisfy:
+
+```text
+focus is visibly located
+keyboard user does not remain behind the newly opened panel
+Tab proceeds through the QueryPanel logically
+Shift+Tab remains contained/appropriate according to the existing primitive
+Escape closes according to existing behaviour
+closing restores meaningful focus
+screen-reader semantics are not weakened
+```
+
+Do not add custom keyboard interception where the underlying primitive already supplies it.
+
+---
+
+# 14. Responsive contract
+
+This is not primarily a layout phase, but verify that focus behaviour remains correct at:
+
+```text
+1440
+1024
+390
+```
+
+Use actual observable viewport widths.
+
+If iframe sizing is required, record the iframe's actual dimensions.
+
+Do not touch the unrelated `/payroll` 390px card clipping.
+
+---
+
+# 15. Known unrelated server
+
+Do not use the existing server on:
+
+```text
+:3007
+```
+
+It belongs to another working tree/commit and is invalid QA evidence.
+
+For browser QA:
+
+```text
+start a server from this exact branch
+use a known distinct port
+confirm it serves the current tree
+stop it immediately after QA
+```
+
+Do not terminate `:3007`.
+
+---
+
+# 16. Expected diff
+
+The implementation should be very narrow.
+
+Likely affected areas:
+
+```text
+shared QueryPanel / query surface
+possibly shared invocation/focus lifecycle
+Phase 08 HITL record
+browser closure record
+```
+
+A diff touching providers or Payroll domain files is a warning sign.
+
+---
+
+# 17. Acceptance probes
+
+Prove all of the following.
+
+### P1 — baseline reproduction
+
+Before fix, demonstrate the keyboard focus remains behind the QueryPanel.
+
+### P2 — entity keyboard invocation
+
+On an `entity_payroll` object:
+
+```text
+Shift+F10
+→ Ask about this
+```
+
+QueryPanel opens and its intended input/control owns focus.
+
+### P3 — pay-run keyboard invocation
+
+Repeat on an existing `payroll_run` provider.
+
+Same result.
+
+This proves the solution is shared.
+
+### P4 — right-click invocation
+
+Right-click → Ask about this.
+
+QueryPanel opens and focus enters the intended control.
+
+### P5 — immediate typing
+
+After opening QueryPanel, type without clicking.
+
+Characters must go to the intended query control.
+
+### P6 — Tab order
+
+Tab proceeds through QueryPanel controls in logical order.
+
+### P7 — Escape
+
+Escape closes the panel according to the existing interaction contract.
+
+### P8 — focus restoration
+
+After closing, focus returns to the meaningful invocation context.
+
+### P9 — provider independence
+
+Test at least two different providers.
+
+No provider-specific focus code exists.
+
+### P10 — unavailable query
+
+An object without a provider still does not expose Ask about this.
+
+Focus fix must not alter capability detection.
+
+### P11 — 1440
+
+Shared focus lifecycle works.
+
+### P12 — 1024
+
+Shared focus lifecycle works.
+
+### P13 — 390
+
+Shared focus lifecycle works.
+
+### P14 — no query regression
+
+Existing suggestions/results continue to render and execute.
+
+### P15 — Properties unaffected
+
+Properties remains available and retains its existing focus behaviour.
+
+---
+
+# 18. Browser evidence
+
+Classify each browser probe only:
+
+```text
+PASS
+FAIL
+NOT VERIFIED
+```
+
+PASS means directly observed.
+
+Do not infer PASS from code.
+
+The previous QA proved trusted Shift+F10/right-click events can be delivered in this environment, so attempt them normally.
+
+---
+
+# 19. Validation gates
+
+After implementation run:
+
+```bash
+pnpm check-types
+pnpm lint
+pnpm build
+```
+
+Also run the existing design-system audit.
+
+If another relevant architecture audit exists, run it.
+
+Do not invent a test framework.
+
+---
+
+# 20. Defect discipline
+
+If fixing focus exposes another unrelated issue:
+
+```text
+record it
+classify ownership
+do not fix it
+```
+
+unless it directly prevents Phase 08 from satisfying its contract.
+
+No opportunistic UI cleanup.
+
+---
+
+# 21. Commit structure
+
+Prefer:
+
+```text
+docs(ux): define phase 08 query focus handoff
+fix(query): hand focus to 360 query panel on open
+docs(ux): close phase 08 browser acceptance
+```
+
+If no separate browser record is customary or necessary, follow the established Phase 07 convention instead.
+
+Do not amend Phase 07 commits.
+
+---
+
+# 22. Final report
+
+Report:
+
+```text
+1. starting commit
+2. branch
+3. baseline defect reproduction
+4. shared owning layer
+5. primitive/focus API discovered
+6. Phase 08 brief
+7. implementation files
+8. exact focus lifecycle after fix
+9. provider/domain files confirmed untouched
+10. browser probe matrix
+11. actual viewport widths
+12. check-types
+13. lint
+14. build
+15. design audit
+16. contract commit
+17. implementation commit
+18. correction commit if any
+19. browser closure commit
+20. working-tree state
+```
+
+Then identify—but do not implement—the next unresolved capability.
+
+---
+
+# 23. Stop condition
+
+Phase 08 may freeze when:
+
+```text
+shared focus defect reproduced
+contract committed
+shared fix implemented
+entity_payroll and existing provider both prove it
+keyboard and pointer paths pass
+focus restoration passes
+responsive probes pass
+gates green
+browser evidence recorded honestly
+working tree clean
+```
+
+STOP afterward.
+
+Do not begin Phase 09.
+
+Begin now by validating `8995222`, reading the shared QueryPanel implementation, and reproducing the focus defect before editing.
