@@ -1,0 +1,1033 @@
+Continue Afenda frontend development with **Phase 11 only: shared modal focus containment**.
+
+# Authoritative starting state
+
+```text
+Phase 10 browser closure:
+79a6771
+
+expected branch:
+payroll/phase11-modal-focus-containment
+```
+
+Phase 10 is frozen.
+
+Do not amend, squash, rewrite, or reopen Phase 10.
+
+Known unrelated untracked files include:
+
+```text
+.HITL/step03.txt
+.HITL/step05.txt
+.HITL/step06.txt
+```
+
+and possibly other `.HITL/step*.txt` files created outside this programme.
+
+They are not Phase 11 inputs.
+
+Do not:
+
+```text
+edit
+delete
+rename
+stage
+interpret
+```
+
+them.
+
+If there are unexpected TRACKED changes, stop and report the contradiction.
+
+---
+
+# Phase 11 problem
+
+Phase 10 directly proved:
+
+```text
+PropertiesSheet opens with focus correctly inside the modal
+BUT
+Tab traversal can reach Base UI's own focus guard and then escape
+to page content behind the modal.
+```
+
+The same containment failure was directly reproduced on the existing:
+
+```text
+Command Palette
+```
+
+which Phase 10 never modified.
+
+Therefore:
+
+```text
+This is not a PropertiesSheet defect.
+This is not an Alt+Enter defect.
+This is not a Payroll defect.
+```
+
+It is a shared modal/focus-containment problem.
+
+Phase 11 must identify the lowest shared owning layer and repair modal focus containment once.
+
+---
+
+# 1. Validate baseline
+
+Before editing establish:
+
+```text
+HEAD == 79a6771
+branch == payroll/phase11-modal-focus-containment
+tracked working tree == clean
+```
+
+Record unrelated untracked `.HITL/step*.txt` files and leave them untouched.
+
+---
+
+# 2. Read authority
+
+Read:
+
+```text
+.architecture/ux/afenda-ui-ux-doctrine.yaml
+.HITL/phase10-properties-sheet-focus.md
+Phase 10 browser closure record
+.HITL/phase09-properties-shortcut.md
+```
+
+Then inspect the actual shared primitives involved in:
+
+```text
+PropertiesSheet
+Command Palette
+Dialog
+Sheet
+Modal
+Popup
+Portal
+Backdrop
+focus guards
+focus scope
+focus trap
+```
+
+Locate the project's shadcn/Base UI wrappers rather than assuming filenames.
+
+Search specifically for:
+
+```text
+Dialog.Root
+Dialog.Popup
+Dialog.Portal
+Dialog.Backdrop
+modal
+trapFocus
+focusTrap
+focus guard
+data-base-ui-focus-guard
+initialFocus
+finalFocus
+tabIndex
+onOpenChange
+```
+
+The installed Base UI version observed in Phase 10 is:
+
+```text
+1.6.0
+```
+
+Verify rather than merely repeat it.
+
+Do not introduce Radix.
+
+---
+
+# 3. Reproduce before editing
+
+Use actual DOM focus instrumentation.
+
+Attach or use equivalent observation for:
+
+```text
+focusin
+focusout
+document.activeElement
+```
+
+Reproduce independently on at least:
+
+```text
+A. PropertiesSheet
+B. Command Palette
+```
+
+Use a cold page load.
+
+For each record:
+
+```text
+1. element focused when modal opens
+2. complete forward Tab sequence
+3. element immediately before the focus guard
+4. focus guard reached
+5. element focused after another Tab
+6. whether that element is inside or behind the modal
+```
+
+Then repeat in reverse with:
+
+```text
+Shift+Tab
+```
+
+Do not rely on screenshots alone.
+
+---
+
+# 4. Establish modal truth
+
+Before coding answer:
+
+```text
+A. Are both surfaces actually configured as modal?
+B. Which primitive inserts the focus guards?
+C. Are the guards siblings, descendants, or portal-level sentinels?
+D. What component is expected to loop focus?
+E. Does the project wrapper disable or bypass Base UI containment?
+F. Does portal placement affect containment?
+G. Does the failure happen in both directions?
+H. Does it happen only after particular controls?
+I. Does it reproduce on first and subsequent opens?
+J. Is the same behaviour present in another modal surface?
+```
+
+Do not turn the phrase "focus guard bug" into the answer before proving its mechanism.
+
+---
+
+# 5. Optional third control surface
+
+If another existing genuinely modal Afenda surface can be tested cheaply, use it as a third control.
+
+Examples may include an existing:
+
+```text
+dialog
+sheet
+confirmation modal
+```
+
+but only use a real existing surface.
+
+Do not build a fixture just for Phase 11 unless absolutely necessary.
+
+Classify it:
+
+```text
+same defect
+or
+not affected
+```
+
+This may help identify whether ownership is:
+
+```text
+Base UI generally
+project wrapper
+specific composition
+specific modal configuration
+```
+
+---
+
+# 6. Write Phase 11 contract before implementation
+
+Create:
+
+```text
+.HITL/phase11-modal-focus-containment.md
+```
+
+The contract must record:
+
+```text
+problem
+measured browser evidence
+affected shared surfaces
+unaffected control surfaces if any
+Base UI behaviour
+shared ownership
+focus-guard mechanics
+forward traversal law
+reverse traversal law
+modal containment law
+entry-focus interaction
+restoration interaction
+accessibility requirement
+responsive contract
+acceptance probes
+explicit exclusions
+expected files
+frozen systems
+stop condition
+```
+
+State explicitly:
+
+```text
+Phase 11 repairs shared modal keyboard containment.
+
+It is not a Properties feature.
+It is not a Command Palette feature.
+It is not a Payroll feature.
+```
+
+---
+
+# 7. Required interaction law
+
+While an Afenda modal is OPEN:
+
+```text
+keyboard focus MUST remain inside that modal's valid focus scope
+```
+
+until the user explicitly closes/dismisses it through a permitted mechanism.
+
+Forward traversal:
+
+```text
+last valid focus target
+→ Tab
+→ first valid focus target
+```
+
+or the equivalent behaviour supplied by the actual Base UI primitive.
+
+Reverse traversal:
+
+```text
+first valid focus target
+→ Shift+Tab
+→ last valid focus target
+```
+
+or equivalent primitive behaviour.
+
+The exact first/last target depends on the surface.
+
+Do not hard-code control names globally.
+
+---
+
+# 8. Guard law
+
+A Base UI focus guard is infrastructure.
+
+It must never become an observable endpoint that allows the user to continue into page content behind an active modal.
+
+The acceptance criterion is NOT:
+
+```text
+focus guard never receives focus
+```
+
+because a sentinel may legitimately receive transient internal focus.
+
+The actual law is:
+
+```text
+focus MUST NOT escape the active modal through the focus guard.
+```
+
+Measure final focus ownership after traversal.
+
+---
+
+# 9. Find the lowest shared owner
+
+Prefer the lowest layer whose correction naturally fixes both:
+
+```text
+PropertiesSheet
+Command Palette
+```
+
+Possible ownership levels to investigate include:
+
+```text
+shared Dialog wrapper
+shared Sheet wrapper
+shared modal composition
+shared portal/focus scope configuration
+```
+
+Do not force one in advance.
+
+If Properties and Command Palette use different wrappers but share one erroneous composition law, determine whether the smallest safe correction belongs in:
+
+```text
+one shared primitive
+or
+two existing primitive compositions
+```
+
+Do not create a new abstraction merely to claim one-file ownership.
+
+---
+
+# 10. Base UI first
+
+Understand what Base UI 1.6.0 guarantees.
+
+Inspect the actual package types/source/docs available in node_modules where useful.
+
+Determine:
+
+```text
+what enables modal trapping
+what role focus guards play
+whether modal is default
+whether popup/portal placement matters
+whether initialFocus changes trapping
+whether finalFocus changes trapping
+whether a FocusManager/FocusScope mechanism exists
+```
+
+Do not use API names from Radix.
+
+Do not copy examples from another primitive library.
+
+---
+
+# 11. Preserve Phase 10 entry focus
+
+Phase 10 fixed Properties entry focus.
+
+After Phase 11:
+
+```text
+PropertiesSheet first open
+PropertiesSheet subsequent open
+Alt+Enter
+right-click
+Shift+F10
+```
+
+must still enter Properties correctly.
+
+Do not remove the Phase 10 focus mechanism merely because containment is now being corrected.
+
+Entry and containment are distinct responsibilities.
+
+---
+
+# 12. Preserve focus restoration
+
+When a modal closes:
+
+```text
+Escape
+close control
+normal dismissal
+```
+
+focus restoration must remain meaningful.
+
+Phase 11 must not fix trapping by breaking:
+
+```text
+final focus
+summoning-control restoration
+```
+
+Explicitly test restoration on both Properties and Command Palette.
+
+---
+
+# 13. Do not add a global document Tab trap
+
+Do NOT implement a blanket:
+
+```text
+document.addEventListener('keydown', ...)
+```
+
+that manually cycles Tab across every modal.
+
+That would create a parallel focus-management system competing with Base UI.
+
+Only use custom keyboard handling if repository and primitive evidence proves the shared Base UI composition cannot satisfy the required contract, and document why.
+
+Default expectation:
+
+```text
+fix primitive configuration/composition
+not reimplement focus trapping
+```
+
+---
+
+# 14. No arbitrary timing
+
+Do not use:
+
+```text
+setTimeout
+requestAnimationFrame loops
+sleep
+polling
+```
+
+to keep focus inside.
+
+Containment is structural, not temporal.
+
+Phase 10 legitimately used mount/open lifecycle for entry focus.
+
+Phase 11 should repair containment through the actual modal/focus-scope mechanism.
+
+---
+
+# 15. Inert/background behaviour
+
+While the modal is active, evaluate whether background content is correctly:
+
+```text
+non-interactive
+aria-hidden/inert as supplied by primitive
+outside the active focus order
+```
+
+Do not broaden Phase 11 into a full accessibility rewrite.
+
+But if focus escaping is caused by incorrect modal/non-modal configuration, background interaction is relevant evidence.
+
+---
+
+# 16. Pointer behaviour
+
+Do not break:
+
+```text
+backdrop dismissal where currently permitted
+outside click behaviour
+right-click invocation
+normal pointer interaction inside the modal
+```
+
+Focus containment should not imply a new dismissal policy.
+
+Preserve each existing surface's intended close behaviour.
+
+---
+
+# 17. Escape behaviour
+
+For both shared control surfaces verify:
+
+```text
+Escape closes once
+focus restores meaningfully
+no ghost-open state remains interactive
+```
+
+Do not judge closure only through `[role=dialog]`.
+
+Phase 09/10 proved closed Base UI popups may remain temporarily in the DOM during transition.
+
+Use:
+
+```text
+data-open/data-closed
+actual interactivity
+focus state
+```
+
+as appropriate.
+
+---
+
+# 18. Properties remains read-oriented
+
+Do not add controls merely to manufacture more tabbable targets.
+
+Properties may legitimately have very few interactive elements.
+
+The trap must work even when the only meaningful target is:
+
+```text
+popup/container
+close control
+```
+
+according to the shared primitive.
+
+---
+
+# 19. Command Palette remains unchanged semantically
+
+Do not change:
+
+```text
+command discovery
+filter behaviour
+result ranking
+command execution
+⌘K shortcut
+```
+
+Phase 11 touches only focus containment unless a tiny primitive-level mechanical change is required.
+
+The QueryPanel is a separate non-modal surface and must not accidentally become trapped.
+
+---
+
+# 20. QueryPanel regression is mandatory
+
+Because Phase 08 intentionally operates a:
+
+```text
+non-modal QueryPanel
+```
+
+verify that Phase 11 does NOT globally trap focus in overlays/panels that are not modal.
+
+Test:
+
+```text
+Shift+F10
+→ Ask about this
+```
+
+and confirm the established Phase 08 behaviour remains correct.
+
+Do not turn every portal/popup into a modal.
+
+---
+
+# 21. Domain systems frozen
+
+Do not modify:
+
+```text
+src/views/payroll/**
+src/app/server/**
+query providers
+payroll objects
+entity identity
+workspace customisation
+workspace persistence
+```
+
+unless a compile-only mechanical consequence is unavoidable.
+
+Expected domain diff:
+
+```text
+zero
+```
+
+---
+
+# 22. Phase 09 shortcut frozen
+
+Do not change:
+
+```text
+Alt+Enter eligibility
+editable-target guard
+properties-store capability law
+ObjectContext capability determination
+shortcut modifier matching
+```
+
+unless the primitive fix reveals a direct regression requiring the smallest correction.
+
+---
+
+# 23. Expected runtime diff
+
+Expected runtime center should be within shared UI primitives/compositions.
+
+Likely:
+
+```text
+shared dialog/sheet/modal primitive
+possibly PropertiesSheet if its composition is uniquely wrong
+possibly Command Palette if its composition is independently wrong
+```
+
+Do not assume exact files before inspection.
+
+A broad application/domain diff is a warning sign.
+
+---
+
+# 24. Acceptance probes
+
+At minimum prove:
+
+## P1 — Properties baseline escape
+
+Before editing:
+
+```text
+open Properties
+Tab through modal
+focus escapes behind it
+```
+
+PASS means the defect was directly reproduced.
+
+## P2 — Command Palette baseline escape
+
+Before editing:
+
+```text
+open Command Palette
+Tab through modal
+focus escapes behind it
+```
+
+Direct observation.
+
+## P3 — Properties forward containment
+
+After fix:
+
+```text
+Tab repeatedly
+```
+
+focus remains inside Properties.
+
+## P4 — Properties reverse containment
+
+```text
+Shift+Tab repeatedly
+```
+
+focus remains inside Properties.
+
+## P5 — Command Palette forward containment
+
+Tab never escapes to page content.
+
+## P6 — Command Palette reverse containment
+
+Shift+Tab never escapes.
+
+## P7 — focus guard
+
+If `data-base-ui-focus-guard` receives transient focus, the next resulting focus remains inside the modal.
+
+## P8 — Properties entry
+
+First open still lands inside Properties.
+
+## P9 — Properties subsequent entry
+
+Second/subsequent open remains correct.
+
+## P10 — Alt+Enter
+
+Alt+Enter → Properties still passes.
+
+## P11 — right-click
+
+right-click → Properties still passes.
+
+## P12 — Shift+F10
+
+Shift+F10 → Properties still passes.
+
+## P13 — Properties Escape
+
+Escape closes and restores focus.
+
+## P14 — Command Palette opening
+
+Existing shortcut opens it as before.
+
+## P15 — Command Palette Escape
+
+Escape closes and restores meaningful focus.
+
+## P16 — QueryPanel non-modal regression
+
+Ask about this opens and focuses QueryPanel as Phase 08 defined.
+
+No unintended trapping.
+
+## P17 — no-modal background keyboard access
+
+While Properties is open, page controls behind it cannot receive focus through normal Tab traversal.
+
+## P18 — pointer interactions
+
+Modal controls continue working by pointer.
+
+## P19 — entity truth
+
+Properties for `ent-feed` remains truthful.
+
+No domain rendering regression.
+
+## P20 — payroll-run Properties
+
+Run inspector still identifies the run correctly.
+
+## P21 — 1440
+
+No layout/focus regression.
+
+## P22 — 1024
+
+No layout/focus regression.
+
+## P23 — 390 compact layout
+
+Modal remains usable and trapped appropriately.
+
+Label iframe testing accurately.
+
+---
+
+# 25. First vs subsequent opens
+
+Repeat containment probes on:
+
+```text
+first open after cold page load
+second open
+subsequent open
+```
+
+Phase 10 showed lifecycle differences can hide during HMR or warm state.
+
+Do not validate only after Hot Module Replacement.
+
+Cold-load evidence is required.
+
+---
+
+# 26. Browser evidence law
+
+Classify every browser probe as:
+
+```text
+PASS
+FAIL
+NOT VERIFIED
+```
+
+For focus claims, record DOM evidence using:
+
+```text
+document.activeElement
+focusin
+focusout
+containment within active modal
+data-open/data-closed where relevant
+```
+
+Screenshots alone are insufficient.
+
+---
+
+# 27. HMR evidence is not baseline evidence
+
+Do not establish baseline immediately after changing source/HMR.
+
+For final acceptance:
+
+```text
+cold load the tested route
+open the modal fresh
+run the focus sequence
+```
+
+Phase 10 specifically proved why this matters.
+
+Record whether the page was cold-loaded.
+
+---
+
+# 28. Dev-server discipline
+
+Do not use an old server without proving:
+
+```text
+repository
+branch
+HEAD
+```
+
+Start the current branch on a dedicated known port for browser QA.
+
+Do not interfere with unrelated servers.
+
+Stop the Phase 11 server immediately after acceptance testing.
+
+If stale `.next` output creates false behaviour, regenerate it and record this as environment cleanup, not a product fix.
+
+---
+
+# 29. Validation gates
+
+After implementation run:
+
+```bash
+pnpm check-types
+pnpm lint
+pnpm build
+```
+
+Also run the existing:
+
+```text
+design-system audit
+```
+
+Do not claim an architecture audit unless one exists.
+
+---
+
+# 30. Design-system implication
+
+Because this defect affects multiple shared modal surfaces, determine whether Phase 11 changes a design-system primitive or establishes a new invariant that future modals must inherit.
+
+If yes, record that invariant in the Phase 11 HITL document.
+
+Do not build a separate design-language programme.
+
+A concise law is sufficient, e.g.:
+
+```text
+All modal Afenda surfaces MUST contain keyboard focus while open
+and MUST restore meaningful focus when closed.
+```
+
+Only record what the implementation actually guarantees.
+
+---
+
+# 31. Defect discipline
+
+If testing uncovers another issue:
+
+Report:
+
+```text
+probe
+observed
+expected
+owning layer
+whether caused by Phase 11
+whether it blocks containment
+```
+
+Only fix it if necessary for this phase.
+
+Otherwise record it as the next unresolved capability.
+
+No opportunistic cleanup.
+
+---
+
+# 32. Commit structure
+
+Prefer:
+
+```text
+docs(ux): define phase 11 modal focus containment
+fix(ui): contain focus within shared modal surfaces
+docs(ux): close phase 11 browser acceptance
+```
+
+If the implementation genuinely requires separate primitive corrections, keep them in one coherent Phase 11 runtime commit unless repository evidence strongly justifies separation.
+
+Do not amend frozen commits.
+
+---
+
+# 33. Final report
+
+Report:
+
+```text
+1. starting commit
+2. branch
+3. baseline Properties escape
+4. baseline Command Palette escape
+5. Base UI focus-containment mechanism discovered
+6. exact root cause
+7. shared owning layer
+8. Phase 11 brief path
+9. runtime files changed
+10. behaviour before
+11. behaviour after
+12. forward Tab result
+13. reverse Shift+Tab result
+14. focus-guard behaviour
+15. Properties entry regression
+16. Properties restoration
+17. Command Palette regression
+18. QueryPanel non-modal regression
+19. domain files confirmed untouched
+20. probe-by-probe PASS / FAIL / NOT VERIFIED
+21. actual viewport dimensions
+22. cold-load evidence
+23. check-types
+24. lint
+25. build
+26. design-system audit
+27. contract commit
+28. implementation commit
+29. correction commit if any
+30. browser closure commit
+31. working-tree state including unrelated .HITL/step*.txt
+```
+
+Identify the next unresolved capability, but do not implement it.
+
+---
+
+# 34. Stop condition
+
+Phase 11 may freeze only when:
+
+```text
+baseline escape reproduced on at least two existing modal surfaces
+root cause proven
+contract committed
+shared containment corrected
+Properties forward traversal contained
+Properties reverse traversal contained
+Command Palette forward traversal contained
+Command Palette reverse traversal contained
+focus entry remains correct
+focus restoration remains correct
+Alt+Enter remains correct
+right-click remains correct
+Shift+F10 remains correct
+QueryPanel remains intentionally non-modal
+cold-load browser evidence passes
+gates green
+tracked working tree clean
+```
+
+Unrelated `.HITL/step*.txt` files may remain untouched.
+
+Then STOP.
+
+Do not begin Phase 12.
+
+Begin now by validating `79a6771`, cold-loading Properties and Command Palette, and measuring exactly how focus exits each modal before editing.
