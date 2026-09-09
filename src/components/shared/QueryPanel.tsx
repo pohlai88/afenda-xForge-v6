@@ -2,6 +2,7 @@
 
 // React Imports
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { RefObject } from 'react'
 
 // Next Imports
 import Link from 'next/link'
@@ -45,10 +46,7 @@ type AnswerStatus = 'idle' | 'loading' | 'done' | 'error'
  * whole contract — wrapping the result to carry a failure would push this component's lifecycle
  * into every domain that implements one.
  */
-type SuggestionState =
-  | { status: 'loading' }
-  | { status: 'ready'; questions: QuerySuggestion[] }
-  | { status: 'error' }
+type SuggestionState = { status: 'loading' } | { status: 'ready'; questions: QuerySuggestion[] } | { status: 'error' }
 
 /**
  * The doctrine's own words for the three kinds of question, and the only place they are named.
@@ -76,6 +74,32 @@ const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]'
  */
 const focusTarget = (element: HTMLElement | null) =>
   element?.isConnected ? element.closest<HTMLElement>(FOCUSABLE) : null
+
+/**
+ * Puts focus in the panel's filter when the panel opens.
+ *
+ * `initialFocus` below says the same thing to the primitive and is left in place, because it is the
+ * declaration of what this panel wants and removing it would hide that the primitive is expected to
+ * do this. Measured, it does not: opening the panel from a context menu — by pointer or by keyboard,
+ * on any provider — produces no focus event at all, and the reader is left on a menu item inside a
+ * popup that has already closed. This is the guarantee.
+ *
+ * It renders *inside* the popup, which is the whole point, and it is the same shape as
+ * `KeyboardFocusHandoff` in `ObjectCommands` for the same reason. The popup is absent from the
+ * document between invocations, so mounting is the moment the panel exists — there is nothing to
+ * poll for, no frame to chase, and nothing to cancel, because closing unmounts this with it.
+ *
+ * The filter is the target rather than the popup: it is the first thing a reader would use, it is
+ * the same control on every provider, and focusing a container instead would satisfy a focus check
+ * while leaving typing to go nowhere.
+ */
+const FocusHandoff = ({ filter }: { filter: RefObject<HTMLInputElement | null> }) => {
+  useEffect(() => {
+    filter.current?.focus({ preventScroll: true })
+  }, [filter])
+
+  return null
+}
 
 /** Stable list identity. Objects are type + id; the other kinds are their key. */
 const keyOf = (result: FindResult) =>
@@ -525,6 +549,8 @@ const QueryPanel = () => {
               )
             ) : null}
           </div>
+
+          <FocusHandoff filter={inputRef} />
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
