@@ -14,9 +14,10 @@
 
 import type { QueryProvider } from '@/types/common/query-types'
 
-import { payRunQueryProvider, settlementQueryProvider } from '@/views/payroll/payroll-query'
+import { entityPayrollQueryProvider, payRunQueryProvider, settlementQueryProvider } from '@/views/payroll/payroll-query'
 
 const QUERY_PROVIDERS: Record<string, QueryProvider> = {
+  [entityPayrollQueryProvider.type]: entityPayrollQueryProvider,
   [payRunQueryProvider.type]: payRunQueryProvider,
   [settlementQueryProvider.type]: settlementQueryProvider
 }

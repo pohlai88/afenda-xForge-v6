@@ -20,6 +20,9 @@ import type { QueryAnswer, QueryProvider, QuerySuggestion } from '@/types/common
 
 // Action Imports
 import {
+  entityPayrollLatestRunExceptions,
+  entityPayrollQueryCapabilities,
+  entityPayrollRuns,
   payRunCalculationChanges,
   payRunEmployeesWithOpenExceptions,
   payRunQueryCapabilities,
@@ -169,5 +172,80 @@ export const settlementQueryProvider: QueryProvider = {
     }
 
     throw new Error(`Unknown settlement question: ${suggestionId}`)
+  }
+}
+
+/* -------------------------------------------------------------------------------------------- */
+/* Company payroll                                                                              */
+/* -------------------------------------------------------------------------------------------- */
+
+const ENTITY_RUNS = 'entity-pay-runs'
+const ENTITY_OPEN_EXCEPTIONS = 'entity-open-exceptions'
+
+/**
+ * A company's questions, both of them decided by what the company actually has.
+ *
+ * The subject carries a company and nothing else — no run, no period, no filter — because the
+ * workspace may be displaying an earlier run through `?run=` and this cannot know that. So every
+ * question here is answerable from the company alone, and anything that depends on which run is on
+ * screen belongs to the run's own provider, which already exists.
+ */
+const entityPayrollSuggestions = async (object: ObjectContext): Promise<QuerySuggestion[]> => {
+  const capabilities = await entityPayrollQueryCapabilities(object.id)
+  const questions: QuerySuggestion[] = []
+
+  if (capabilities.runs) {
+    questions.push({
+      id: ENTITY_RUNS,
+      mode: 'search',
+      label: 'Which pay runs has this company calculated?',
+      keywords: ['run', 'runs', 'history', 'period', 'periods', 'calculated', 'past', 'previous']
+    })
+  }
+
+  if (capabilities.openExceptions) {
+    questions.push({
+      id: ENTITY_OPEN_EXCEPTIONS,
+      mode: 'search',
+
+      // "On the latest run" is in the label because it is in the answer. A company is not a run,
+      // and a question that said only "open exceptions" would let a reader who selected an earlier
+      // period read this as being about the run in front of them.
+      label: 'Who is affected by open exceptions on the latest run?',
+      keywords: ['exception', 'blocker', 'blocking', 'outstanding', 'people', 'who', 'affected', 'latest']
+    })
+  }
+
+  return questions
+}
+
+/**
+ * A company's payroll, the object its own workspace is about.
+ *
+ * `modes` is search alone, and the two absences are the same ones Phase 06 argued for rather than
+ * new ones. Audit is absent because there is no entity-level audit trail — a company records no
+ * events of its own, only its runs do, and offering an audit control that reached into them would
+ * be answering a question about a run while claiming to answer one about a company. Predict is
+ * absent because this domain stores lifecycle facts and not forecasts.
+ *
+ * Neither the exclusion from a group total nor an inclusion in one is asked about here. Exclusion
+ * is provable and Properties already states it; inclusion needs an FX rate and a consolidation this
+ * path never runs, so a question about group standing could only be answered by half.
+ */
+export const entityPayrollQueryProvider: QueryProvider = {
+  type: 'entity_payroll',
+  modes: ['search'],
+  suggestions: entityPayrollSuggestions,
+
+  run: async (object: ObjectContext, suggestionId: string): Promise<QueryAnswer> => {
+    if (suggestionId === ENTITY_RUNS) {
+      return { kind: 'objects', items: resultsFromHits(await entityPayrollRuns(object.id)) }
+    }
+
+    if (suggestionId === ENTITY_OPEN_EXCEPTIONS) {
+      return { kind: 'objects', items: resultsFromHits(await entityPayrollLatestRunExceptions(object.id)) }
+    }
+
+    throw new Error(`Unknown company payroll question: ${suggestionId}`)
   }
 }
