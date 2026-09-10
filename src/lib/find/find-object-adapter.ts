@@ -12,7 +12,16 @@
  * teaches Find how to present and reopen one.
  */
 
-import { BanknoteIcon, Building2Icon, LandmarkIcon, UserIcon, WalletIcon, type LucideIcon } from 'lucide-react'
+import {
+  BanknoteIcon,
+  BriefcaseIcon,
+  Building2Icon,
+  LandmarkIcon,
+  MapPinIcon,
+  UserIcon,
+  WalletIcon,
+  type LucideIcon
+} from 'lucide-react'
 
 import type { FindTarget } from '@/types/common/find-types'
 import type { ObjectCommand, ObjectContext } from '@/types/common/object-context-types'
@@ -80,13 +89,39 @@ const FIND_OBJECT_TYPES: Record<string, FindObjectType> = {
     href: object => object.href ?? null
   },
 
-  // An employee is read on the run workspace its payroll belongs to, so the source resolves the
-  // address and this only passes it through. No command list: the employee commands a table offers
-  // close over a run row this adapter does not have, and inventing a second, thinner list for Find
-  // is exactly the duplication the object contract exists to prevent.
+  // An employee is read on their own HRM workspace. Until H01 existed the address came from a pay
+  // run, so somebody whose company had never run payroll could not be opened at all — the identity
+  // break the HRM domain was built to close. The href falls back to the canonical route rather than
+  // returning null, because a person is now addressable whatever the source knew about them.
+  //
+  // Still no command list: `employeeCommands` needs the department and whether the person has
+  // payroll history, and this adapter holds an `ObjectContext`, which carries identity and no
+  // domain fields. Inventing a second, thinner list here is the duplication the object contract
+  // exists to prevent.
   employee: {
     heading: 'People',
     icon: UserIcon,
+    href: object => object.href ?? `/hrm/people/${object.id}`
+  },
+
+  // Both are read on the organisation workspace, which resolves the address. Registered because an
+  // unregistered type is invisible to Find twice over — the favourite command is withheld and a
+  // recorded recent is dropped as unresolvable.
+  department: {
+    heading: 'Departments',
+    icon: Building2Icon,
+    href: object => object.href ?? null
+  },
+
+  position: {
+    heading: 'Positions',
+    icon: BriefcaseIcon,
+    href: object => object.href ?? null
+  },
+
+  work_location: {
+    heading: 'Locations',
+    icon: MapPinIcon,
     href: object => object.href ?? null
   },
 

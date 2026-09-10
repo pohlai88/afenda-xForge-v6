@@ -8,7 +8,7 @@
 
 // Type Imports
 import type { Money } from '@/types/common/primitive-types'
-import type { Department, Employee, PayFrequency, WorkLocation } from '@/types/hrm/employee-types'
+import type { Department, Employee, WorkLocation } from '@/types/hrm/employee-types'
 import type { PayRun, PayRunException, PayRunStatus, Payslip } from '@/types/payroll/pay-run-types'
 import type {
   AuditEvent,
@@ -77,12 +77,12 @@ export const isLocked = (status: PayRunStatus) => status === 'approved' || statu
  * How often a pay group is paid, in the words people use for it. 'biweekly' and 'semi_monthly'
  * are the pair everyone confuses, so both are spelled out rather than title-cased.
  */
-export const PAY_FREQUENCY_LABELS: Record<PayFrequency, string> = {
-  weekly: 'Weekly',
-  biweekly: 'Every two weeks',
-  semi_monthly: 'Twice a month',
-  monthly: 'Monthly'
-}
+/**
+ * Re-exported, not redefined. How often somebody is paid is a fact about the employee record,
+ * which HRM owns; this kept the only copy until HRM existed. Every existing payroll caller is
+ * unchanged.
+ */
+export { PAY_FREQUENCY_LABELS } from '@/utils/hrm-people'
 
 /* -------------------------------------------------------------------------------------------- */
 /* Per-employee status vocabularies                                                             */
@@ -128,14 +128,8 @@ export const PAYMENT_STATUS_STYLES: Record<EmployeePaymentStatus, string> = {
 /* Formatting                                                                                   */
 /* -------------------------------------------------------------------------------------------- */
 
-/** 'Yuki Tanaka' -> 'YT'. */
-export const initials = (name: string) =>
-  name
-    .split(' ')
-    .slice(0, 2)
-    .map(part => part[0] ?? '')
-    .join('')
-    .toUpperCase()
+/** Re-exported, not redefined. Turning a name into initials is not a payroll concept. */
+export { initials } from '@/utils/text'
 
 /** '+S$932.00' / '-S$103.00' / 'S$0.00'. The sign is the message, so it is never dropped. */
 export const formatSignedMoney = (money: Money): string => {

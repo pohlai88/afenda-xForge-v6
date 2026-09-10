@@ -35,6 +35,8 @@ import { db as mailDb } from '@/fake-db/apps/mail'
 import { db as userSettingsDb } from '@/fake-db/pages/user-settings'
 import { db as userProfileDb } from '@/fake-db/pages/user-profile'
 import { activeEmployees, departments, employees, locations } from '@/fake-db/hrm/employees'
+import { positions } from '@/fake-db/hrm/positions'
+import { employeeMovements } from '@/fake-db/hrm/movements'
 import { legalEntities } from '@/fake-db/hrm/entities'
 import { currentPayRun, latestRunFor, payRuns, payslips } from '@/fake-db/payroll/pay-runs'
 import { BUDGET_YEAR, budgetRates, fxRates } from '@/fake-db/payroll/fx-rates'
@@ -81,6 +83,19 @@ export const getActiveEmployees = async () => activeEmployees
 export const getDepartments = async () => departments
 
 export const getLocations = async () => locations
+
+export const getPositions = async () => positions
+
+export const getEmployeeMovements = async () => employeeMovements
+
+/**
+ * Which people have a payslip, and so have payroll history worth offering.
+ *
+ * A set of ids rather than the payslips themselves: HRM needs to know whether the command should
+ * appear, not what the person was paid. Handing the whole payroll result to an HR surface would
+ * put pay figures on a screen whose confidentiality boundary is still open.
+ */
+export const getEmployeesWithPayroll = async () => new Set(payslips.map(payslip => payslip.employeeId))
 
 // Payroll Group Actions
 export const getLegalEntities = async () => legalEntities

@@ -5,6 +5,7 @@ import type { ForwardRefExoticComponent, RefAttributes } from 'react'
 import {
   BanIcon,
   BanknoteIcon,
+  Building2Icon,
   CalendarIcon,
   CircleAlertIcon,
   ConstructionIcon,
@@ -95,6 +96,20 @@ export const searchData: SearchData[] = [
         name: 'Logistics Dashboard',
         key: 'dashboard.logistics',
         href: '/dashboard/logistics'
+      },
+      {
+        icon: UsersIcon,
+        name: 'People',
+        key: 'hrm',
+        href: '/hrm',
+        tags: ['people', 'hr', 'hrm', 'employee', 'staff', 'headcount', 'workforce', 'directory']
+      },
+      {
+        icon: Building2Icon,
+        name: 'Organisation',
+        key: 'hrm.organisation',
+        href: '/hrm/organisation',
+        tags: ['organisation', 'organization', 'department', 'position', 'location', 'reporting', 'structure', 'org']
       },
       {
         icon: BanknoteIcon,

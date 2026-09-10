@@ -44,6 +44,34 @@ const Field = ({ label, value }: PropertyField) => (
 )
 
 /**
+ * The element focus should come back to, which is not always the element focus was taken from.
+ *
+ * Properties is usually summoned from a menu item, and that item dies before the reader can be
+ * returned to it: closing the inspector also closes the menu, so restoring to the item wins focus
+ * for one frame and then loses it to `<body>` when the popup unmounts. Measured on
+ * `/payroll/entities/ent-sg` — focus reached the *Properties* item and fell to `BODY` ~500ms later,
+ * which is why SD-001 still reproduced after the restoration lifecycle was already correct.
+ *
+ * A popup's owner is reachable without knowing anything about Base UI: the popup labels itself with
+ * its trigger through `aria-labelledby`, and the trigger points back with `aria-controls`. Both are
+ * ARIA the menu has to emit anyway, so this resolves the durable target rather than the doomed one.
+ * An element outside any popup is already durable and is returned untouched.
+ */
+const durableFocusTarget = (el: HTMLElement | null): HTMLElement | null => {
+  const popup = el?.closest<HTMLElement>('[role="menu"]')
+
+  if (!popup) return el
+
+  const labelledBy = popup.getAttribute('aria-labelledby')
+
+  const owner =
+    (labelledBy && document.getElementById(labelledBy)) ||
+    (popup.id && document.querySelector<HTMLElement>(`[aria-controls="${CSS.escape(popup.id)}"]`))
+
+  return owner instanceof HTMLElement ? owner : el
+}
+
+/**
  * The canonical read-oriented object inspector: "what exactly is this object?".
  *
  * Properties is not Edit. It states what the object is and never offers to change it, which
@@ -87,7 +115,9 @@ const PropertiesSheet = ({ object, typeLabel, sections, open, onOpenChange }: Pr
   const takeFocus = useCallback((node: HTMLDivElement | null) => {
     if (!node || node.contains(document.activeElement)) return
 
-    restoreTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    restoreTo.current = durableFocusTarget(
+      document.activeElement instanceof HTMLElement ? document.activeElement : null
+    )
     node.focus({ preventScroll: true })
   }, [])
 

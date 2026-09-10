@@ -30,6 +30,40 @@ all. `ux_acceptance` is the per-surface checklist; `anti_patterns` is the
 The YAML is the only authority. Prose drafts of it under `.HITL/` are
 superseded — don't resolve a UX question against them.
 
+## Architecture contracts
+
+`.architecture/**/*.yaml` is a three-tier contract system, and every file states
+its own place in it under `authority_chain`:
+
+| Tier      | `authority`                          | Files                                        | Ids                      |
+| --------- | ------------------------------------ | -------------------------------------------- | ------------------------ |
+| doctrine  | `product-ux`                         | `ux/afenda-ui-ux-doctrine.yaml`              | `D01`–`D20`              |
+| programme | `payroll-programme`, `hrm-programme` | `<domain>/afenda-<domain>-architecture.yaml` | `A01`–`A17`, `B01`–`B11` |
+| page      | `page-contract`                      | `P0n-*.yaml`, `H0n-*.yaml`                   | `P01`–`P11`, `H01`–`H03` |
+
+Cite the governing id in a comment where the reasoning would otherwise be
+re-derived — ``Doctrine: `floating_query` (D12)``. The id is what makes the
+contract findable from the code, and `pnpm lint:contracts` resolves it.
+
+`pnpm lint:contracts` (`scripts/contract-lint.py`, PyYAML) checks the part of a
+contract that is mechanically decidable, so drift is caught here rather than by a
+later session discovering the contract describes a repo that no longer exists:
+
+- every contract parses, and carries `schema_version` / `status` / `authority`
+- a page contract carries `id` / `route` / `workspace` / `archetype` /
+  `authority_chain` / `component_ownership`, its `id` matches its filename, and
+  its `route` has a page under `src/app/(pages)`
+- every repo path a contract names exists — declared paths are `ERROR`, paths
+  mentioned in prose are `WARN`, and paths under `expected_new` are allowed to be
+  absent
+- every `D..`/`A..`/`B..`/`P..`/`H..` cited in a `src` comment resolves, and a
+  citation naming a section agrees with that section's real id
+- P02's `component_ownership.consumer_check` is re-run and diffed against the
+  record, which the contract itself says must never be inferred from
+
+It judges facts, never design. Whether a surface leads with the right figure is
+what the contract prose and a human reader are for.
+
 ## Shadcn Studio frontend authority
 
 Frontend work is standardised on the Shadcn Studio Admin Template that this app is
@@ -95,9 +129,10 @@ decides the interaction question that the gate does not.
 There is no test framework and no test files. To check work:
 
 ```
-pnpm check-types   # tsc --noEmit
-pnpm build         # next build
-pnpm lint          # eslint
+pnpm check-types     # tsc --noEmit
+pnpm build           # next build
+pnpm lint            # eslint
+pnpm lint:contracts  # scripts/contract-lint.py
 ```
 
 ## Formatting

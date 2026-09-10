@@ -92,7 +92,11 @@
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  /* 0.545, not the 0.556 shadcn ships. The binding surface is not the white card: --muted,
+     --secondary, --accent and --sidebar-accent are all oklch(0.97 0 0), and secondary text sits on
+     them constantly. 0.556 measures 4.73 on white but 4.34 on the 0.97 grey, which is the 4.35
+     SD-003 recorded. 0.545 clears AA on every light surface: 4.96 white, 4.75 sidebar, 4.54 grey. */
+  --muted-foreground: oklch(0.545 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);

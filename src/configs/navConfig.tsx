@@ -96,6 +96,22 @@ export const navItems: NavItem[] = [
     ]
   },
   {
+    groupLabel: 'HRM',
+    items: [
+      {
+        icon: 'Users',
+        label: 'HRM',
+        childItems: [
+          // People is the population and each row opens one person, the same shape Group payroll
+          // takes. `activePath` covers the employee workspace, so opening a person keeps People lit
+          // rather than leaving the reader in a sidebar that highlights nothing.
+          { label: 'People', href: '/hrm', activePath: '/hrm/people' },
+          { label: 'Organisation', href: '/hrm/organisation', activePath: '/hrm/organisation' }
+        ]
+      }
+    ]
+  },
+  {
     groupLabel: 'Apps',
     items: [
       {

@@ -80,13 +80,18 @@ export const findPayRuns = async (query: string): Promise<FindObjectHit[]> => {
 /**
  * People the signed-in person may see, and where to read one.
  *
- * An employee has no route of its own — it is read on the run workspace its payroll belongs to —
- * so the addressable location is resolved here, where the run is known, rather than guessed at by
- * the caller. The newest run for that person's company is the one a reader means by "open this
- * employee"; someone with no run at all is not addressable and is therefore not offered.
+ * An employee is read on their own HRM workspace, so the address is the person's canonical route
+ * and nothing else. This used to resolve to `/payroll/runs/{runId}?employee={id}` and skip anybody
+ * whose company had no pay run — which made the same human being a different conceptual identity
+ * depending on whether payroll had executed, and made a new joiner unfindable. Doctrine
+ * `identity_rule` forbids exactly that, and H01 is what gave the object an address of its own.
  *
- * `ObjectContext` itself is unchanged: `employeeObject` builds the same identity a table builds,
- * and the location is supplied beside it rather than added to the contract.
+ * The run reference stays as a search keyword: somebody who remembers a person by the run they
+ * appeared on should still find them, and a keyword widens the match without moving the address.
+ *
+ * KNOWN GAP (HRM-GAP-001): still gated on `payroll.view`. An HR-only actor cannot find a person.
+ * Correcting it needs an HR permission and an HR actor, which the read-only HRM release does not
+ * build. Recorded in `.architecture/hrm/afenda-hrm-architecture.yaml` B10 rather than worked around.
  */
 export const findEmployees = async (query: string): Promise<FindObjectHit[]> => {
   if (!can(actor(), 'payroll.view')) return []
@@ -117,18 +122,13 @@ export const findEmployees = async (query: string): Promise<FindObjectHit[]> => 
 
     const run = latestRunFor(employee.entityId)
 
-    if (!run) continue
-
     hits.push({
-      object: {
-        ...employeeObject({ employeeId: employee.id, name }),
-        href: `/payroll/runs/${run.id}?employee=${encodeURIComponent(employee.id)}`
-      },
+      object: employeeObject({ employeeId: employee.id, name }),
 
       // What tells two people of the same name apart. Both halves are needed: this dataset has two
       // employees called Anh Ngo in different departments.
       sublabel: `${employee.employeeNumber} · ${employee.positionTitle}`,
-      keywords: [employee.employeeNumber, run.reference]
+      keywords: run ? [employee.employeeNumber, run.reference] : [employee.employeeNumber]
     })
   }
 
@@ -204,23 +204,16 @@ export const resolveObjectTargets = async (
       continue
     }
 
+    // Same correction as `findEmployees`: a saved favourite or recent for somebody whose company
+    // has never run payroll used to resolve to nothing and be silently dropped. The person's own
+    // route always resolves, so the entry survives.
     if (target.type === 'employee') {
       const employee = employees.find(candidate => candidate.id === target.id)
 
       if (!employee) continue
 
-      const run = [...payRuns]
-        .filter(candidate => candidate.entityId === employee.entityId)
-        .sort((a, b) => a.periodStart.localeCompare(b.periodStart))
-        .at(-1)
-
-      if (!run) continue
-
       hits.push({
-        object: {
-          ...employeeObject({ employeeId: employee.id, name: `${employee.firstName} ${employee.lastName}` }),
-          href: `/payroll/runs/${run.id}?employee=${encodeURIComponent(employee.id)}`
-        },
+        object: employeeObject({ employeeId: employee.id, name: `${employee.firstName} ${employee.lastName}` }),
         sublabel: `${employee.employeeNumber} · ${employee.positionTitle}`
       })
 

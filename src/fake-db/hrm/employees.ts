@@ -25,13 +25,28 @@ import type {
   WorkLocation
 } from '@/types/hrm/employee-types'
 
+/**
+ * `parentId` is what makes the structure a hierarchy rather than a flat list. Customer Support
+ * reports into Operations here; the other five are top-level and say so by leaving it unset.
+ *
+ * Undefined means "no parent recorded", and H03 renders that as a root rather than guessing one.
+ * Rooting an orphan under whichever department looks plausible would make the tree look complete
+ * when it is not, which is the failure `domain_truth` exists to prevent.
+ */
 export const departments: Department[] = [
   { id: 'dept-eng', name: 'Engineering', code: 'ENG', costCenter: 'CC-1000', headEmployeeId: 'emp-001' },
   { id: 'dept-sales', name: 'Sales', code: 'SLS', costCenter: 'CC-2000', headEmployeeId: 'emp-009' },
   { id: 'dept-ops', name: 'Operations', code: 'OPS', costCenter: 'CC-3000', headEmployeeId: 'emp-015' },
   { id: 'dept-fin', name: 'Finance', code: 'FIN', costCenter: 'CC-4000', headEmployeeId: 'emp-020' },
   { id: 'dept-people', name: 'People', code: 'PPL', costCenter: 'CC-5000', headEmployeeId: 'emp-023' },
-  { id: 'dept-support', name: 'Customer Support', code: 'SUP', costCenter: 'CC-6000', headEmployeeId: 'emp-026' }
+  {
+    id: 'dept-support',
+    name: 'Customer Support',
+    code: 'SUP',
+    parentId: 'dept-ops',
+    costCenter: 'CC-6000',
+    headEmployeeId: 'emp-026'
+  }
 ]
 
 export const locations: WorkLocation[] = [

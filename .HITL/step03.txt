@@ -1,0 +1,454 @@
+Proceed with A16 Step 4 for P02.
+
+A16 Step 3 is accepted and closed.
+
+This step performs the A12 frontend preflight for every ratified:
+
+* REFINE
+* REPLACE
+* ADD
+
+It does NOT implement frontend code.
+
+It does NOT move components.
+
+It does NOT create the final composition.
+
+It does NOT fix defects.
+
+The output of Step 4 is evidence sufficient for Step 5 to accept the visual/composition contract.
+
+# AUTHORITIES
+
+Primary:
+
+`.architecture/payroll/P02-entity-payroll-workspace.yaml`
+
+Also read:
+
+* programme payroll architecture
+* A12
+* A16
+* Afenda UX doctrine
+* relevant accepted P01 patterns where explicitly named by the Step 3 evidence
+
+P01 remains `FROZEN_V1`.
+
+Do not reopen Step 3 classification unless Step 4 discovers a genuine contradiction.
+
+If that occurs, record the contradiction and STOP rather than silently changing the disposition.
+
+# WRITE BOUNDARY
+
+No `src/**` modification.
+
+Architecture/evidence records only.
+
+Do not move files into:
+
+`src/views/payroll/entity/**`
+
+yet.
+
+`src/utils/payroll-payments.ts` remains blocked for modification.
+
+`_archive/**` remains out of scope.
+
+# STEP 4 POPULATION
+
+There are 23 visible Step-4 subjects:
+
+* 13 REFINE
+* 4 REPLACE
+* 6 ADD
+
+`ADD-007` deterministic active/open-run handling is a non-visible page-level rule.
+
+Do not treat ADD-007 as an additional visible component.
+
+Apply it as a binding constraint when preflighting:
+
+* #14 current next-step control
+* #15 primary next action
+* any open-run presentation involved in #3
+
+# EVIDENCE LAW
+
+A12 evidence budget is a CAP, not a quota.
+
+Do not consume evidence merely because a budget exists.
+
+For every item:
+
+1. inspect the accepted existing project pattern first;
+2. determine whether that evidence already resolves the implementation pattern;
+3. inspect Shadcn Studio only where the A12 mode/budget permits and project evidence is insufficient;
+4. do not browse arbitrary UI libraries;
+5. do not introduce a second primitive system;
+6. Base UI/shadcn project semantics remain authoritative;
+7. do not let a visually attractive block override the P02 contract.
+
+For each inspected pattern record:
+
+* source/path or Studio reference
+* what property is being learned
+* why it applies
+* what is rejected
+* whether adaptation is required
+
+Do not copy a full external composition merely because one sub-pattern is useful.
+
+# BUDGET 0 ITEMS
+
+These require an A12 Step 4 pass, but NO Studio inspection.
+
+Resolve entirely from:
+
+* P02 contract
+* Step 2 evidence
+* current project primitives/patterns
+* accepted shared authorities
+
+Items:
+
+#1 Return control
+#4 Awaiting-data banner
+#8 Employer-cost hero responsiveness
+#12 Blocking-issues scoping
+#13 Gross/Tax/Net band demotion
+#16 Period-mismatch statement
+#19 Work-exceptions return path
+#22 No-open-exceptions truth copy
+#23 Payment readiness adaptation
+#24 Funding position / P02-DEF-001A
+#26 No-funding/unresolved state
+#29 Gross-to-net / P02-DEF-004
+#31 Department chart accessibility/interaction
+#32 Run-history calculation_version
+#34 Overtime replacement
+#37 Entity + exception descriptors
+
+For each, record the implementation mechanism available from existing code.
+
+No design exploration.
+
+# BUDGET 1 ITEMS
+
+Use at most ONE additional pattern investigation beyond the existing project evidence.
+
+## #2 — Entity identity as a business object
+
+Goal:
+
+Make the legal employer visibly behave like an Afenda business object without introducing a new object interaction system.
+
+Inspect first:
+
+* existing object identity pattern
+* `ObjectCommands`
+* P01 company-object treatment
+* existing Properties/context-menu grammar
+
+Determine:
+
+* identity presentation
+* object descriptor use
+* contextual command entrance
+* Properties affordance
+
+Do not design an entity-specific command system.
+
+## #3 — Identity line completion
+
+Goal:
+
+Expose the P02-required identity/scope facts, including open period and displayed run reference where truthfully available.
+
+Inspect the strongest existing Afenda workspace/header pattern.
+
+Do not create a second header grammar.
+
+## #14 — Replace buried “Open run workspace”
+
+Goal:
+
+Remove the legacy buried control and establish the supporting/secondary navigation relationship to the primary next action.
+
+Inspect one accepted existing project action-hierarchy pattern.
+
+Do not decide final placement until Step 5.
+
+## #15 — Primary next action
+
+Goal:
+
+Provide one prominent legitimate navigation action into payroll work.
+
+Binding rule:
+
+There is no domain-supported deterministic priority between multiple active/open runs.
+
+Therefore do NOT choose a run using:
+
+* `.find()`
+* fixture order
+* array order
+* incidental status order
+
+unless Step 4 uncovers an already-authoritative domain rule.
+
+Without such a rule, preflight the action around the collection/context of the employer's active payroll work.
+
+ADD-007 binds here.
+
+Inspect one existing project primary-action pattern only.
+
+## #36 — Period-over-period deltas
+
+Goal:
+
+Expose factual comparison without claiming causal attribution.
+
+Inspect one existing Afenda metric/comparison pattern.
+
+The implementation must distinguish:
+
+* factual delta
+  from
+* explanation/attribution
+
+P01-GAP-003 remains open.
+
+No invented “why” text.
+
+# BUDGET 2 ITEMS
+
+These receive the deepest evidence pass, but still remain bounded.
+
+## #21 — Exception list item
+
+Current disposition:
+
+REPLACE
+
+Before inspecting Studio, read the accepted P01 needs-attention pattern.
+
+If P01 already provides the required interaction grammar, reduce the effective external evidence need to zero.
+
+The P02 item must ultimately support the contract-required meaningful exception interaction, including:
+
+* consequence/impact
+* legitimate destination/action
+* keyboard reachability
+* deterministic ordering
+* object identity where applicable
+
+Do not create a new exception interaction grammar if the accepted P01 pattern already solves it.
+
+If project evidence is insufficient, inspect at most ONE relevant Shadcn Studio list/item pattern.
+
+Study composition only.
+
+Do not adopt incompatible primitives.
+
+## #25 — Dated obligations
+
+Current disposition:
+
+ADD
+
+Current domain truth is deliberately narrow:
+
+* payroll cutoff exists
+* pay date exists
+* filing due date may be available through filing records
+* approval deadline is NOT thereby proven
+* P01-GAP-002 remains open
+
+The surface must never merge these into a generic “deadline” concept.
+
+Preflight separate semantic treatment for:
+
+* payroll cutoff
+* pay date
+* statutory filing due date, only where entity/run evidence exists
+
+If no entity-scoped filing accessor is available, preserve the gap rather than inventing access.
+
+Inspect:
+
+1. strongest existing project dated-obligation/date-status pattern;
+2. only if needed, at most ONE Studio pattern suitable for compact dated obligations.
+
+Do not turn this into a timeline merely because a timeline component exists.
+
+# SPECIFIC DEFECT PREFLIGHTS
+
+## P02-DEF-001A
+
+Step 4 must prove the containment mechanism without implementing it.
+
+Establish the exact existing APIs/data that allow the P02 caller to verify:
+
+* account belongs to current entity
+* account is the intended/default applicable account
+* account currency
+* run currency
+* whether calculation operands are currency-compatible
+
+Expected direction remains Case A.
+
+If existing data cannot establish those preconditions, STOP and report a contradiction.
+
+Do not fall through into local funding arithmetic.
+
+Do not touch `payroll-payments.ts`.
+
+Also preflight the truthful failure state:
+
+`states.empty.no_funding_account`
+
+or the exact contract equivalent.
+
+The unresolved branch must remove the unsupported monetary conclusion, not display zero.
+
+## P02-DEF-004
+
+Trace the accepted one-consumer boundary again immediately before recommending Step 6 treatment.
+
+Preflight the smallest lawful change in:
+
+`src/utils/payroll-metrics.ts`
+
+Required semantics:
+
+* currency minor-unit digits come from existing monetary authority
+* VND must not be divided as though it has two decimal minor units
+* formatter must use the same currency truth
+* existing export signatures remain unchanged
+
+Do not implement.
+
+If consumer cardinality is no longer exactly one, record the contradiction and STOP that part of the preflight.
+
+# OVERTIME REPLACEMENT
+
+For #34, do not design a new chart.
+
+The replacement direction is a domain-supported overtime attention signal based on the existing overtime-spike exception capability.
+
+Step 4 should determine:
+
+* which existing exception field proves the condition
+* its consequence/impact
+* how it relates to the needs-attention queue
+* whether a separate visual component is even justified
+
+It is acceptable for Step 4 to conclude:
+
+“no dedicated replacement component; represent through the ATTEND exception surface.”
+
+REPLACE does not mean “replace chart with another card”.
+
+# DEPARTMENT SURFACE
+
+For #31, determine whether the visual chart itself earns its place independently of the verified department chips.
+
+The chips already provide meaningful `?dept=` navigation.
+
+The chart must therefore pass the admission test on its own.
+
+If it adds no additional usable information, Step 4 may recommend simplifying the component around the chip/filter interaction.
+
+Do not change the Step 3 disposition during this step; record the Step 5 recommendation.
+
+# GROSS-TO-NET
+
+For #29, preserve the accepted Step 3 decision:
+
+REFINE / INSPECT
+
+The section has a distinct explanatory purpose.
+
+Do not reopen whether it belongs on the page unless new evidence directly contradicts the contract.
+
+Step 4 determines only:
+
+* truthful currency handling
+* appropriate explanatory presentation
+* whether the existing waterfall composition remains suitable after the defect is fixed
+
+# DESCRIPTORS
+
+For #37 preflight additions to:
+
+`src/views/payroll/payroll-objects.ts`
+
+Entity and exception descriptors must be additive.
+
+No existing export signature changes.
+
+Confirm they follow the current descriptor vocabulary rather than inventing a P02-only descriptor shape.
+
+# STEP 4 OUTPUT PER ITEM
+
+For each of the 23 subjects return:
+
+* matrix row number
+* subject
+* Step 3 disposition
+* A12 mode
+* original budget
+* evidence actually consumed
+* existing project pattern inspected
+* Studio pattern inspected, if any
+* primitive compatibility result
+* recommended implementation mechanism
+* rejected alternatives
+* candidate Step 6 owner/file
+* unresolved domain dependency
+* Step 5 decision required
+
+Use concise records; do not write implementation code.
+
+# STEP 4 COMPLETION TEST
+
+Step 4 is complete only when:
+
+* all 23 REFINE/REPLACE/ADD items have a preflight result;
+* all budget-0 items were resolved without Studio exploration;
+* budget-1/2 items did not exceed their evidence caps;
+* existing project patterns were inspected before Studio;
+* no parallel primitive system is proposed;
+* P02-DEF-001A has a proven containment path;
+* P02-DEF-004 has a proven currency-correct path;
+* `payroll-payments.ts` remains unchanged;
+* no source code has changed;
+* every item has enough evidence for Step 5 to make a composition decision.
+
+# STOP LINE
+
+Stop after A16 Step 4.
+
+Return:
+
+1. 23-row preflight matrix;
+2. evidence consumed per row;
+3. Studio references actually inspected;
+4. existing project patterns reused;
+5. primitive compatibility findings;
+6. P02-DEF-001A containment proof;
+7. P02-DEF-004 correction proof;
+8. overtime replacement recommendation;
+9. department-surface recommendation;
+10. all Step 5 composition decisions still required;
+11. contradictions or scope changes discovered;
+12. git status/diff proving no `src/**` changes.
+
+Do NOT proceed to Step 5.
+
+Do NOT implement frontend code.
+
+Do NOT move components.
+
+Do NOT modify shared authorities.

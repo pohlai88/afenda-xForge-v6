@@ -1,0 +1,174 @@
+h03_organisation:
+  schema_version: '1.0'
+  status: 'normative'
+  authority: 'page-contract'
+
+  id: 'H03'
+  workspace: 'Organisation'
+  route: '/hrm/organisation'
+  archetype: 'settings / configuration'
+
+  archetype_note: >
+    The reader is here to find one thing and understand where it sits, so the page leads with
+    navigable sections rather than a summary. No hero figure: nothing on this page is a headline.
+
+  authority_chain:
+    outranked_by:
+      - '.architecture/ux/afenda-ui-ux-doctrine.yaml'
+      - '.architecture/hrm/afenda-hrm-architecture.yaml'
+
+  purpose: 'Operate the structure people sit in: departments, positions, locations and reporting.'
+
+  core_question: 'How is this company organised, and who is where?'
+
+  operator_intent:
+    - 'see the department hierarchy and how many people are in each'
+    - 'see which positions exist and where'
+    - 'see the work locations and their headcount'
+    - 'see who reports to whom, where the domain can prove it'
+    - 'get from any of those to the people in it'
+
+  scope:
+    includes: [department_hierarchy, headcount_rollup, positions, work_locations, reporting_relationships]
+    excludes: [creating_or_editing_any_of_them, job_grades, cost_centre_configuration, branches_as_a_separate_object]
+
+  is_not:
+    - 'a people list — that is H01, and every section here links into it'
+    - 'an org chart of individuals — the reporting section states relationships the data holds, not a drawn tree of everyone'
+    - 'HR settings — configuration is H06, declared and not built'
+
+  # ---------------------------------------------------------------------------
+  # STRUCTURE
+  # ---------------------------------------------------------------------------
+
+  tabs:
+    shape: 'one route, `?tab=` in the URL'
+    values: [departments, positions, locations, reporting]
+    rationale: >
+      Four views of one structure, not four routes. `domain_page_budget` requires proof of an
+      independent work context before a new route, and these share one: understanding the shape of
+      the organisation. The reference product this was compared against gives departments,
+      positions and branches three separate routes and gains nothing by it.
+
+  anatomy:
+    departments:
+      shows: 'the hierarchy as a tree, each node with its code, head and headcount'
+      rollup_rule: >
+        A parent's headcount includes its children's, and the figure says so. A parent that showed
+        only its own people would read as a smaller department than it is.
+      orphan_rule: >
+        A department with no `parentId` renders as a root. It is never attached to a plausible
+        parent to make the tree look complete.
+
+    positions:
+      shows: 'title, code, department, and how many people hold it'
+      no_grades: 'Job grades are a declared gap. No grade column, no band, no empty field.'
+
+    locations:
+      shows: 'name, country, timezone, and headcount'
+      entity_vs_location_rule: >
+        A work location is not a legal employer. The page says so where the two could be confused,
+        because somebody can work in Kuala Lumpur while employed by the Singapore company.
+
+    reporting:
+      shows: 'each manager and the people who report to them'
+      provable_only: >
+        Built from `managerId` and nothing else. People with no manager recorded are listed as
+        such, under their own heading, rather than being rooted under whoever sits at the top.
+
+  # ---------------------------------------------------------------------------
+  # ACTIONS
+  # ---------------------------------------------------------------------------
+
+  primary_action:
+    id: 'none'
+    rule: 'Read-only release. No create, no edit, and no control that suggests otherwise.'
+
+  contextual_actions:
+    department: ['People in this department', 'Copy department code', 'Properties']
+    position: ['People in this position', 'Copy position code', 'Properties']
+    work_location: ['People at this location', 'Properties']
+    rule: >
+      Every command either navigates into H01 filtered, or copies an identifier. Nothing here
+      mutates, so nothing here offers to.
+
+  drill_down:
+    rule: 'Every count is a link into H01 with the matching filter applied. A dead count is a dead summary card.'
+
+  # ---------------------------------------------------------------------------
+  # DOMAIN TRUTH
+  # ---------------------------------------------------------------------------
+
+  domain_truth:
+    inherits: '.architecture/hrm/afenda-hrm-architecture.yaml#B07'
+
+    binding_on_this_page:
+      - 'A department with no recorded parent is a root, never adopted into the tree.'
+      - 'A person with no recorded manager is listed as unreported, never attached to the top of the org.'
+      - 'A headcount states whether it includes sub-departments.'
+      - 'A position is a title the organisation defines; it carries no grade because no grade is held.'
+      - 'Headcount excludes leavers, and says so.'
+
+  rejected:
+    - decision: 'A drawn org chart of every individual'
+      why: >
+        `managerId` is optional and sparsely set. A chart would either drop the people it cannot
+        place or invent edges for them, and both misstate the structure. A list that names the
+        unreported is honest about the same data.
+      would_reverse_if: 'reporting lines become complete and required'
+
+    - decision: 'Separate routes for departments, positions and locations'
+      why: 'domain_page_budget — one work context, and the anti-pattern list forbids the split.'
+
+    - decision: 'A job-grade column on positions'
+      why: 'No grade is held. A column that is always empty teaches every reader to ignore it.'
+
+    - decision: 'Branches as a distinct object'
+      why: >
+        The reference product separates branches from locations; this domain has one concept for
+        the place somebody works and does not need two names for it.
+
+  # ---------------------------------------------------------------------------
+  # QUALITY
+  # ---------------------------------------------------------------------------
+
+  responsive:
+    rule: 'Never scrolls sideways. The tree indents; it does not become a horizontal scroller.'
+
+  keyboard:
+    - { key: 'Alt+Enter', does: 'open Properties for the focused object' }
+    - { key: 'Shift+F10', does: 'open the context menu' }
+
+  component_ownership:
+    owns: ['src/views/hrm/organisation/*', 'src/utils/hrm-org.ts']
+    reuses_without_modification:
+      - 'src/components/shared/DataTable.tsx'
+      - 'src/components/shared/ObjectCommands.tsx'
+      - 'src/components/shared/PropertiesSheet.tsx'
+    MUST_NOT_modify: 'anything under src/app/(pages)/payroll or src/views/payroll'
+
+  new_gaps:
+    - id: 'H03-GAP-001'
+      statement: 'No job grades. Declared in the domain contract as compensation configuration.'
+      status: 'DECLARED'
+
+    - id: 'H03-GAP-002'
+      statement: >
+        The department hierarchy has one recorded parent relationship in the seed. The tree is
+        correct but shallow, and depth is a data gap rather than a rendering one.
+      status: 'OPEN — accepted'
+
+    - id: 'H03-GAP-003'
+      statement: 'Positions are derived from the titles people hold, so a vacant position cannot exist yet.'
+      status: 'OPEN — closes when positions become their own seeded record'
+
+  inherited_gaps:
+    - 'SD-001 — Properties sheet does not restore focus when it closes.'
+    - 'SD-003 — --muted-foreground fails WCAG AA in the light theme, app-wide.'
+
+  files_in_scope:
+    - 'src/app/(pages)/hrm/organisation/page.tsx'
+    - 'src/app/(pages)/hrm/organisation/loading.tsx'
+    - 'src/views/hrm/organisation/*'
+    - 'src/utils/hrm-org.ts'
+    - 'src/configs/navConfig.tsx'

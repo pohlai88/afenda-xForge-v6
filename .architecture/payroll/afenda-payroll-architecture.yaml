@@ -762,6 +762,42 @@ afenda_payroll_architecture:
       inspected or modified — the pointer advancing is not a licence to touch the code beneath it.
       The first P03 action is to establish its contract, exactly as P01 and P02 were.
 
+    paused:
+      on: '2026-09-10'
+      reason: >
+        The HRM domain took priority. `.architecture/hrm/afenda-hrm-architecture.yaml` is its
+        programme, and it built H01 People, H02 Employee Workspace and H03 Organisation under the
+        same contract-first sequence P01 and P02 followed.
+      why_it_came_first: >
+        HRM is upstream of payroll and payroll had been reading its records without HRM existing as
+        a surface. An employee had no address of its own: `findEmployees` resolved a person to a pay
+        run and dropped anyone whose company had never run payroll, so the same human being was a
+        different conceptual identity depending on whether payroll had executed. Doctrine
+        `identity_rule` forbids that, and no payroll page could have fixed it.
+      payroll_code_touched:
+        rule: 'Nothing under src/app/(pages)/payroll or src/views/payroll was modified.'
+        two_exceptions:
+          - file: 'src/views/payroll/payroll-objects.ts'
+            change: >
+              `employeeObject` now delegates to HRM's, which owns the employee. It previously built
+              the identity here with no href, on the reasoning that an employee within a run has no
+              route of its own — true until H01 gave the person one. Two builders producing two
+              different hrefs for one human being is the identity_rule breach itself.
+          - file: 'src/utils/payroll-workspace.ts'
+            change: >
+              `PAY_FREQUENCY_LABELS` is re-exported from HRM rather than defined here. How often
+              somebody is paid is a fact about the employee record. Every payroll caller unchanged.
+
+    p03_defect_recorded_while_paused:
+      surface: '/payroll/runs'
+      observed: >
+        Four WCAG AA contrast failures at 2.34:1 in the light theme, on the run-queue stage rail's
+        `(not started)` label and its step numbers at 10-12px. Isolated when the app-wide
+        `--muted-foreground` repair (SD-003) cleared everything else on the page — 22 failures
+        became 4.
+      status: 'OPEN — belongs in the P03 contract''s local defect pass, not to the shared register'
+      note: 'Found by measurement, not fixed. P03 owns it, and P03 has no contract yet.'
+
     branch_reconciliation:
       merged_on: '2026-09-10'
       subject: 'origin/main merged into dev after the P02 freeze'

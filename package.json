@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "lint:fix": "eslint --fix",
+    "lint:contracts": "python scripts/contract-lint.py",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\"",
     "check-types": "tsc --noEmit",
     "clean": "rm -rf .next dist",

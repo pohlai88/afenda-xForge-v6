@@ -1,0 +1,408 @@
+h01_people:
+  schema_version: '1.0'
+  status: 'normative'
+  authority: 'page-contract'
+
+  id: 'H01'
+  workspace: 'People'
+  route: '/hrm'
+  archetype: 'operational workbench'
+
+  archetype_note: >
+    A workbench, not a dashboard. The reader is here to work a list and inspect in place,
+    so the page leads with the work and its filters, not a hero figure. This is the
+    distinction that decides the layout: `/payroll` leads with a 60px consolidated total
+    because one number is the point there; here no single number is. The design-system
+    measure for the largest figure is a diagnostic for the archetype, not a target.
+
+  authority_chain:
+    outranked_by:
+      - '.architecture/ux/afenda-ui-ux-doctrine.yaml'
+      - '.architecture/hrm/afenda-hrm-architecture.yaml'
+
+  # ---------------------------------------------------------------------------
+  # PURPOSE
+  # ---------------------------------------------------------------------------
+
+  purpose: >
+    Give the workforce an address. H01 is where a person is found, and it is the first
+    surface in Afenda where an employee exists on their own terms rather than as a row
+    inside a pay run.
+
+  core_question: 'Who works here, and which records need attention?'
+
+  operator_intent:
+    - 'find one person by name, number or position'
+    - 'see the population of one company, department or location'
+    - 'see which records are missing payroll-relevant details'
+    - 'see who is arriving and who is leaving'
+    - 'open one person and keep the filters that got me there'
+
+  scope:
+    includes:
+      - group_wide_population_across_every_legal_employer
+      - headcount_and_fte
+      - record_completeness_attention
+      - joiners_and_leavers_for_the_current_month
+      - search_and_filter
+      - drill_down_to_H02
+
+    excludes:
+      - creating_an_employee
+      - editing_an_employee
+      - changing_compensation
+      - transferring_an_employee
+      - anything_the_ADVANCED_or_PRO_tier_owns
+
+  is_not:
+    - 'a payroll surface — it never states whether someone can be paid'
+    - 'a dashboard — no KPI card grid, no chart band'
+    - 'an org chart — that is H03'
+    - 'a user or account list — /apps/users models logins, not employment'
+
+  # ---------------------------------------------------------------------------
+  # SCOPE MODEL
+  # ---------------------------------------------------------------------------
+
+  scope_model:
+    shape: 'group-wide with a company filter'
+
+    rationale: >
+      A person exists once and their legal employer is an attribute of them. Scoping the
+      list per entity would make someone reachable only through their current employer,
+      which fails exactly where inter-company transfer matters most. This mirrors
+      `/payroll/runs`, which is cross-entity with a company filter, rather than
+      `/payroll/entities/[entityId]`, which is deliberately one employer.
+
+    MUST_NOT: 'introduce a second entity-picker hierarchy above this page'
+
+  # ---------------------------------------------------------------------------
+  # TIME SEMANTICS
+  # ---------------------------------------------------------------------------
+
+  time_semantics:
+    rule: >
+      Fixed here because prose alone lets two correct implementations produce different
+      numbers.
+
+    as_of_date:
+      source: 'read once in the server page, passed down as a value'
+      MUST_NOT: 'read the clock inside a component'
+
+    definitions:
+      headcount: 'people whose status is not terminated as of asOfDate'
+      fte: 'sum of fte over the same population'
+      joiners: 'hireDate within the calendar month containing asOfDate'
+      leavers: 'terminationDate within the calendar month containing asOfDate'
+      comparison_period: 'the immediately preceding calendar month'
+
+  # ---------------------------------------------------------------------------
+  # INFORMATION HIERARCHY
+  # ---------------------------------------------------------------------------
+
+  information_hierarchy:
+    rule: 'This vertical order matters more than the individual components.'
+
+    order:
+      - who_works_here_and_under_which_employers
+      - which_records_have_missing_payroll_relevant_details
+      - who_is_arriving_and_who_is_leaving
+      - the_population_itself_searchable_and_filterable
+      - how_the_shape_of_the_workforce_differs_from_the_period_before
+
+    forbidden_default: >
+      SUMMARY -> CHART -> CHART -> CHART. A figure band followed by charts is the shape of
+      a dashboard, and this is a workbench.
+
+  operational_hierarchy:
+    bands:
+      - band: 'OPERATE'
+        answers: 'Who works here?'
+        may_contain: [headcount, fte, company_coverage]
+        MUST_NOT_contain: [analysis, comparison]
+
+      - band: 'ATTEND'
+        answers: 'Which records need attention?'
+        may_contain: [payroll_relevant_record_gaps, probation_ending, notice_period_running, onboarding_incomplete]
+        rule: >
+          Every item names one action or one destination. An item with neither is not
+          attention, it is information.
+        naming_rule: >
+          This band says "payroll-relevant record gaps". It MUST NOT say "records blocking
+          payment" — see B07.
+
+      - band: 'INSPECT'
+        answers: 'Who exactly is in the population?'
+        may_contain: [the_people_table]
+        rule: 'Exact values. This is the band the page exists for.'
+
+      - band: 'UNDERSTAND'
+        answers: 'How does this month differ from the last?'
+        may_contain: [joiners_and_leavers_movement]
+        rule: 'The narrowest band, and the only one that may be empty.'
+
+    demotion_rule: >
+      A section that cannot answer its band's question is moved down a band or removed. It
+      is never kept in place with a caption explaining that it does not need action.
+
+  # ---------------------------------------------------------------------------
+  # ANATOMY
+  # ---------------------------------------------------------------------------
+
+  anatomy:
+    operate:
+      - id: 'people-headline'
+        must_show: [headcount, fte, number_of_companies_covered]
+        must_state: 'that headcount and FTE are different measures'
+        MUST_NOT: 'sum compensation across companies'
+
+    attend:
+      - id: 'people-attention'
+        ranked: true
+        item_shape: [what_is_missing, who_it_concerns, where_to_go]
+        sources:
+          - 'bank detail missing where paymentMethod is bank_transfer'
+          - 'tax detail missing'
+          - 'probation ending within 30 days of asOfDate'
+          - 'notice period running'
+          - 'onboarding not complete'
+        empty_state: 'Every record has its payroll-relevant details.'
+
+    inspect:
+      - id: 'people-table'
+        engine: 'src/components/shared/DataTable.tsx'
+        anchor: 'name'
+
+    understand:
+      - id: 'people-movement'
+        must_show: [joiners_this_month, leavers_this_month, comparison_with_previous_month]
+        may_be_empty: true
+
+  # ---------------------------------------------------------------------------
+  # TABLE
+  # ---------------------------------------------------------------------------
+
+  table:
+    columns:
+      - { id: 'name', label: 'Employee', semantic: 'identity', isAnchor: true, pinned: true }
+      - { id: 'employeeNumber', label: 'Employee no.', semantic: 'identifier' }
+      - { id: 'entity', label: 'Company', semantic: 'relation' }
+      - { id: 'department', label: 'Department', semantic: 'relation' }
+      - { id: 'position', label: 'Position', semantic: 'text' }
+      - { id: 'location', label: 'Location', semantic: 'relation', hideable: true }
+      - { id: 'status', label: 'Status', semantic: 'status' }
+      - { id: 'completeness', label: 'Record', semantic: 'signal' }
+      - { id: 'fte', label: 'FTE', semantic: 'quantity' }
+      - { id: 'compensation', label: 'Compensation', semantic: 'money', hideable: true }
+      - { id: 'hireDate', label: 'Hired', semantic: 'date', hideable: true }
+
+    column_priority:
+      rule: 'Declared, not emergent. The tail hides first when width runs out.'
+      order: [name, status, completeness, entity, department, position, fte, location, compensation, hireDate]
+
+    identity_rule: 'The name column stays put when the table scrolls horizontally.'
+
+    identifier_rule: >
+      `employeeNumber` renders quieter than the name — text-xs, muted, mono. Reverse that
+      and every row reads as a database dump.
+
+    filters:
+      - { id: 'status', control: 'ToggleGroup', shows_counts: true }
+      - { id: 'entity', control: 'Select' }
+      - { id: 'department', control: 'Select' }
+      - { id: 'location', control: 'Select' }
+      - { id: 'search', control: 'text', matches: [name, employeeNumber, positionTitle] }
+      - { id: 'reset', control: 'Button' }
+
+    footer:
+      shows: [headcount, fte]
+      MUST_NOT: 'sum compensation — the population spans three currencies'
+
+    bulk_actions:
+      offered: false
+      why: 'This release is read-only. There is no bulk operation the domain can perform.'
+
+    export:
+      offered: true
+      format: 'CSV'
+      why: 'An export produces a file, not a state change, so it is available read-only.'
+
+  # ---------------------------------------------------------------------------
+  # ACTIONS
+  # ---------------------------------------------------------------------------
+
+  primary_action:
+    id: 'open-employee'
+    label: 'Open'
+    destination: '/hrm/people/[employeeId]'
+    rule: >
+      One visually dominant action per region. The row anchor is a real focusable control,
+      not an onClick on the container; the row click is mouse convenience only.
+
+  drill_down:
+    rule: 'Opening a person navigates to H02, which is a genuinely independent work context.'
+    context_preservation: >
+      The filters, sort and search that reached the row are preserved in the URL so H02s
+      Back returns to the same list rather than a reset one.
+
+  contextual_actions:
+    employee:
+      ['Open', 'Search related', 'View payroll history', 'View movement', 'View audit', 'Copy employee number', 'Properties']
+    order: 'default_action, workspace_actions, object_actions, output_and_transfer, audit_and_source, properties'
+    properties_position: 'last'
+    omission_rule: >
+      Irrelevant commands are omitted, never shown disabled. Edit, Change compensation and
+      Transfer do not appear in this release because the domain cannot perform them.
+    conditional:
+      - command: 'View payroll history'
+        present_when: 'the person has at least one payslip'
+        why: 'Offering it for someone with no pay history navigates to an empty surface.'
+
+  properties:
+    invocation: ['context menu', 'Alt+Enter']
+    sections: [identity, employment, system]
+    rule: 'Read-oriented. Never synonymous with Edit. Carries no compensation figures.'
+
+  # ---------------------------------------------------------------------------
+  # STATES
+  # ---------------------------------------------------------------------------
+
+  states:
+    loading:
+      route_transition: 'loading.tsx renders the page shell with skeletons matching the table geometry'
+      rule: 'A skeleton matches the height, columns and row count it replaces.'
+      MUST_NOT: 'show a placeholder figure such as 0 employees'
+
+    empty_filtered:
+      message: 'No one matches'
+      must_echo: 'the query and the active filters'
+      MUST_NOT: 'render an empty table frame with no explanation'
+
+    empty_unfiltered:
+      note: 'Not reachable against the current seed. Handled rather than designed for.'
+
+    error: 'error.tsx states what failed and what to do about it.'
+
+  # ---------------------------------------------------------------------------
+  # DOMAIN TRUTH
+  # ---------------------------------------------------------------------------
+
+  domain_truth:
+    inherits: '.architecture/hrm/afenda-hrm-architecture.yaml#B07'
+
+    binding_on_this_page:
+      - 'Record completeness is a record fact. This page never states whether someone can be paid.'
+      - 'Headcount and FTE are both stated and never conflated.'
+      - 'Compensation is never summed across companies.'
+      - 'Every figure in a column carries tabular-nums.'
+      - 'A currency is never implied — each amount names its own.'
+      - 'The empty state names the filter rather than claiming there is nobody.'
+
+  # ---------------------------------------------------------------------------
+  # REJECTED
+  # ---------------------------------------------------------------------------
+
+  rejected:
+    - decision: 'A KPI card grid across the top'
+      why: 'A04 forbids KPI grids as a default, and this is a workbench, not an overview.'
+      would_reverse_if: 'the page acquired an overview role it does not have'
+
+    - decision: 'A "Payroll readiness" column'
+      why: 'B07. HRM cannot prove whether someone can be paid.'
+      would_reverse_if: 'never — the concept belongs to the run workspace'
+
+    - decision: 'Per-entity scoping under an entity picker'
+      why: 'Makes a person reachable only through their current employer.'
+      would_reverse_if: 'a statutory view genuinely required one-employer isolation'
+
+    - decision: 'Bulk actions and checkbox selection'
+      why: 'Read-only release. `choose_table_capability` omits what is not meaningful.'
+      would_reverse_if: 'the mutation slice adds an operation that applies to many people'
+
+    - decision: 'An org chart on this page'
+      why: 'That is H03. A person list and a structure are different work contexts.'
+
+  # ---------------------------------------------------------------------------
+  # QUALITY
+  # ---------------------------------------------------------------------------
+
+  responsive:
+    rule: 'The page never scrolls sideways at any breakpoint.'
+    table: 'Scrolls inside its own container, which has a visible edge.'
+    columns: 'The declared tail hides first. At 768px the identity column stays pinned.'
+    semantics: 'Resizing never changes interaction semantics.'
+
+  keyboard:
+    bindings:
+      - { key: 'Enter', does: 'open the focused row' }
+      - { key: 'Alt+Enter', does: 'open Properties for the focused row' }
+      - { key: 'Shift+F10', does: 'open the context menu on the anchor cell' }
+      - { key: 'Esc', does: 'dismiss the open surface' }
+    invariant: 'A pointer equivalent exists for every one of these.'
+    focus: 'Visible, >=2px, >=3:1, and never obscured by the sticky header.'
+
+  # ---------------------------------------------------------------------------
+  # OWNERSHIP
+  # ---------------------------------------------------------------------------
+
+  component_ownership:
+    owns:
+      - 'src/views/hrm/people/*'
+      - 'src/views/hrm/hrm-objects.ts'
+      - 'src/utils/hrm-people.ts'
+      - 'src/types/hrm/people-types.ts'
+
+    reuses_without_modification:
+      - 'src/components/shared/DataTable.tsx'
+      - 'src/components/shared/DataTableToolbar.tsx'
+      - 'src/components/shared/ObjectCommands.tsx'
+      - 'src/components/shared/PropertiesSheet.tsx'
+      - 'src/components/ui/*'
+
+    moves:
+      - from: 'src/utils/payroll-workspace.ts'
+        to: 'src/utils/date.ts'
+        what: ['formatDate', 'formatInstant', 'formatPeriod']
+        why: 'HRM is the second caller. Documented in the design system as the trigger.'
+        rule: 'A move, not a behaviour change. Payroll imports are updated, nothing else.'
+
+    MUST_NOT_modify: 'anything under src/app/(pages)/payroll or src/views/payroll'
+
+  # ---------------------------------------------------------------------------
+  # GAPS
+  # ---------------------------------------------------------------------------
+
+  new_gaps:
+    - id: 'H01-GAP-001'
+      statement: 'findEmployees remains gated on payroll.view. An HR-only actor cannot find a person.'
+      owner: 'HRM permission model'
+      status: 'OPEN'
+
+    - id: 'H01-GAP-002'
+      statement: >
+        Probation and notice-period attention items are derived from probationEndDate and
+        status, which the seed sets sparsely. Where the date is absent the item is absent,
+        not assumed.
+      status: 'OPEN — accepted, the absence is honest'
+
+    - id: 'H01-GAP-003'
+      statement: 'No position or job-grade filter. Position is a free-text title until H03 seeds Position.'
+      status: 'CLOSES_WITH_H03'
+
+  inherited_gaps:
+    - 'SD-001 — Properties sheet does not restore focus when it closes. Shared primitive; not fixed here.'
+    - 'SD-002 — dead href="#" controls in the global shell footer. Global shell; not ours.'
+
+  files_in_scope:
+    - 'src/app/(pages)/hrm/page.tsx'
+    - 'src/app/(pages)/hrm/loading.tsx'
+    - 'src/views/hrm/people/*'
+    - 'src/views/hrm/hrm-objects.ts'
+    - 'src/utils/hrm-people.ts'
+    - 'src/types/hrm/people-types.ts'
+    - 'src/utils/date.ts'
+    - 'src/configs/navConfig.tsx'
+    - 'src/assets/data/search.ts'
+    - 'src/components/layout/Breadcrumbs.tsx'
+    - 'src/lib/find/find-object-adapter.ts'
+    - 'src/app/server/find-actions.ts'

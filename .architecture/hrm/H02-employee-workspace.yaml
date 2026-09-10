@@ -1,0 +1,249 @@
+h02_employee_workspace:
+  schema_version: '1.0'
+  status: 'normative'
+  authority: 'page-contract'
+
+  id: 'H02'
+  workspace: 'Employee Workspace'
+  route: '/hrm/people/[employeeId]'
+  archetype: 'record detail'
+
+  archetype_note: >
+    A record detail: the reader is here to read one object, so the page leads with identity, state
+    and what can be done to it. Not a dashboard and not a workbench — there is no hero figure and
+    no primary table.
+
+  authority_chain:
+    outranked_by:
+      - '.architecture/ux/afenda-ui-ux-doctrine.yaml'
+      - '.architecture/hrm/afenda-hrm-architecture.yaml'
+
+  purpose: >
+    Understand one person: who they are, on what terms they are employed, and how that changed.
+
+  core_question: 'Who is this person, and what is their employment?'
+
+  operator_intent:
+    - 'confirm I have the right person'
+    - 'see their current employment and compensation'
+    - 'see what is missing from their record'
+    - 'see what changed, when it took effect, and who recorded it'
+    - 'get to their pay history when there is one'
+
+  # ---------------------------------------------------------------------------
+  # ONE WORKSPACE
+  # ---------------------------------------------------------------------------
+
+  one_workspace_rule:
+    statement: 'Do not create seven separate employee pages.'
+
+    rationale: >
+      Doctrine `drill_down` and `domain_page_budget` both require hierarchical detail to drill down
+      before navigating away, and `anti_patterns` forbids a route for every nested object. The
+      reference product this domain was compared against demonstrates the failure directly: it
+      carries separate routes for a person's contracts, dependants, onboarding and offboarding, and
+      several of them are dead links.
+
+    shape: 'one route, tabs in the URL as `?tab=`'
+
+    tabs: [overview, employment, compensation, payroll, movement]
+
+    MUST_NOT:
+      - 'add a route for a section of a person'
+      - 'render a tab whose content the domain cannot supply'
+
+  scope:
+    includes: [identity, employment, compensation_current, payroll_details, movement_ledger]
+    excludes:
+      - editing_anything
+      - contracts
+      - dependants
+      - documents
+      - leave_or_attendance
+      - performance_or_learning
+
+  is_not:
+    - 'an edit form — this release is read-only'
+    - 'a payslip — the pay statement is payroll P06 and lives in the run workspace'
+    - 'an account or permissions screen — /apps/users models logins, not employment'
+
+  # ---------------------------------------------------------------------------
+  # INFORMATION HIERARCHY
+  # ---------------------------------------------------------------------------
+
+  information_hierarchy:
+    order:
+      - who_is_this_and_are_they_currently_employed
+      - what_is_missing_from_their_record
+      - what_are_their_employment_terms
+      - what_are_they_paid_and_from_when
+      - what_changed_and_when_did_it_take_effect
+
+  anatomy:
+    header:
+      must_show: [name, employee_number, status, legal_employer, department, position]
+      may_show: [preferred_name, avatar]
+      actions: 'object commands and Properties, from the one definition in hrm-objects.ts'
+      back: 'returns to H01 preserving the filters that reached this person'
+
+    tabs:
+      overview:
+        shows: [identity_summary, record_completeness, key_employment_facts, recent_movement]
+        rule: 'A summary that links onward, never a duplicate of every other tab.'
+
+      employment:
+        shows:
+          [
+            legal_employer,
+            department,
+            position,
+            manager,
+            location,
+            work_arrangement,
+            employment_type,
+            fte,
+            hire_date,
+            probation_end_date,
+            termination_date_and_reason
+          ]
+        entity_vs_location_rule: >
+          The legal employer and the work location are different facts and are shown as such.
+          Somebody can work in Kuala Lumpur while employed, paid and taxed by the Singapore company.
+
+      compensation:
+        shows: [current_amount, currency, basis, effective_from, pay_grade_if_recorded]
+        MUST: 'state the effective date beside the amount, never the amount alone'
+        history: 'read from the movement ledgers salary_adjustment entries, never inferred'
+
+      payroll:
+        shows: [pay_frequency, payment_method, bank_last4, tax_identifier_last4, record_completeness]
+        MUST_NOT:
+          - 'show a full bank account number or a full tax identifier'
+          - 'state whether the person can be paid'
+        links_out: 'to the run workspace, only when the person actually has a payslip'
+
+      movement:
+        shows: [kind, dimension, previous_value, next_value, effective_from, recorded_by, recorded_at]
+        empty_state: 'states plainly that only the hire is on record, rather than rendering an empty frame'
+
+  # ---------------------------------------------------------------------------
+  # ACTIONS
+  # ---------------------------------------------------------------------------
+
+  primary_action:
+    id: 'none'
+    rule: >
+      There is deliberately no primary action. The release is read-only, and inventing a dominant
+      control so the header looks complete would promise an action the domain cannot perform.
+
+  contextual_actions:
+    source: 'employeeCommands in src/views/hrm/hrm-objects.ts, with isCurrent true'
+    isCurrent_rule: 'Open is dropped — a command that navigates to where you already are is noise.'
+
+  properties:
+    invocation: ['context menu', 'Alt+Enter']
+    rule: 'Identity and employment only. No compensation figure — Properties is not the record.'
+
+  # ---------------------------------------------------------------------------
+  # STATES
+  # ---------------------------------------------------------------------------
+
+  states:
+    not_found:
+      rule: >
+        An employeeId that resolves to nobody returns Next's notFound, not an empty workspace.
+        A page that renders a shell for a person who does not exist is stating that they do.
+
+    terminated:
+      rule: >
+        A leaver is shown as a leaver, with their termination date and reason, and the page does not
+        pretend the employment is current. Their record stays readable — payroll history must not
+        disappear because somebody left.
+
+    loading: 'loading.tsx renders the header and tab shell with skeletons matching the section geometry'
+
+  # ---------------------------------------------------------------------------
+  # DOMAIN TRUTH
+  # ---------------------------------------------------------------------------
+
+  domain_truth:
+    inherits: '.architecture/hrm/afenda-hrm-architecture.yaml#B07'
+
+    binding_on_this_page:
+      - 'The current record is authoritative; the ledger explains it and is never replayed to compute it.'
+      - 'A movement states its effective date and, separately, when it was recorded.'
+      - 'Compensation shows its effective date. Earlier rates come from the ledger or are said to be unheld.'
+      - 'An absent manager, probation date or termination reason is absent, never invented or defaulted.'
+      - 'Bank and tax identifiers are shown as last four digits only.'
+      - 'The page never states whether the person can be paid.'
+
+  rejected:
+    - decision: 'A separate route per tab'
+      why: 'anti_patterns — a route for every nested object. The reference product ships dead ones.'
+
+    - decision: 'An Edit button in the header'
+      why: 'Read-only release. A control that cannot act is worse than an absent one.'
+      would_reverse_if: 'the mutation slice lands with its permission model and refusal rules'
+
+    - decision: 'A compensation history chart'
+      why: >
+        The ledger holds a handful of salary adjustments, not a series. A chart drawn over two
+        points implies a trend the data cannot support.
+
+    - decision: 'Showing full bank and tax identifiers'
+      why: >
+        The type deliberately holds only the last four digits, and the confidentiality boundary for
+        this workspace is recorded as unresolved in B10.
+
+  # ---------------------------------------------------------------------------
+  # QUALITY
+  # ---------------------------------------------------------------------------
+
+  responsive:
+    rule: 'Never scrolls sideways. Tabs collapse to a scrollable strip, not to a select.'
+    semantics: 'Resizing never changes interaction semantics.'
+
+  keyboard:
+    bindings:
+      - { key: 'Alt+Enter', does: 'open Properties for this person' }
+      - { key: 'Esc', does: 'dismiss the open surface' }
+    focus: 'Visible, and not obscured by the sticky header.'
+
+  release_boundary:
+    frontend_acceptance: 'allowed'
+    production_enablement: 'blocked'
+    blocker: 'HRM permission and field-visibility policy'
+    why: >
+      This page puts compensation, masked banking, tax identifiers, legal employer and payroll
+      information on one screen while the HRM permission model is postponed. Read-only does not
+      remove the confidentiality question, and no fake permission is invented to paper over it.
+
+  component_ownership:
+    owns: ['src/views/hrm/employee/*', 'src/utils/hrm-movement.ts', 'src/types/hrm/movement-types.ts']
+    reuses_without_modification:
+      - 'src/components/shared/ObjectCommands.tsx'
+      - 'src/components/shared/PropertiesSheet.tsx'
+      - 'src/components/ui/*'
+    MUST_NOT_modify: 'anything under src/app/(pages)/payroll or src/views/payroll'
+
+  new_gaps:
+    - id: 'H02-GAP-001'
+      statement: >
+        Compensation history exists only where the movement ledger holds a salary_adjustment. For
+        everybody else the earlier rate is not held, and the page says so rather than implying the
+        rate never changed.
+      status: 'OPEN — accepted, the absence is honest'
+
+    - id: 'H02-GAP-002'
+      statement: 'No contracts, dependants or documents. Declared in the domain contract, not built.'
+      status: 'DECLARED'
+
+  inherited_gaps:
+    - 'SD-001 — Properties sheet does not restore focus when it closes.'
+    - 'SD-003 — --muted-foreground fails WCAG AA in the light theme, app-wide.'
+
+  files_in_scope:
+    - 'src/app/(pages)/hrm/people/[employeeId]/page.tsx'
+    - 'src/app/(pages)/hrm/people/[employeeId]/loading.tsx'
+    - 'src/views/hrm/employee/*'
+    - 'src/utils/hrm-movement.ts'

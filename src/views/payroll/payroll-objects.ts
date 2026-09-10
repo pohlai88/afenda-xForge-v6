@@ -23,6 +23,9 @@ import type { PropertySection } from '@/components/shared/PropertiesSheet'
 import type { EntityRow } from '@/types/payroll/group-types'
 import type { SettlementRow } from '@/utils/payroll-payments'
 
+// Component Imports
+import { employeeObject as hrmEmployeeObject } from '@/views/hrm/hrm-objects'
+
 // Util Imports
 import { formatCount, formatMoney } from '@/utils/money'
 import { COUNTRY_LABELS } from '@/utils/payroll-group'
@@ -213,14 +216,20 @@ export const payRunQueueProperties = (row: PayRunQueueRow): PropertySection[] =>
 // ---------------------------------------------------------------------------
 
 /**
- * No `href`: an employee within a run has no route of its own. It is reached through
- * `?employee=` on the run workspace, which is why the contract makes `href` optional.
+ * The person, delegated to HRM.
+ *
+ * This used to build the identity here with no `href`, on the reasoning that an employee within a
+ * run is reached through `?employee=` and has no route of its own. The first half was right and
+ * the second stopped being true when H01 gave the person an address: doctrine `identity_rule` says
+ * the same object MUST NOT become a different conceptual identity because it appears in another
+ * domain, and two builders producing two different hrefs for one human being is precisely that.
+ *
+ * HRM owns the employee, so HRM owns what an employee object is. Payroll keeps its own view of
+ * what can be *done* with one inside a run — `employeeCommands` below is still payroll's, because
+ * opening a payslip is a payroll capability and not an HR one.
  */
-export const employeeObject = (row: Pick<PayrollRunRow, 'employeeId' | 'name'>): ObjectContext => ({
-  type: 'employee',
-  id: row.employeeId,
-  label: row.name
-})
+export const employeeObject = (row: Pick<PayrollRunRow, 'employeeId' | 'name'>): ObjectContext =>
+  hrmEmployeeObject({ id: row.employeeId, name: row.name })
 
 export const employeeCommands = (
   row: PayrollRunRow,

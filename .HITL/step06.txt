@@ -1,0 +1,745 @@
+Proceed with A16 Step 6.
+
+The Step 6 gate is PASSED.
+
+Begin frontend implementation of P02 according to the accepted Step 3 classification, Step 4 preflight, Step 5 composition contract, and the multiple-actionable-context amendment.
+
+Do NOT redesign the architecture while implementing.
+
+If implementation exposes a genuine contract/domain contradiction, STOP that affected item and report it. Do not improvise around the contract.
+
+# IMPLEMENTATION AUTHORITY
+
+P02:
+
+`/payroll/entities/[entityId]`
+
+Purpose:
+
+`Understand and operate payroll for one legal employer.`
+
+Final semantic order is binding:
+
+1. OPERATE
+2. ATTEND
+3. INSPECT
+4. UNDERSTAND
+
+Do not restore a generic dashboard grid or Trends band.
+
+# PERMITTED SOURCE BOUNDARY
+
+## New target composition home
+
+`src/views/payroll/entity/**`
+
+Create only the files justified by the accepted Step 3/5 composition.
+
+Do not turn this into wholesale folder normalization.
+
+## Existing P02 page
+
+`src/app/(pages)/payroll/entities/[entityId]/page.tsx`
+
+May be recomposed to consume the accepted entity workspace.
+
+## Existing legacy entity modules
+
+Move/refine only where Step 3 marked them as move candidates.
+
+Consumer checks remain mandatory before any move/removal.
+
+## Additive shared changes permitted
+
+`src/views/payroll/payroll-objects.ts`
+
+Only:
+
+* legal-entity descriptor
+* payroll-exception descriptor
+
+No existing export signature changes.
+
+`src/utils/payroll-metrics.ts`
+
+Only:
+
+* P02-DEF-004 internal currency correction
+
+No existing export signature changes.
+
+Re-confirm the one-consumer boundary immediately before editing.
+
+## Read-only shared authorities
+
+Do NOT modify or fork:
+
+`src/components/shared/DataTable.tsx`
+
+`src/components/shared/DataTableToolbar.tsx`
+
+`src/components/shared/ObjectCommands.tsx`
+
+`src/utils/payroll-group.ts`
+
+`src/utils/money.ts`
+
+`src/app/server/**`
+
+`src/fake-db/**`
+
+`src/views/payroll/reports/reports-workspace.tsx`
+
+## Explicitly blocked
+
+`src/utils/payroll-payments.ts`
+
+Remain unchanged.
+
+## Explicitly out of scope
+
+`_archive/**`
+
+Do not touch it.
+
+# IMPLEMENTATION ORDER
+
+Implement in the following sequence.
+
+This order is deliberate.
+
+---
+
+## 6.1 — ESTABLISH TARGET ENTITY WORKSPACE COMPOSITION
+
+Create the minimum composition structure under:
+
+`src/views/payroll/entity/**`
+
+that represents the four accepted semantic bands.
+
+Do not move every legacy component first.
+
+Build the target composition around the accepted ownership decisions and migrate/refine components only as they are required.
+
+No unnecessary wrappers.
+
+No new primitive layer.
+
+No P02-specific design system.
+
+---
+
+## 6.2 — OPERATE
+
+Implement the final OPERATE hierarchy.
+
+### Header
+
+Composition:
+
+* named return target
+* legal entity object identity
+* ObjectCommands/contextual object interaction
+* identity/scope facts
+* primary next action
+* payroll state
+
+Use business-object type:
+
+`legal_entity`
+
+not `entity_payroll`.
+
+Properties remains last according to the existing object-command grammar.
+
+### Identity/scope
+
+Render truthful stored/derived facts where available:
+
+* payroll period
+* displayed run reference
+* lifecycle/status
+
+At 390px:
+
+* wrap;
+* do not clip;
+* do not truncate meaningful identifiers merely to preserve one line.
+
+### Period mismatch / awaiting data
+
+Replace hard-coded copy.
+
+Use one contextual in-band statement.
+
+Do not render duplicate banner + mismatch explanation.
+
+### Payroll state
+
+Retain:
+
+* employer cost
+* run reference/status
+* lifecycle stages
+* employees in run
+* cut-off
+* scoped blockers
+
+Blocking count MUST use the same scoped exception set as the corresponding queue.
+
+Move Gross / Tax / Net out of OPERATE.
+
+---
+
+## 6.3 — PRIMARY NEXT ACTION
+
+Implement all three accepted branches.
+
+### zero actionable contexts
+
+Render truthful non-action state.
+
+No disabled fake CTA.
+
+### exactly one actionable context
+
+Render:
+
+`Open {run reference}`
+
+or accepted equivalent.
+
+Destination:
+
+`/payroll/runs/{runId}`
+
+Carry the P02 return path.
+
+### more than one actionable context
+
+Render one primary chooser:
+
+`Choose payroll work`
+
+or accepted equivalent.
+
+The chooser exposes one legitimate item for each actionable PayRun.
+
+Each item navigates to:
+
+`/payroll/runs/{runId}`
+
+Carry the return path.
+
+Do not create a new route.
+
+Do not modify P04.
+
+Do not select a preferred run.
+
+### chooser ordering
+
+Use deterministic presentation ordering only.
+
+Prefer:
+
+1. period descending
+2. run reference ascending
+
+unless an existing neutral run-order helper already expresses an equivalent contract.
+
+Do not use:
+
+* `.find()`
+* fixture order
+* ACTION_RANK
+* lifecycle rank
+* urgency language
+
+to manufacture business priority.
+
+### chooser interaction
+
+Reuse existing project primitives/patterns.
+
+Must support:
+
+* pointer activation
+* keyboard access
+* visible focus
+* Escape where overlay semantics apply
+* focus restoration
+* one reachable target per run
+
+Do not introduce a new primitive system.
+
+---
+
+## 6.4 — SUPPORTING RUN NAVIGATION
+
+Replace the buried legacy primary-looking `Open run workspace`.
+
+Where appropriate, retain lower-emphasis supporting navigation such as:
+
+`View run details`
+
+It must not compete visually with the primary next action.
+
+Carry return context.
+
+---
+
+## 6.5 — ATTEND: EXCEPTION SURFACE
+
+Refine the existing exception queue using the accepted P01 attention grammar.
+
+Each actionable item must communicate:
+
+* issue
+* severity
+* consequence/impact
+* smallest legitimate scope
+* legitimate destination
+
+Use deterministic ordering.
+
+Use impact only as the already-accepted tie-break, not invented business priority.
+
+Each item must expose one keyboard-reachable interaction target.
+
+Carry return context.
+
+### Overtime
+
+Remove the dedicated overtime chart from P02 composition.
+
+Do not replace it with another chart or card.
+
+Represent domain-authored `overtime_spike` through the exception surface.
+
+Delete no component merely because P02 no longer consumes it unless consumer analysis proves it is otherwise dead and deletion is permitted by the Step 3 ownership record.
+
+---
+
+## 6.6 — ATTEND: FUNDING AND READINESS
+
+Close P02-DEF-001A.
+
+Before calling the existing shared calculation prove:
+
+* funding account belongs to current entity;
+* applicable/default account is selected inside that entity;
+* account currency is known;
+* payroll/run currency is known;
+* currency operands are compatible.
+
+### Proven branch
+
+Use the existing shared calculation unchanged.
+
+Do not recreate funding arithmetic locally.
+
+### Unproven branch
+
+Do NOT emit:
+
+* zero funding
+* zero headroom
+* mixed-currency figure
+* guessed currency
+* full readiness percentage
+
+Render truthful unresolved copy.
+
+Known non-funding checks may remain visible, but the UI must state that payment readiness is not fully evaluated because funding is unresolved.
+
+Do not touch `payroll-payments.ts`.
+
+P02-DEF-001B remains OPEN shared debt.
+
+---
+
+## 6.7 — ATTEND: DATED OBLIGATIONS
+
+Implement the compact obligations surface.
+
+Semantic rows:
+
+* Payroll cut-off
+* Pay date
+* Statutory filing due — only when entity-scoped filing evidence exists
+
+Do not collapse them into generic `deadlines`.
+
+Do not infer approval deadline.
+
+Do not create a timeline unless the accepted Step 5 contract explicitly requires one. It currently does not.
+
+Desktop may arrange these compactly.
+
+390px stacks them vertically.
+
+Preserve complete labels and dates.
+
+---
+
+## 6.8 — INSPECT: TOTALS AND GROSS-TO-NET
+
+Move Gross / Tax / Net factual figures into INSPECT.
+
+Retain the gross-to-net explanatory surface.
+
+Close P02-DEF-004.
+
+Immediately before editing:
+
+1. re-confirm `grossToNetBridge` still has exactly one consumer;
+2. inspect its current exported signature;
+3. confirm sufficient currency truth is already available through existing inputs.
+
+Then make the smallest INTERNAL correction.
+
+NO existing export signature change.
+
+Use existing monetary authority:
+
+* `currencyDigits`
+* `toMajorUnits`
+* `formatMajorUnits`
+
+or their already-established equivalent.
+
+VND must not be scaled as a two-decimal currency.
+
+Rendered formatter and arithmetic must use the same currency truth.
+
+If the current existing inputs are insufficient to determine currency minor units truthfully:
+
+STOP P02-DEF-004.
+
+Do not add a parameter.
+
+Do not guess.
+
+Report `IMPLEMENTATION_BOUNDARY_INSUFFICIENT`.
+
+---
+
+## 6.9 — INSPECT: DEPARTMENT SURFACE
+
+Remove the heavyweight chart treatment from P02.
+
+Retain the meaningful department ranking/filter interaction.
+
+Preferred result:
+
+* lightweight ranked department rows
+* existing department chips/filter
+
+The chips remain the interaction carrying:
+
+`?dept=...`
+
+Do not make the visual ranking a second competing interactive mechanism.
+
+Preserve keyboard usability.
+
+---
+
+## 6.10 — INSPECT: RUN HISTORY
+
+Retain the governed DataTable.
+
+Do not fork or replace it.
+
+Add domain-backed:
+
+`calculation_version`
+
+as an actual table column.
+
+No synthetic version string.
+
+No separate version card.
+
+Preserve governed:
+
+* sorting
+* selection
+* responsive horizontal behaviour
+* existing table engine semantics
+
+---
+
+## 6.11 — UNDERSTAND
+
+Implement a deliberately small period-over-period section.
+
+Candidate factual comparisons:
+
+* employer cost
+* gross payroll
+* net payroll
+* headcount
+
+Only render comparisons where consecutive run/period evidence actually exists.
+
+Use existing neutral `VarianceValue` semantics.
+
+Direction is not valence.
+
+Do NOT use:
+
+* green = increase
+* red = decrease
+* good/bad interpretation
+* invented causal explanation
+
+P01-GAP-003 remains open.
+
+UNDERSTAND may legitimately be absent when comparison data is unavailable.
+
+---
+
+## 6.12 — REMOVE LEGACY P02 COMPOSITION
+
+Remove from P02 composition:
+
+* KPI strip
+* KPI caption
+* generic Trends band/caption
+* overtime trend
+* payroll cost trend
+
+Important:
+
+`payroll-cost-trend` has another verified consumer in:
+
+`src/views/payroll/reports/reports-workspace.tsx`
+
+Therefore remove it from P02 composition only.
+
+Do NOT delete or modify the shared component.
+
+Apply the same consumer-before-delete law to every other legacy module.
+
+---
+
+# MOVES INTO TARGET HOME
+
+Move only components whose Step 3 file outcome permits movement and which remain part of P02 after implementation.
+
+Expected move/refine candidates include the retained entity-specific surfaces such as:
+
+* run status/state
+* exception queue
+* gross-to-net
+* department surface
+* run history
+
+Actual filenames under:
+
+`src/views/payroll/entity/**`
+
+should follow existing project naming conventions.
+
+Do not create gratuitous index/barrel layers.
+
+Do not move shared payment readiness into the entity directory.
+
+Do not move report-owned/shared cost trend.
+
+---
+
+# OBJECT DESCRIPTORS
+
+Add the accepted descriptors to:
+
+`src/views/payroll/payroll-objects.ts`
+
+Only use the existing descriptor vocabulary.
+
+Add:
+
+* legal entity
+* payroll exception
+
+No P02-specific descriptor schema.
+
+No signature changes to existing exports.
+
+Use the descriptors through the existing ObjectCommands/CRUD-SAP grammar.
+
+---
+
+# RESPONSIVE LAW
+
+Validate both desktop and 390px.
+
+The semantic order MUST remain:
+
+OPERATE
+→ ATTEND
+→ INSPECT
+→ UNDERSTAND
+
+390px may compress or stack.
+
+It must not change navigation semantics or reorder operational priority.
+
+Verify particularly:
+
+* entity identity wraps
+* run reference remains readable
+* employer-cost hero does not clip
+* primary action remains understandable
+* chooser is keyboard usable
+* exception items remain actionable
+* obligations stack
+* gross-to-net remains legible
+* department filters remain usable
+* governed run-history table scrolls correctly
+
+---
+
+# ACCESSIBILITY / KEYBOARD
+
+Exercise automated gates where available.
+
+Manual acceptance ledger is required for interactions the harness cannot prove.
+
+At minimum validate:
+
+* entity ObjectCommands
+* primary-action chooser
+* exception items
+* department filters
+* run-history table controls
+* focus restoration from overlays
+* Escape
+* visible focus
+* logical tab order
+
+Do not mark manual keyboard behaviour PASS from source inference.
+
+---
+
+# RUNTIME EVIDENCE
+
+Ports are not identity.
+
+Before every rendered validation session:
+
+verify:
+
+* worktree path
+* git revision
+* dev-server PID/process
+* server working directory
+* rendered route belongs to the intended worktree
+
+Do not trust `:3007` merely because it was correct previously.
+
+---
+
+# QUALITY GATES
+
+After implementation run:
+
+`pnpm check-types`
+
+`pnpm lint`
+
+`pnpm build`
+
+Run the design-system audit / ratchet.
+
+Then perform rendered validation against the accepted P02 contract:
+
+* light theme
+* dark theme
+* desktop
+* 390px
+
+Use representative entities sufficient to test:
+
+* Singapore
+* non-Singapore
+* funding resolved
+* funding unresolved if fixture/domain data permits
+* zero actionable context
+* one actionable context
+* more-than-one actionable context if current fixtures support it
+
+If fixture data cannot exercise one accepted branch, record it as NOT RENDER_VERIFIED rather than fabricating evidence.
+
+---
+
+# DOMAIN-TRUTH ACCEPTANCE
+
+Before declaring Step 6 complete, verify line by line:
+
+* no unrelated funding account can affect an entity;
+* no mixed-currency arithmetic is displayed;
+* no unproven readiness percentage is shown;
+* no arbitrary run is described as priority;
+* no hard-coded payroll period remains;
+* no invented overtime target remains;
+* blocker count and queue share one scope;
+* dated obligations remain semantically distinct;
+* period deltas remain neutral;
+* no causal explanation is invented;
+* no component survives merely to fill visual space.
+
+---
+
+# SOURCE BOUNDARY CHECK
+
+Before finalising Step 6:
+
+`git diff --name-only`
+
+Every modified `src/**` path must belong to the accepted Step 6 boundary.
+
+If an implementation requires a file outside that boundary:
+
+STOP that item.
+
+Do not broaden scope silently.
+
+---
+
+# STEP 6 COMPLETION REPORT
+
+Return:
+
+1. files created;
+2. files moved;
+3. files modified;
+4. files removed from P02 composition;
+5. components physically deleted, if any, with consumer proof;
+6. final OPERATE implementation;
+7. zero/one/multiple primary-next-action behaviour;
+8. final ATTEND implementation;
+9. P02-DEF-001A closure evidence;
+10. P02-DEF-001B carried status;
+11. P02-DEF-004 closure evidence;
+12. final INSPECT implementation;
+13. final UNDERSTAND implementation;
+14. desktop render findings;
+15. 390px render findings;
+16. light/dark findings;
+17. keyboard/manual ledger findings;
+18. `check-types` result;
+19. `lint` result;
+20. `build` result;
+21. design audit/ratchet result;
+22. remaining gaps/defects;
+23. exact git diff summary.
+
+Do not freeze P02 automatically.
+
+STOP after Step 6 implementation and validation.
+
+P02 freeze is the next explicit decision.

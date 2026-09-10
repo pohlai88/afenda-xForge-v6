@@ -59,6 +59,33 @@ export interface WorkLocation {
   timezone?: string
 }
 
+/**
+ * A named job, distinct from the person filling it.
+ *
+ * `Employee.positionTitle` is a free-text string and stays that way: it is what the person's
+ * payslip and org listing call them, and it is already seeded. This models the position as a
+ * thing the organisation defines, which is what makes a vacancy, a headcount plan or a reporting
+ * structure expressible at all.
+ *
+ * Deliberately minimal. No job grade and no salary band — a grade hierarchy is compensation
+ * configuration, it is not seeded here, and a field carrying a concept nothing populates is worse
+ * than its absence because every reader has to discover it means nothing.
+ */
+export interface Position {
+  id: string
+  title: string
+
+  /** Short code used on reports and structure listings, e.g. 'ENG-SR'. */
+  code?: string
+  departmentId: string
+
+  /**
+   * The legal employer this position belongs to, when it is employer-specific. Undefined for a
+   * position the group defines once and every company fills.
+   */
+  entityId?: string
+}
+
 export interface Compensation {
   basis: CompensationBasis
 

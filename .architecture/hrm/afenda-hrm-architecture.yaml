@@ -1,0 +1,504 @@
+afenda_hrm_architecture:
+  schema_version: '1.0'
+  status: 'normative'
+  authority: 'hrm-programme'
+  product: 'Afenda HRM'
+
+  # ---------------------------------------------------------------------------
+  # AUTHORITY
+  # ---------------------------------------------------------------------------
+
+  authority_chain:
+    outranked_by:
+      - '.architecture/ux/afenda-ui-ux-doctrine.yaml'
+
+    outranks:
+      - '.architecture/hrm/H01-people.yaml'
+      - '.architecture/hrm/H02-employee-workspace.yaml'
+      - '.architecture/hrm/H03-organisation.yaml'
+
+    peer_of:
+      path: '.architecture/payroll/afenda-payroll-architecture.yaml'
+      rule: >
+        Neither outranks the other. HRM is upstream of payroll: it owns the person, the
+        structure they sit in, and their effective-dated movement between positions in it.
+        Payroll owns what that person is paid. Where the two disagree about an employee's
+        identity, HRM wins; where they disagree about a pay result, payroll wins.
+
+    evidence_not_authority:
+      - path: '.HITL/payroll-foundation.txt'
+        note: >
+          Sections 2, 3 and "The Common Afenda Object Pattern" are the prose source this
+          domain was designed from, and its People workspace mock-up and CRUD-SAP function
+          list are good evidence. It is a working brief, not normative. Two things in it are
+          explicitly superseded here: it proposes People at `/payroll/people` inside the
+          payroll page budget, and it names the People column "Payroll readiness".
+
+  # ---------------------------------------------------------------------------
+  # 1. DEVELOPMENT PHILOSOPHY
+  # ---------------------------------------------------------------------------
+
+  development_philosophy:
+    id: 'B01'
+
+    inherits: '.architecture/payroll/afenda-payroll-architecture.yaml#A01'
+
+    rule: >
+      Frontend first. The product experience defines what information, objects, states,
+      actions and explanations are necessary. A backend gap discovered during frontend
+      design is recorded as a FRONTEND_CONTRACT_GAP — never rendered anyway.
+
+  # ---------------------------------------------------------------------------
+  # 2. PRODUCT THESIS
+  # ---------------------------------------------------------------------------
+
+  product_thesis:
+    id: 'B02'
+
+    core: 'ONE WORKER IDENTITY.'
+
+    statement: >
+      A person exists once in Afenda. Their legal employer, department, position, manager
+      and location are attributes of them and change over time; they are not what the
+      person is. Every HR and payroll surface reads the same worker.
+
+    the_defect_this_domain_exists_to_close: >
+      Before H01, an employee had no address of their own. `findEmployees` resolved a
+      person to a pay run and dropped them entirely when their entity had no run, so the
+      same human being was a different conceptual identity depending on whether payroll had
+      executed. Doctrine `identity_rule` forbids exactly that.
+
+  # ---------------------------------------------------------------------------
+  # 3. PRODUCT MODEL — the three tiers
+  # ---------------------------------------------------------------------------
+
+  product_model:
+    id: 'B03'
+
+    inherits: '.architecture/payroll/afenda-payroll-architecture.yaml#A05'
+
+    note: >
+      The same three-tier ladder A05 names, seen from the HR side. A05 calls the second and
+      third tiers `advanced_payroll_workforce` and `pro_hr_people_platform`. This file owns
+      them; A05 owns the first.
+
+    foundation:
+      status: 'THIS PROGRAMME'
+      includes:
+        - worker_identity
+        - employment_and_assignment
+        - organisation_structure
+        - effective_dated_movement
+      produces: 'the population and structure every other tier and payroll depend on'
+
+    advanced_workforce:
+      status: 'DECLARED — not built'
+      includes: [time, attendance, shifts, scheduling, leave, overtime, claims, benefits, ess, mss, approvals]
+      role: 'produces controlled payroll inputs'
+      MUST_NOT: 'bypass the payroll snapshot and calculation boundary'
+
+    pro_hire_to_retire:
+      status: 'DECLARED — not built'
+      includes:
+        [
+          recruitment,
+          onboarding,
+          offboarding,
+          performance,
+          compensation_planning,
+          learning_and_development,
+          skills,
+          career,
+          talent,
+          recognition,
+          workforce_planning,
+          disciplinary
+        ]
+      MUST_NOT: 'directly manipulate payroll results'
+
+  # ---------------------------------------------------------------------------
+  # 4. MOVEMENT
+  # ---------------------------------------------------------------------------
+
+  movement_architecture:
+    id: 'B04'
+
+    inherits: '.architecture/payroll/afenda-payroll-architecture.yaml#A07'
+
+    rule: 'Movement is effective-dated.'
+
+    dimensions:
+      [legal_employer, branch, location, department, cost_centre, position, manager, pay_group, employment_basis]
+
+    authority_rule:
+      statement: >
+        The current Employee record is authoritative. The movement ledger explains how it
+        came to be what it is.
+      MUST_NOT:
+        - 'sum, replay or otherwise compute a present value from ledger entries'
+        - 'infer a previous department, manager, position or salary from the current one'
+        - 'reconstruct transfer history from current values alone'
+      on_disagreement: 'show both the record and the ledger, and say that they disagree'
+
+    dating_rule: >
+      Every entry carries `effectiveFrom` and, separately, when it was recorded. A timeline
+      that shows only sequence is reconstructing history from order, which A07 forbids.
+
+    seeding_rule:
+      derived_from_the_record:
+        joiners: 'hireDate'
+        leavers: 'terminationDate'
+        note: 'These are facts the Employee record itself holds.'
+      fixtures_only:
+        kinds:
+          - promotion
+          - transfer
+          - department_change
+          - manager_change
+          - salary_adjustment
+          - disciplinary
+        note: >
+          Explicit seeded fixture events. Never reverse-engineered from current Employee
+          values, and labelled as intentional fixtures in the seed so no later reader
+          mistakes them for derived truth.
+
+  # ---------------------------------------------------------------------------
+  # 5. ROUTE ARCHITECTURE
+  # ---------------------------------------------------------------------------
+
+  route_architecture:
+    id: 'B05'
+    domain_name: 'hrm'
+    max_primary_pages: 6
+    budget_scope: 'HRM v1'
+
+    justification: >
+      Three independent work contexts exist today: finding and working the population,
+      understanding one person, and operating the structure they sit in. Three more are
+      declared because the ADVANCED tier is known to need them and a budget fixed now is
+      what prevents the route-per-record-relationship the reference product demonstrates.
+
+    amendment_rule: >
+      Expansion beyond six requires evidence that a future capability represents an
+      independent work context and cannot be resolved within the existing six workspaces.
+      This freezes the present architecture, not the company's future: Recruitment,
+      Performance and Learning may each qualify later, and the test is evidence, not
+      precedent from another product.
+
+    primary_routes:
+      - id: 'H01'
+        workspace: 'People'
+        route: '/hrm'
+        purpose: 'Find, filter and work the workforce population across every legal employer.'
+        contract: '.architecture/hrm/H01-people.yaml'
+        status: 'THIS PROGRAMME'
+
+      - id: 'H02'
+        workspace: 'Employee Workspace'
+        route: '/hrm/people/[employeeId]'
+        purpose: 'Understand one person: who they are, on what terms, and how that changed.'
+        contract: '.architecture/hrm/H02-employee-workspace.yaml'
+        status: 'THIS PROGRAMME'
+        note: >
+          One workspace, not seven pages. Doctrine `drill_down` and `domain_page_budget`
+          both require hierarchical detail to drill down before navigating away.
+
+      - id: 'H03'
+        workspace: 'Organisation'
+        route: '/hrm/organisation'
+        purpose: 'Operate the structure: departments, positions, locations and reporting.'
+        contract: '.architecture/hrm/H03-organisation.yaml'
+        status: 'THIS PROGRAMME'
+
+      - id: 'H04'
+        workspace: 'Time'
+        route: '/hrm/time'
+        purpose: 'Attendance, shifts and overtime as controlled payroll inputs.'
+        status: 'DECLARED — not built'
+
+      - id: 'H05'
+        workspace: 'Leave'
+        route: '/hrm/leave'
+        purpose: 'Policies, entitlement, balances and requests.'
+        status: 'DECLARED — not built'
+
+      - id: 'H06'
+        workspace: 'HR Settings'
+        route: '/hrm/settings'
+        purpose: 'Configure HR authority.'
+        status: 'DECLARED — not built'
+
+    declared_not_built_rule: >
+      A route with status DECLARED has no page, no navigation entry and no summary card
+      pointing at it. `anti_patterns` forbids dead summary cards; a declared route reserves
+      a budget slot and nothing else.
+
+    embedded_surfaces:
+      - id: 'H07'
+        name: 'Employee Properties'
+        embedded_in: 'any surface listing an employee'
+        purpose: 'What exactly is this person? Read-oriented, never Edit.'
+
+      - id: 'H08'
+        name: 'Movement ledger'
+        embedded_in: 'H02'
+        purpose: 'What changed, on which dimension, from what to what, when, recorded by whom.'
+
+    evaluation_order: ['H01', 'H02', 'H03']
+
+    evaluation_rule: >
+      A page is evaluated only once the page before it in the order has passed.
+      Section-level progress within a page is permitted; page-level skipping is not.
+
+  # ---------------------------------------------------------------------------
+  # 6. OBJECT MODEL
+  # ---------------------------------------------------------------------------
+
+  object_model:
+    id: 'B06'
+
+    inherits_doctrine: 'business_objects (D09)'
+
+    objects:
+      - type: 'employee'
+        canonical_route: '/hrm/people/[employeeId]'
+        owned_by: 'hrm'
+        note: >
+          Already registered in `src/lib/find/find-object-adapter.ts` under the heading
+          "People". H01 is what finally gives it an address of its own.
+
+      - type: 'department'
+        canonical_route: '/hrm/organisation'
+        owned_by: 'hrm'
+
+      - type: 'position'
+        canonical_route: '/hrm/organisation'
+        owned_by: 'hrm'
+
+      - type: 'work_location'
+        canonical_route: '/hrm/organisation'
+        owned_by: 'hrm'
+
+      - type: 'employee_movement'
+        canonical_route: null
+        owned_by: 'hrm'
+        note: 'Read in H02s ledger. No route of its own, so ObjectContext.href is undefined.'
+
+    contract_shape:
+      file: 'src/views/hrm/hrm-objects.ts'
+      rule: >
+        Per object type, the same triple the payroll module uses: `xObject(): ObjectContext`,
+        `xCommands(): ObjectCommand[]`, `xProperties(): PropertySection[]`. One definition
+        per object, imported everywhere, so no surface can grow a second command vocabulary.
+
+    v1_command_vocabulary:
+      employee:
+        [
+          'Open',
+          'Search related',
+          'View payroll history',
+          'View movement',
+          'View audit',
+          'Copy employee number',
+          'Properties'
+        ]
+      rule: >
+        This release is read-only. Doctrine `context_menu` requires an unavailable command
+        to be absent rather than shown disabled, so Edit, Change compensation, Transfer,
+        Add recurring item and Move pay group do not appear at all.
+
+  # ---------------------------------------------------------------------------
+  # 7. DOMAIN TRUTH
+  # ---------------------------------------------------------------------------
+
+  domain_truth:
+    id: 'B07'
+    priority: 'critical'
+
+    inherits_doctrine: 'domain_truth (D14)'
+
+    completeness_is_not_readiness:
+      rule: >
+        HRM may state what a record is missing. It MUST NOT state whether a person can be
+        paid. Whether payroll can run for someone is a run fact and belongs to the run
+        workspace, which holds the calculation, the exceptions and the approval policy.
+      vocabulary:
+        use: 'RecordCompleteness'
+        states: ['Complete', 'Bank detail missing', 'Tax detail missing', 'Bank and tax details missing']
+      banned_terms:
+        - 'readiness'
+        - 'ready to pay'
+        - 'fit to be paid'
+        - 'blocking payment'
+      banned_from: [type_names, labels, column_headers, contract_prose, empty_states, toasts]
+      note: >
+        `.HITL/payroll-foundation.txt` §2 draws this column as "Payroll readiness". That
+        naming is superseded. The run-scoped predicate at `src/utils/payroll-workspace.ts`
+        stays where it is; HRM derives its own record-level statement from the same two
+        fields rather than importing a run rule.
+
+    headcount_and_fte:
+      rule: 'Two different numbers. State both, never label one as the other.'
+      note: 'Two half-time employees are 2 headcount and 1.0 FTE.'
+
+    currency:
+      rule: >
+        Compensation is never summed across companies. The seed holds three currencies;
+        `/payroll` already refuses to add them and HRM refuses identically.
+
+    org_structure:
+      rule: >
+        `managerId` is optional and `Department.parentId` may be unset. Where a reporting
+        line is absent, say so. Never root an orphan under whoever is at the top to make a
+        tree look complete.
+
+    compensation_history:
+      rule: >
+        `Compensation.effectiveFrom` is the start of the currently-effective record only.
+        Prior rates are read from the movement ledgers `salary_adjustment` entries, never
+        inferred. Where the ledger has no entry, say the earlier rate is not held rather
+        than implying the rate never changed.
+
+    empty_states:
+      rule: 'Name the filter and echo the query. "No one matches" — never "No data".'
+
+  # ---------------------------------------------------------------------------
+  # 8. IMPLEMENTATION POLICY
+  # ---------------------------------------------------------------------------
+
+  implementation_policy:
+    id: 'B08'
+
+    inherits_doctrine: 'implementation_policy'
+
+    reuse_before_building:
+      table_engine: 'src/components/shared/DataTable.tsx — doctrine D13, cardinality 1'
+      object_commands: 'src/components/shared/ObjectCommands.tsx'
+      properties: 'src/components/shared/PropertiesSheet.tsx'
+      timeline: 'src/components/shared/AuditTimeline.tsx'
+      query: 'src/components/shared/QueryPanel.tsx'
+
+    MUST_NOT:
+      - 'introduce a second table system'
+      - 'introduce a HRM-specific Properties or context-menu implementation'
+      - 'introduce wrapper primitives that merely rename existing primitives'
+      - 'introduce Radix into the Base UI application'
+      - 'introduce a second theme architecture or a HRM token layer'
+
+    shared_utilities:
+      rule: >
+        `formatDate`, `formatInstant` and `formatPeriod` currently sit in
+        `src/utils/payroll-workspace.ts` only because payroll was the sole caller. HRM is
+        the second caller, so they move to `src/utils/date.ts`. HRM does not import payroll,
+        and does not write a second copy.
+      money: 'src/utils/money.ts — minor-unit integers, formatted at the edge'
+      hydration: 'No Intl in server-rendered code. The clock is read once in the page.'
+
+  # ---------------------------------------------------------------------------
+  # 9. QUERY
+  # ---------------------------------------------------------------------------
+
+  query_policy:
+    id: 'B09'
+
+    inherits_doctrine: 'floating_query (D12)'
+
+    follow_selection: false
+
+    rule: >
+      The doctrine sets `follow_selection: false` at
+      `.architecture/ux/afenda-ui-ux-doctrine.yaml` and states the reasoning beside it: a
+      subject is set only by explicit invocation of the contextual query command, is cleared
+      when the subject changes, and never retargets because a different row was selected or
+      inspected. HRM follows that exactly. Any older draft showing `follow_selection: true`
+      is stale and MUST NOT be copied here.
+
+  # ---------------------------------------------------------------------------
+  # 10. RELEASE BOUNDARY
+  # ---------------------------------------------------------------------------
+
+  release_boundary:
+    id: 'B10'
+
+    frontend_acceptance: 'allowed'
+    production_enablement: 'blocked'
+    blocker: 'HRM permission and field-visibility policy'
+
+    rule: >
+      H02 puts compensation, masked banking, tax identifiers, legal employer and payroll
+      information on one screen while the HRM permission model is deliberately postponed.
+      Read-only does not remove the confidentiality question. No fake HR permission is
+      invented to paper over it; this boundary exists so that "frontend complete" is never
+      read as "safe to release".
+
+    known_gap:
+      id: 'HRM-GAP-001'
+      statement: >
+        `findEmployees` remains gated on `payroll.view`. An actor without that permission
+        still cannot find a person. Correcting it requires an HR permission and an HR actor,
+        which this release does not build.
+
+  # ---------------------------------------------------------------------------
+  # 11. DEVELOPMENT SEQUENCE
+  # ---------------------------------------------------------------------------
+
+  development_sequence:
+    id: 'B11'
+
+    inherits: '.architecture/payroll/afenda-payroll-architecture.yaml#A16'
+
+    per_page:
+      - 'Author the page contract. It exists before its JSX exists.'
+      - 'Search existing Afenda patterns, then Studio evidence, then compose.'
+      - 'Implement frontend only. Backend and domain gaps remain explicit contract gaps.'
+      - 'Render and validate in both themes, and measure.'
+      - 'Only once the page passes does evaluation proceed to the next page.'
+
+    scope_rule: >
+      Do not expand feature scope during implementation. Tighten the contracts and truth
+      boundaries first, then execute H01 -> H02 -> H03 sequentially.
+
+  # ---------------------------------------------------------------------------
+  # PROGRAMME STATE
+  # ---------------------------------------------------------------------------
+
+  programme_state:
+    updated_on: '2026-09-10'
+
+    surfaces:
+      H01:
+        route: '/hrm'
+        status: 'BUILT — contract authored, implemented, measured in both themes'
+        contract: '.architecture/hrm/H01-people.yaml'
+      H02:
+        route: '/hrm/people/[employeeId]'
+        status: 'BUILT — contract authored, implemented, measured in both themes'
+        contract: '.architecture/hrm/H02-employee-workspace.yaml'
+      H03:
+        route: '/hrm/organisation'
+        status: 'BUILT — contract authored, implemented, measured in both themes'
+        contract: '.architecture/hrm/H03-organisation.yaml'
+
+    not_yet_frozen:
+      rule: >
+        None of the three is FROZEN_V1. P01 and P02 froze only after a human acceptance pass, and
+        these have had automated measurement in both themes and no human pass. Freezing is the
+        reader's call, not the implementer's.
+
+    measured:
+      date: '2026-09-10'
+      viewport: '1440x900, both themes'
+      results: >
+        Contrast failures 0 on all three surfaces in both themes. No sideways scroll at 1440.
+        Zero figures missing tabular-nums. Radii and gaps within the 8/8 budget on every surface.
+        The design-system audit is at budget on every check.
+      defect_found_and_fixed: >
+        H01 initially paired `text-warning` and `text-success` with a tinted surface, which measured
+        1.88:1 in light while looking correct in dark — the exact failure class the design system
+        records. Corrected to the `-strong` variants globals.css documents for tinted surfaces.
+
+    relationship_to_payroll: >
+      The payroll programme is paused at P03, which has no contract and no implementation.
+      Nothing under `/payroll` is modified by this programme. The one exception is
+      `src/utils/payroll-workspace.ts`, from which three date helpers move to a shared
+      module under B08 — a move, not a behaviour change.
